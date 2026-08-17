@@ -2,12 +2,15 @@
 
 自动抓取 27 家公司校招岗位，用 **flash 模型逐岗读判**（不是关键字命中），筛出「LLM 算法 / Agent·LLM 应用」方向的校招全职岗位。
 
+> 🌐 **在线预览**：https://nozomix1.github.io/wheres-my-job/
+
 ## 产出（直接看这两个）
 
 | 文件 | 说明 |
 |---|---|
 | `2026秋招_LLM_Agent岗位总表.csv` | 汇总表：公司 / 类型 / 岗位 / 部门 / 城市 / 批次 / 发布时间 / 投递链接 |
-| `2026秋招_LLM_Agent岗位筛选.html` | 网页版，可搜索 / 筛选 / 排序，直接丢 GitHub Pages 就能用 |
+| `index.html`（在线版） | 网页版，可搜索 / 筛选 / 排序，已部署 GitHub Pages：https://nozomix1.github.io/wheres-my-job/ |
+| `2026秋招_LLM_Agent岗位筛选.html` | 本地同名副本，与 `index.html` 内容一致 |
 
 - 口径：**2027届校招全职**；方向 = LLM/大模型算法 或 Agent/LLM 应用；**应用优先**。
 - 排除：实习、社招（DeepSeek 无校招、按特例保留）、精英计划（阿里星/AIDU/天才少年/北斗 等）、纯职能营销岗。
@@ -30,6 +33,7 @@
 ```
 .
 ├── README.md                    ← 本文件（项目总览）
+├── index.html                   ← GitHub Pages 在线版（与筛选页同内容）
 ├── 2026秋招_LLM_Agent岗位总表.csv
 ├── 2026秋招_LLM_Agent岗位筛选.html
 └── crawler/                     ← 工具（含全部脚本、站点注册表、数据、缓存）
