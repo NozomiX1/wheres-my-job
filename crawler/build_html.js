@@ -339,4 +339,7 @@ buildSeg(); buildCompanySelect(); buildBatchSelect(); bind(); render();
 
 const out = html.replace('__DATA__', JSON.stringify(data).replace(/</g, '\\u003c'));
 fs.writeFileSync(OUT, out, 'utf8');
-console.log('生成 ' + OUT + ' （岗位 ' + data.length + ' 条）');
+// GitHub Pages 首页入口：与筛选页保持同内容（Pages 从根目录 index.html 起服务）
+const INDEX = path.join(path.dirname(OUT), 'index.html');
+fs.writeFileSync(INDEX, out, 'utf8');
+console.log('生成 ' + OUT + ' + index.html （岗位 ' + data.length + ' 条）');
