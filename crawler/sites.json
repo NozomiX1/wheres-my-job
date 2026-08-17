@@ -1,0 +1,35 @@
+{
+  "说明": "站点注册表：一家公司一条。ats 取值 feishu|moka|beisen|custom。custom 表示该站是自建 API，靠 cdp_capture.js 逆向后按 api/body/note 复现。exclude 为该司需排除的精英计划关键词(regex)。",
+  "sites": [
+    {"key":"bytedance","company":"字节跳动","ats":"custom","batch":"2027届校招","exclude":"(无，Seed=普通校招)","linkTemplate":"https://jobs.bytedance.com/campus/position/{id}/detail","note":"关键词搜索+CDP抓响应，见 lib/custom/bytedance.js"},
+    {"key":"sensetime","company":"商汤","ats":"feishu","url":"https://hr-jobs.sensetime.com/edu","aid":0,"websitePath":"edu","subjectIdList":["7657490082207058226"],"batch":"2027届校招","exclude":"无限原力","linkTemplate":"https://hr-jobs.sensetime.com/edu/position/{id}/detail"},
+    {"key":"minimax","company":"MiniMax","ats":"feishu","url":"https://vrfi1sk8a0.jobs.feishu.cn/379481/","aid":1658,"websitePath":"campus","subjectIdList":["7495675705720965415"],"plain":true,"batch":"2027届校招","exclude":"Top Talent","linkTemplate":"https://vrfi1sk8a0.jobs.feishu.cn/379481/position/{id}/detail"},
+    {"key":"lilith","company":"莉莉丝","ats":"feishu","url":"https://lilithgames.jobs.feishu.cn/campus","aid":1658,"websitePath":"campus","subjectIdList":[],"batch":"2027届校招","exclude":"(无)","matchKeyword":"算法|AI|NPC","linkTemplate":"https://lilithgames.jobs.feishu.cn/campus/position/{id}/detail"},
+    {"key":"papegames","company":"叠纸游戏","ats":"feishu","url":"https://career.papegames.com/campus","aid":1658,"websitePath":"campus","subjectIdList":[],"batch":"2027届校招","exclude":"(无)","linkTemplate":"https://career.papegames.com/campus/position/{id}/detail"},
+
+    {"key":"kimi","company":"月之暗面","ats":"moka","orgId":"moonshot","siteId":148507,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(无)"},
+    {"key":"zhipu","company":"智谱","ats":"moka","orgId":"zphz","siteId":148984,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(无)"},
+    {"key":"deepseek","company":"DeepSeek","ats":"moka","orgId":"high-flyer","siteId":140576,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招(无校招批次)","exclude":"(无)"},
+    {"key":"stepfun","company":"阶跃星辰","ats":"moka","orgId":"step","siteId":141903,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(StepStar=校招品牌，勿排)"},
+    {"key":"hypergryph","company":"鹰角网络","ats":"custom","batch":"2027届校招","exclude":"(无)","matchKeyword":"AI算法|算法开发"},
+
+    {"key":"iflytek","company":"科大讯飞","ats":"beisen","api":"https://iflytek.zhiye.com/api/Jobad/GetJobAdPageList","category":["2"],"batch":"2027届校招","exclude":"(无)","linkTemplate":"https://iflytek.zhiye.com/campus/jobdetail?jobAdId={id}"},
+
+    {"key":"alibaba","company":"阿里巴巴","ats":"custom","api":"POST https://campus-talent.alibaba.com/position/search","body":"{\"batchId\":100000760001,\"pageIndex\":1,\"pageSize\":10,\"channel\":\"campus_group_official_site\",\"language\":\"zh\"}","batch":"2027届校招","exclude":"阿里星|A Star|π天才","note":"需先GET /campus/position 取 XSRF-TOKEN/SESSION cookie"},
+    {"key":"tencent","company":"腾讯","ats":"custom","api":"POST https://join.qq.com/api/v1/position/searchPosition","body":"projectMappingIdList=[1](2027校园招聘)","batch":"2027届校招","exclude":"青云计划|AI产品经理培训生"},
+    {"key":"tme","company":"腾讯音乐","ats":"custom","api":"GET https://join.tencentmusic.com/api/uc-job/list?page=N","body":"-","batch":"2027届校招","exclude":"技术大咖"},
+    {"key":"jd","company":"京东","ats":"custom","api":"POST https://campus.jd.com/api/wx/position/page?type=present","body":"pageSize/pageIndex/parameter","batch":"2027届校招","exclude":"TGT"},
+    {"key":"huawei","company":"华为","ats":"custom","api":"POST https://apigw-dgg-b0.huawei.com/api/apig/channelhw/recruitmentPosition/pub/getJobPage","body":"{\"jobType\":\"CR\",\"recruitmentType\":[\"FRESH_GRADUATE\"]}","batch":"2027届校招","exclude":"天才少年","matchKeyword":"算法|AI"},
+    {"key":"oppo","company":"OPPO","ats":"custom","api":"POST https://careers.oppo.com/openapi/position/pageNew","body":"{\"pageNum\":1,\"pageSize\":100,\"idRecruitProject\":30}","batch":"2027届校招","exclude":"(无)"},
+    {"key":"xiaomi","company":"小米","ats":"custom","api":"GET https://hr.xiaomi.com/website/api/agent/searchJobPage?type=2","body":"keyword/cityZhNames/pageSize/pageNum","batch":"2027届校招","exclude":"顶尖人才"},
+    {"key":"ant","company":"蚂蚁集团","ats":"custom","api":"POST https://hrcareersweb.antgroup.com/api/campus/position/search","body":"{\"channel\":\"campus_group_official_site\",\"language\":\"zh_CN\",\"pageIndex\":0,\"pageSize\":10}","batch":"2027届校招","exclude":"蚂蚁星|Plan A"},
+    {"key":"meituan","company":"美团","ats":"custom","api":"POST https://zhaopin.meituan.com/api/official/job/getJobList","body":"jobShareType=1校招, jobType=[{code:1}]应届生","batch":"2027届校招","exclude":"LongCat|北斗计划"},
+    {"key":"kuaishou","company":"快手","ats":"custom","api":"POST https://campus.kuaishou.cn/recruit/campus/e/api/v1/open/positions/simple","body":"recruitSubProjectCodes=[\"20271779425607\"]","batch":"2027届校招","exclude":"快Star"},
+    {"key":"mihoyo","company":"米哈游","ats":"custom","api":"POST https://ats.openout.mihoyo.com/ats-portal/v1/job/list","body":"{\"channelDetailIds\":[1],\"hireType\":1}","batch":"2027届校招","exclude":"(无)","note":"hireType 1=校招"},
+    {"key":"netease_huyu","company":"网易互娱","ats":"custom","api":"GET https://campus.game.163.com/api/campuspc/position/getJobList?projectId=102","body":"pageSize=100&currentPage=1","batch":"2027届校招","exclude":"(无)"},
+    {"key":"netease_leihuo","company":"网易雷火","ats":"custom","api":"GET https://xiaozhao.leihuo.netease.com/api/apply/job/list/show?project_id=77","body":"page_size=200&page_number=1","batch":"2027届校招","exclude":"(无)"},
+    {"key":"baidu","company":"百度","ats":"custom","api":"SSR https://talent.baidu.com/jobs/list?projectType=1","body":"__INITIAL_DATA__","batch":"2027届校招","exclude":"AIDU"},
+    {"key":"baichuan","company":"百川智能","ats":"custom","api":"SSR --dump-dom https://campus.baichuan-inc.com/","body":"-","batch":"2027届校招","exclude":"(星耀=校招品牌，勿排)"},
+    {"key":"shlab","company":"上海AI实验室","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=campus","body":"page_token/limit","batch":"实习(留用)","exclude":"(无)"}
+  ]
+}

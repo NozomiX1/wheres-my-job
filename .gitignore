@@ -1,0 +1,16 @@
+# ---- 中间数据（每日由 crawl/recall/judge 重新生成，不入库）----
+crawler/out/
+
+# ---- 运行日志 ----
+crawler/log/
+
+# ---- 依赖 ----
+node_modules/
+
+# ---- 系统 / 编辑器 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
