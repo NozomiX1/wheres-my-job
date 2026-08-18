@@ -13,7 +13,7 @@
     {"key":"stepfun","company":"阶跃星辰","ats":"moka","orgId":"step","siteId":141903,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(StepStar=校招品牌，勿排)"},
     {"key":"hypergryph","company":"鹰角网络","ats":"custom","batch":"2027届校招","exclude":"(无)","matchKeyword":"AI算法|算法开发"},
 
-    {"key":"iflytek","company":"科大讯飞","ats":"beisen","api":"https://iflytek.zhiye.com/api/Jobad/GetJobAdPageList","category":["2"],"batch":"2027届校招","exclude":"(无)","linkTemplate":"https://iflytek.zhiye.com/campus/jobdetail?jobAdId={id}"},
+    {"key":"iflytek","company":"科大讯飞","ats":"beisen","api":"https://iflytek.zhiye.com/api/Jobad/GetJobAdPageList","category":["2"],"batch":"2027届校招","exclude":"(无)","linkTemplate":"https://iflytek.zhiye.com/campus/detail?jobAdId={id}"},
 
     {"key":"alibaba","company":"阿里巴巴","ats":"custom","api":"POST https://campus-talent.alibaba.com/position/search","body":"{\"batchId\":100000760001,\"pageIndex\":1,\"pageSize\":10,\"channel\":\"campus_group_official_site\",\"language\":\"zh\"}","batch":"2027届校招","exclude":"阿里星|A Star|π天才","note":"需先GET /campus/position 取 XSRF-TOKEN/SESSION cookie"},
     {"key":"tencent","company":"腾讯","ats":"custom","api":"POST https://join.qq.com/api/v1/position/searchPosition","body":"projectMappingIdList=[1](2027校园招聘)","batch":"2027届校招","exclude":"青云计划|AI产品经理培训生"},

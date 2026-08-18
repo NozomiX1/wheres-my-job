@@ -59,7 +59,7 @@ for (const j of jobs) {
   const rawDate = pick(j, fm.date, '-');
   let date = String(rawDate || '-').slice(0, 10);
   if (rawDate && Number.isFinite(Number(rawDate)) && Number(rawDate) > 1e12) date = new Date(Number(rawDate) + 8 * 3600 * 1000).toISOString().slice(0, 10);
-  const id = String(pick(j, ['id', 'JobAdId', 'jobAdId'], ''));
+  const id = String(pick(j, ['id', 'Id', 'JobAdId', 'jobAdId'], ''));
   const url = String(pick(j, ['url'], '') || '') || buildUrl(site, id);
 
   let score = 0;

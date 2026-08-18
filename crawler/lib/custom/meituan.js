@@ -57,7 +57,7 @@ async function fetchAll() {
         dept: dept || '-',
         city: city || '-',
         date: fmtDate(x.firstPostTime),
-        url: 'https://zhaopin.meituan.com/web/campus/position-detail?jobUnionId=' + x.jobUnionId,
+        url: 'https://zhaopin.meituan.com/web/position/detail?jobUnionId=' + x.jobUnionId + '&highlightType=campus',
         desc: [x.jobDuty, x.jobRequirement].filter(Boolean).join('\n'),
         commitment: '全职',
         id: String(x.jobUnionId),
