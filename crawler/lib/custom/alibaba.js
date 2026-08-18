@@ -16,7 +16,8 @@ function fmtDate(v) {
   if (m) return m[1] + '-' + m[2] + '-' + m[3];
   const n = Number(s);
   if (Number.isFinite(n) && n > 0) {
-    const d = new Date(n);
+    // 时间戳按北京时间(UTC+8)展示，与官网「更新于」一致
+    const d = new Date(n + 8 * 3600 * 1000);
     if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   }
   return '-';
@@ -70,7 +71,7 @@ async function fetchAll() {
         title: String(x.name || '').trim(),
         dept: join(x.circleNames),
         city: join(x.workLocations),
-        date: fmtDate(x.publishTime),
+        date: fmtDate(x.modifyTime ?? x.publishTime),
         url: BASE + '/campus/position/' + x.id,
         desc: [x.description, x.requirement].filter(Boolean).join('\n'),
         commitment: '全职',
