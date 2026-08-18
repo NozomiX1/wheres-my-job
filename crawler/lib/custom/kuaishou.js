@@ -45,7 +45,7 @@ async function fetchAll() {
         dept: String(x.departmentName || '-').trim() || '-',
         city: Array.isArray(x.workLocationDicts) ? x.workLocationDicts.map(c => c && c.name).filter(Boolean).join('/') : '-',
         date: String(x.releaseTime || '').slice(0, 10) || '-',
-        url: 'https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/' + x.code,
+        url: 'https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/' + x.id,
         desc: [x.description, x.positionDemand].filter(Boolean).join('\n'),
         commitment: '全职',
         id: String(x.code)
