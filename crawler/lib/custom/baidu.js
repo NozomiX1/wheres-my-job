@@ -74,7 +74,7 @@ async function fetchAll() {
       dept: String(d.orgName || '-'),
       city: String(d.workPlace || '-'),
       date: String(d.publishDate || '').slice(0, 10) || '-',
-      url: d.postId ? ('https://talent.baidu.com/jobs/detail/' + d.postId) : '',
+      url: d.jobId ? ('https://talent.baidu.com/jobs/detail/GRADUATE/' + d.jobId) : '',
       desc: String(d.workContent || ''),
       commitment: '全职',
       id: String(d.postId || d.jobId || '')

@@ -10,6 +10,7 @@ const COMPANY = '百川智能';
 const KEY = 'baichuan';
 const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const CAMPUS_URL = 'https://campus.baichuan-inc.com/';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 function dumpDom() {
   const prof = path.join(os.tmpdir(), 'baichuan_prof_' + Date.now());
@@ -43,7 +44,7 @@ function mapCommitment(c) {
   return c;
 }
 
-function parseCards(html) {
+function parseCards(html, base) {
   const jobs = [];
   const re = /<a\s+data-id="(\d+)"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g;
   let m;
@@ -62,7 +63,7 @@ function parseCards(html) {
     const city = spans[0] || '-';
     const commitment = mapCommitment(spans[1]);
     const func = spans[2] || '';
-    const url = href.startsWith('http') ? href : ('https://campus.baichuan-inc.com' + href);
+    const url = href.startsWith('http') ? href : (base + href);
     jobs.push({
       title,
       dept: func || '-',
@@ -77,9 +78,16 @@ function parseCards(html) {
   return jobs;
 }
 
+async function resolveBase() {
+  // campus.baichuan-inc.com 会重定向到飞书域名并把 /position/{id}/detail 路径丢掉，需直接用飞书域名
+  const r = await fetch(CAMPUS_URL, { headers: { 'User-Agent': UA }, redirect: 'follow' });
+  return new URL(r.url).origin;
+}
+
 async function fetchAll() {
+  const base = await resolveBase();
   const html = dumpDom();
-  const jobs = parseCards(html);
+  const jobs = parseCards(html, base);
   if (!jobs.length) throw new Error('未解析到百川岗位卡片');
   return jobs;
 }

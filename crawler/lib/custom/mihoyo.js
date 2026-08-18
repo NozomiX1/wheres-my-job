@@ -43,7 +43,7 @@ async function fetchAll() {
         dept: String(it.competencyType || '-'),
         city: (it.addressDetailList || []).map(a => a && a.addressDetail).filter(Boolean).join('/') || '-',
         date: '-',
-        url: LIST_URL,
+        url: 'https://jobs.mihoyo.com/#/campus/position/' + it.id,
         desc: String(it.jobSummary || ''),
         commitment: String(it.jobNature || '全职'),
         id: String(it.id || '')
