@@ -41,7 +41,7 @@ async function fetchAll() {
     dept: String(i.positionTypeName || '-'), // 岗位类别（人工智能/技术/游戏策划…），该接口无部门字段
     city: String(i.workPlaceName || '-').replace(/,/g, '/'),
     date: fmtDate(i.updateTime),
-    url: 'https://campus.game.163.com/app/job/position?id=102', // 项目投递/详情入口（详情在列表页内展开）
+    url: 'https://campus.game.163.com/app/detail/index?id=' + i.id + '&projectId=102',
     desc: [i.positionDescription, i.positionRequirement].filter(Boolean).join('\n'),
     commitment: '全职',
     id: String(i.id || ''),
