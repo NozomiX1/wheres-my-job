@@ -41,7 +41,7 @@ const CACHE_DIR = path.join(OUT_DIR, 'judge_cache');
 // 已判定过的公司 = 有缓存 或 有判定批次
 const judgedKeys = new Set();
 if (fs.existsSync(CACHE_DIR)) for (const f of fs.readdirSync(CACHE_DIR)) if (f.endsWith('.json')) judgedKeys.add(f.replace(/\.json$/, ''));
-for (const f of fs.readdirSync(JUDGE_DIR)) if (f.endsWith('.json')) judgedKeys.add(f.replace(/_\d+\.json$/, ''));
+for (const f of fs.readdirSync(JUDGE_DIR)) if (f.endsWith('.json')) judgedKeys.add(f.replace(/_\d+\.json$/, '').replace(/_narrow\.json$/, ''));
 
 const refreshed = [];
 for (const key of judgedKeys) {

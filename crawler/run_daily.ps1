@@ -5,6 +5,10 @@ $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
+# 窄口径开关：置 $true 则每日收窄到「Agent/LLM 应用研发」（在召回后、切批前跑 narrow.js 砍算法/infra/非研发）
+# 默认 $false，保持宽口径；本次收窄为手动执行，不常开。
+$NARROW = $false
+
 # 全部 27 个站点 key（moka/beisen/custom 纯 HTTP 快；feishu 需无头 Chrome，约 30-60s/站）
 $siteKeys = @(
   'kimi','zhipu','deepseek','stepfun','hypergryph','iflytek',          # moka/beisen
@@ -34,6 +38,15 @@ foreach ($k in $siteKeys) {
   Write-Output "---- recall $k ----"
   node (Join-Path $root 'recall.js') $k
   if ($LASTEXITCODE -ne 0) { Write-Output "!! $k 召回失败 (exit $LASTEXITCODE)" }
+}
+
+# 2.5) 窄过滤（仅当 $NARROW 开启）
+if ($NARROW) {
+  foreach ($k in $siteKeys) {
+    Write-Output "---- narrow $k ----"
+    node (Join-Path $root 'narrow.js') $k
+    if ($LASTEXITCODE -ne 0) { Write-Output "!! $k 窄过滤失败 (exit $LASTEXITCODE)" }
+  }
 }
 
 # 3) 增量切批（只切「缓存里没有 / 内容已变」的岗位）

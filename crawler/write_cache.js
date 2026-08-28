@@ -22,7 +22,7 @@ for (const f of fs.readdirSync(OUT).filter(f => f.endsWith('_recall.json'))) {
 
 const keys = new Set();
 for (const f of fs.readdirSync(PARTIAL).filter(f => f.endsWith('.json'))) {
-  const key = f.replace(/_\d+\.json$/, '');
+  const key = f.replace(/_\d+\.json$/, '').replace(/_narrow\.json$/, '');
   keys.add(key);
   let arr = [];
   try { arr = JSON.parse(fs.readFileSync(path.join(PARTIAL, f), 'utf8')); } catch (e) { continue; }

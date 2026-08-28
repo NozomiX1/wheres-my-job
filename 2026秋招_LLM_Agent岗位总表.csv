@@ -1,511 +1,71 @@
 ﻿公司,类型,岗位,部门,城市,批次,发布时间,投递链接
-阿里巴巴,应用,百炼MaaS网关工程师,阿里巴巴控股集团,北京/杭州,2027届校招,2026-08-13,https://campus-talent.alibaba.com/campus/position/199908340003
-阿里巴巴,应用,AI产品经理-智能体,千问办公,杭州,2027届校招,2026-08-12,https://campus-talent.alibaba.com/campus/position/199908580004
-阿里巴巴,应用,AI Infra高性能网络研发工程师,阿里云,北京/杭州,2027届校招,2026-08-12,https://campus-talent.alibaba.com/campus/position/199907640016
-阿里巴巴,应用,AI安全技术工程师,阿里巴巴控股集团/阿里云/千问办公,北京/杭州/上海,2027届校招,2026-08-10,https://campus-talent.alibaba.com/campus/position/199907640022
-阿里巴巴,应用,AI Agent优化工程师-训练/数据/评测,阿里巴巴控股集团/淘天集团/阿里云/虎鲸文娱集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720043
-阿里巴巴,应用,Agent Infra工程师,阿里巴巴控股集团/阿里国际数字商业集团/阿里云/Token Foundry/千问事业部,北京/成都/广州/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640058
-阿里巴巴,应用,AI产品经理-超级智能体,千问事业部,北京/广州/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907680002
-阿里巴巴,应用,AI Agent产品经理,盒马,上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740089
-阿里巴巴,应用,AI大模型产品经理,淘天集团,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740103
-阿里巴巴,应用,AI Infra研发工程师-AI Agent,阿里国际数字商业集团/阿里云,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907660055
-阿里巴巴,应用,算法工程师-大模型应用（T-Star Lab ）,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800005
-阿里巴巴,应用,技术服务工程师-AI大模型/智算-香港,阿里云,中国香港,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740032
-阿里巴巴,应用,技术服务工程师-AI大模型/智算,阿里云,北京/成都/广州/杭州/南京/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720067
-阿里巴巴,应用,算法工程师-大模型评测,Token Foundry/千问办公,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620028
-阿里巴巴,应用,算法工程师-AI Agent,阿里巴巴控股集团/淘天集团/阿里国际数字商业集团/阿里云/Token Foundry/千问事业部/菜鸟/虎鲸文娱集团,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700028
-阿里巴巴,应用,算法工程师-大模型应用,阿里巴巴控股集团/淘天集团/阿里国际数字商业集团/阿里云/高德地图/虎鲸文娱集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700032
-阿里巴巴,应用,Agent Infra操作系统研发工程师,阿里云,北京/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780012
-阿里巴巴,应用,AI agent平台研发工程师,阿里云,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780019
 阿里巴巴,应用,AI Agent研发工程师,飞猪/阿里国际数字商业集团/阿里云/Token Foundry/千问办公,北京/广州/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620027
-阿里巴巴,应用,大模型Infra研发工程师（训练/推理）,阿里云/Token Foundry,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820095
 阿里巴巴,应用,大模型应用开发工程师,阿里巴巴控股集团/阿里云/高德地图/盒马/灵犀互娱,北京/广州/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720102
 阿里巴巴,应用,AI Agent平台开发工程师,阿里云/Token Foundry/千问办公,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780033
 阿里巴巴,应用,AI Agent 研发工程师-决策方向,阿里云/盒马,杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720097
-阿里巴巴,应用,RAG引擎研发工程师,阿里巴巴控股集团/盒马,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720096
-阿里巴巴,应用,AI Infra工程师,阿里巴巴控股集团/淘天集团/淘宝闪购/飞猪/阿里国际数字商业集团/阿里云/Token Foundry/千问事业部/虎鲸文娱集团,北京/成都/广州/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640056
-阿里巴巴,应用,AI数据工程师,阿里巴巴控股集团/淘天集团/阿里国际数字商业集团/阿里云/千问办公/千问事业部/虎鲸文娱集团/阿里健康,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640071
-阿里巴巴,应用,AI应用算法工程师,阿里巴巴控股集团/淘天集团/淘宝闪购/飞猪/阿里国际数字商业集团/阿里云/Token Foundry/千问办公/千问事业部/高德地图/虎鲸文娱集团/阿里健康/灵犀互娱,北京/广州/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740040
 阿里巴巴,应用,AI应用研发工程师,阿里巴巴控股集团/淘天集团/淘宝闪购/飞猪/阿里国际数字商业集团/阿里云/Token Foundry/千问办公/千问事业部/平头哥/高德地图/虎鲸文娱集团,北京/广州/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620013
-阿里巴巴,应用,AI商业分析师,淘宝闪购,上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720068
-阿里巴巴,应用,深度学习AI编译和推理引擎研发工程师,平头哥,杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620031
-阿里巴巴,应用,AI产品运营,阿里巴巴控股集团/淘宝闪购/阿里国际数字商业集团/千问办公/盒马,杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700034
-阿里巴巴,应用,AI产品经理,阿里巴巴控股集团/淘宝闪购/飞猪/阿里国际数字商业集团/阿里云/Token Foundry/高德地图/菜鸟/虎鲸文娱集团/盒马/阿里健康/灵犀互娱,北京/广州/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700037
-阿里巴巴,应用,AI Infra网络研发工程师,阿里云,北京/杭州/南京,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740014
-阿里巴巴,应用,AI Infra测试开发工程师-存储方向,阿里云,成都/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640014
 阿里巴巴,应用,AI全栈开发工程师 -大数据方向,阿里云,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907840004
 阿里巴巴,应用,AI安全研发工程师,阿里云/千问办公,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907680063
-阿里巴巴,应用,AI Infra工程师（T-Star Lab ）,淘天集团,北京,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800003
-阿里巴巴,应用,AI应用产品经理,淘天集团/阿里国际数字商业集团,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700003
-阿里巴巴,应用,AI框架软件工程师,阿里巴巴控股集团/平头哥,杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820057
-阿里巴巴,应用,算法工程师-数据合成,阿里巴巴控股集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620035
-阿里巴巴,应用,算法工程师-AI搜索/推荐/广告,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820022
 阿里巴巴,应用,AI引擎研发工程师-C/C++,淘天集团,北京,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820009
-阿里巴巴,应用,AI Infra操作系统工程师,阿里云,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640013
-阿里巴巴,应用,AI平台研发工程师,阿里云,北京/广州/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640011
-阿里巴巴,应用,AI Infra工程师-计算方向,阿里云,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780013
-阿里巴巴,应用,AI Infra工程师-容器方向,阿里云/Token Foundry,北京/杭州/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820013
-阿里巴巴,应用,AI Infra工程师-存储方向,阿里云,北京/成都/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640015
-阿里巴巴,应用,AI Infra研发工程师-广告引擎,淘天集团,北京,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740016
-阿里巴巴,应用,AI Infra软硬件结合开发工程师,阿里巴巴控股集团/阿里云,北京/杭州/上海/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820018
+阿里巴巴,应用,安全AI研发工程师,阿里云,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780017
 阿里巴巴,应用,AI全栈开发工程师,阿里巴巴控股集团/阿里云/千问办公/菜鸟,北京/杭州/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720060
-阿里巴巴,应用,移动端AI推理引擎优化工程师,阿里云,杭州/深圳,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740057
-阿里巴巴,应用,工程效能工程师-AI与研发基建方向,阿里云,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740055
-阿里巴巴,应用,AI产品评测工程师,阿里云/千问办公,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907720070
-阿里巴巴,应用,AI编译研发工程师,阿里巴巴控股集团/阿里云,杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640012
-阿里巴巴,应用,高性能计算加速软件工程师,平头哥,上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820056
-阿里巴巴,应用,数据科学家,淘天集团/淘宝闪购/阿里国际数字商业集团/阿里云/千问事业部/高德地图/盒马,北京/广州/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800043
 阿里巴巴,应用,全栈研发工程师,千问办公,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640030
-阿里巴巴,应用,AI产品经理-文娱方向,虎鲸文娱集团,北京,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908160002
-阿里巴巴,应用,算法工程师-评估系统算法,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908500003
 阿里巴巴,应用,Harness研究工程师,Token Foundry,北京/杭州,2027届校招,2026-07-31,https://campus-talent.alibaba.com/campus/position/199908460005
-阿里巴巴,应用,算法工程师-AI制药,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199908260001
-阿里巴巴,应用,AI数据平台研发工程师,菜鸟,杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907780084
-阿里巴巴,应用,AI工程设计师,淘天集团,杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907640036
-阿里巴巴,应用,基础模型Infra研发工程师（训练/推理）,Token Foundry,北京/杭州/上海,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907780026
-阿里巴巴,应用,基础平台研发工程师-开源技术社区,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907640026
-阿里巴巴,算法,算法工程师-预训练评测,Token Foundry,北京/杭州/上海,2027届校招,2026-08-13,https://campus-talent.alibaba.com/campus/position/199908720004
-阿里巴巴,算法,AI应用算法工程师-PostTrain,阿里巴巴控股集团,北京/杭州,2027届校招,2026-08-12,https://campus-talent.alibaba.com/campus/position/199908700002
-阿里巴巴,算法,算法工程师-视觉生成大模型,阿里巴巴控股集团,杭州,2027届校招,2026-08-07,https://campus-talent.alibaba.com/campus/position/199908600002
-阿里巴巴,算法,算法工程师- AI手机智能大模型,Token Foundry,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199908160006
-阿里巴巴,算法,算法工程师-AI Agent（T-Star Lab ）,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620003
-阿里巴巴,算法,算法工程师-AIGC方向（T-Star Lab ）,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620005
-阿里巴巴,算法,算法工程师-多模态（T-Star Lab ）,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907660005
-阿里巴巴,算法,算法工程师-自然语言处理（T-Star Lab ）,淘天集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800004
-阿里巴巴,算法,算法工程师-生成式方向,淘宝闪购,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640010
-阿里巴巴,算法,算法工程师-多模态检索/RAG,千问事业部,杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907820052
-阿里巴巴,算法,算法工程师-语音多模态大模型,淘天集团/Token Foundry/千问办公/千问事业部/高德地图/虎鲸文娱集团,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907680036
-阿里巴巴,算法,算法工程师-安全大模型,阿里巴巴控股集团/Token Foundry,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700035
-阿里巴巴,算法,算法工程师-视频生成,淘天集团/Token Foundry,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800031
-阿里巴巴,算法,算法工程师-多模态,阿里巴巴控股集团/淘天集团/阿里国际数字商业集团/阿里云/Token Foundry/千问事业部/高德地图/虎鲸文娱集团/灵犀互娱,北京/广州/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620025
-阿里巴巴,算法,算法工程师-自然语言处理,淘天集团/Token Foundry/高德地图,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800033
-阿里巴巴,算法,算法工程师-大语言模型,阿里巴巴控股集团/阿里国际数字商业集团/阿里云/虎鲸文娱集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907660030
-阿里巴巴,算法,算法工程师-VLM训练,千问事业部,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907660024
-阿里巴巴,算法,算法工程师-医疗多模态大模型,阿里巴巴控股集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907640065
-阿里巴巴,算法,算法工程师-大模型后训练 (Post-training),阿里巴巴控股集团/阿里国际数字商业集团/阿里云/Token Foundry/千问事业部,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907620030
-阿里巴巴,算法,算法工程师-多模态AIGC,淘天集团/阿里国际数字商业集团/Token Foundry/千问事业部,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907700029
-阿里巴巴,算法,算法工程师-AI安全,阿里巴巴控股集团/阿里云/Token Foundry,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800030
-阿里巴巴,算法,算法工程师-具身智能,高德地图,北京,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907780083
-阿里巴巴,算法,算法工程师-深度学习,阿里国际数字商业集团/高德地图/虎鲸文娱集团,北京/杭州,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907800041
-阿里巴巴,算法,算法工程师-强化学习,阿里国际数字商业集团/阿里云/Token Foundry/千问事业部,北京/杭州/上海,2027届校招,2026-08-06,https://campus-talent.alibaba.com/campus/position/199907740101
-阿里巴巴,算法,算法工程师-RLHF算法研究,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908400003
-阿里巴巴,算法,算法工程师-多模态基础大模型和多模态Agent,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908360005
-阿里巴巴,算法,算法工程师-合版算法研究,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908320006
-阿里巴巴,算法,算法工程师-模型自进化,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908500004
-阿里巴巴,算法,算法工程师-AI for Engineering,Token Foundry,北京/杭州/上海,2027届校招,2026-08-05,https://campus-talent.alibaba.com/campus/position/199908360006
-阿里巴巴,算法,算法工程师-数据算法（多模态生成方向）,Token Foundry,杭州,2027届校招,2026-08-04,https://campus-talent.alibaba.com/campus/position/199908320008
-阿里巴巴,算法,算法工程师-大模型Agentic Reward System,Token Foundry,北京/杭州,2027届校招,2026-08-03,https://campus-talent.alibaba.com/campus/position/199908340004
-阿里巴巴,算法,算法工程师-基础模型预训练数据,Token Foundry,北京/杭州/上海,2027届校招,2026-08-03,https://campus-talent.alibaba.com/campus/position/199908320009
-阿里巴巴,算法,算法工程师-Agentic Coding模型训练,Token Foundry,北京/杭州/上海,2027届校招,2026-08-03,https://campus-talent.alibaba.com/campus/position/199908340005
-阿里巴巴,算法,算法工程师-强化学习模型训练,Token Foundry,北京/杭州/上海,2027届校招,2026-08-03,https://campus-talent.alibaba.com/campus/position/199908320010
-阿里巴巴,算法,算法工程师-Agent算法研究,Token Foundry,北京/杭州/上海,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199908500001
-阿里巴巴,算法,算法工程师-全模态基础大模型,Token Foundry,北京/杭州/上海,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199908460006
-阿里巴巴,算法,算法工程师-大模型可解释性,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199908020004
-阿里巴巴,算法,LLM and Multimodal Post-training-AliStar/Bravo Star,阿里国际数字商业集团,杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907820114
-阿里巴巴,算法,算法工程师-大模型预训练 (Pre-training),Token Foundry,北京/杭州/上海,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907800035
-阿里巴巴,算法,算法工程师-世界模型,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907740050
-阿里巴巴,算法,算法工程师-跨模态理解与视频生成处理（T-Star Lab）,淘天集团,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907820017
-阿里巴巴,算法,算法工程师-3D重建大模型（T-Star Lab）,淘天集团,杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907740018
-阿里巴巴,算法,算法工程师-多模态算法（音乐方向）,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907740013
-阿里巴巴,算法,算法工程师-Agent在线强化学习（T-Star Lab）,淘天集团,杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907720007
-阿里巴巴,算法,算法工程师-多语言技术探索与应用,Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199908300004
-阿里巴巴,算法,算法工程师-三维重建和生成,淘天集团/Token Foundry,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907620042
-阿里巴巴,算法,算法工程师-数字人,淘天集团,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907620034
-阿里巴巴,算法,算法工程师-视频增强与AI生成处理,淘天集团,北京/杭州,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907640031
-阿里巴巴,算法,算法工程师-AI For Science,Token Foundry,北京/杭州/上海,2027届校招,2026-07-30,https://campus-talent.alibaba.com/campus/position/199907680004
-百川智能,应用,【百川星耀计划】AI产品经理,产品,北京,2027届校招,-,https://cq6qe6bvfr6.jobs.feishu.cn/646926/position/7508660264633174282/detail
 百川智能,应用,【百川星耀计划】AI应用开发工程师,工程,北京,2027届校招,-,https://cq6qe6bvfr6.jobs.feishu.cn/646926/position/7508658568129366283/detail
-百川智能,算法,【百川星耀计划】大模型算法工程师,算法,北京,2027届校招,-,https://cq6qe6bvfr6.jobs.feishu.cn/646926/position/7290816062135503160/detail
-百度,应用,智能体算法工程师(J101017),-,北京市,2027届校招,2026-07-08,https://talent.baidu.com/jobs/detail/GRADUATE/95548098-c8d1-42b3-88ee-a6cec0d59aaf
-百度,应用,AI产品经理(J100665),-,北京市,2027届校招,2026-07-08,https://talent.baidu.com/jobs/detail/GRADUATE/cb79f6d4-b39e-4e4e-907e-d4d39d4c3f80
-百度,应用,AI测试开发工程师(J101055),-,北京市,2027届校招,2026-07-08,https://talent.baidu.com/jobs/detail/GRADUATE/f53dd4ae-d2fb-4f8b-b3b6-fb81469edc4e
-百度,算法,多模态算法工程师(J100765),-,北京市,2027届校招,2026-07-08,https://talent.baidu.com/jobs/detail/GRADUATE/ee1c72c6-bc8a-448e-952b-a48820b01870
-百度,算法,大模型算法工程师(J100728),-,北京市,2027届校招,2026-07-08,https://talent.baidu.com/jobs/detail/GRADUATE/8228ed01-5592-4f26-a406-c6581dfd8418
-华为,应用,AI Infra工程师,"ICT BG,终端BG,2012实验室,数字能源BU,云计算BU,制造部,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/杭州/北京/长沙/济南/东莞/南京/西安/成都/武汉/上海/合肥/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36384
+百度,应用,全栈开发工程师(J103964),-,深圳市,2027届校招,2026-08-03,https://talent.baidu.com/jobs/detail/GRADUATE/5ea78d8e-0f9e-40f7-898e-94861224f066
+百度,应用,AI审计专家(J103164),-,北京市,2027届校招,2026-07-24,https://talent.baidu.com/jobs/detail/GRADUATE/4e1d1238-e10f-4e03-b529-58d2268548e7
 华为,应用,AI应用工程师,"芯片与器件BU,ICT BG,终端BG,2012实验室,数字能源BU,云计算BU,制造部,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/济南/东莞/南京/西安/杭州/成都/武汉/北京/长沙/上海/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36390
-华为,应用,AI Infra研究员,"ICT BG,终端BG,2012实验室,数字能源BU,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/杭州/北京/长沙/济南/东莞/南京/西安/成都/武汉/上海/合肥/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36415
-华为,应用,AI应用研究员,"ICT BG,终端BG,2012实验室,数字能源BU,云计算BU,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/杭州/北京/长沙/济南/东莞/南京/西安/成都/武汉/上海/合肥/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36419
-华为,算法,AI模型工程师,"芯片与器件BU,ICT BG,终端BG,2012实验室,数字能源BU,云计算BU,制造部,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/杭州/北京/长沙/济南/东莞/南京/西安/成都/武汉/上海/合肥/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36383
-华为,算法,AI模型研究员,"ICT BG,终端BG,2012实验室,数字能源BU,云计算BU,制造部,质量与流程IT部,半导体业务部,智能汽车解决方案BU",苏州/杭州/北京/长沙/济南/东莞/南京/西安/成都/武汉/上海/合肥/深圳,2027届校招,-,https://career.huawei.com/cn/job-details?advertisementId=36411
-阶跃星辰,应用,27届Stepstar-大模型推理优化系统工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/4fd27b27-d29f-40a0-9ec2-9848c3f81622
-阶跃星辰,应用,27届Stepstar-大语言模型pre-train 数据算法工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/9fd48889-12c5-4613-b0f7-1f459c6340b0
-阶跃星辰,应用,27届Stepstar-大模型后训练系统工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/7ca418fb-2df5-437d-9c79-514c022f094b
-阶跃星辰,应用,27届Stepstar-大模型训练框架系统工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/64c156e3-a665-4ce9-9e47-613fe09218ec
-阶跃星辰,应用,27届Stepstar-高性能网络系统工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/dda341a8-2b55-472e-ac36-927acacb8ebe
-阶跃星辰,算法,27届Stepstar-LLM post train 算法研究员,-,北京市/上海市,2027届校招,2026-07-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/5e938ea8-dfab-4d05-8043-550393edb488
-阶跃星辰,算法,27届Stepstar-Code Agent 算法研究员,-,北京市/上海市,2027届校招,2026-07-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/6c97ac79-0156-408d-be2f-f7e2a73ba34f
-阶跃星辰,算法,27届Stepstar-大语言模型pre-train 算法研究员,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/e1b32746-3aff-47b6-bef5-7370840c3db0
-阶跃星辰,算法,27届Stepstar-大语言模型架构算法研究员,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/d8d0e0ef-09ee-4733-b643-c8606c113574
-阶跃星辰,算法,27届Stepstar-大语言模型mid-train 算法研究员,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/650e8b25-27be-4229-a757-cfc38d753893
-阶跃星辰,算法,27届Stepstar-语音大模型算法研究员/工程师,-,北京市/上海市,2027届校招,2026-06-23,https://app.mokahr.com/campus-recruitment/step/141903#/job/96558782-96c6-44b7-a9d6-8732a1a861e0
-京东,应用,技术方向-运筹大模型,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9195
-京东,应用,技术方向-AI Infra,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9210
-京东,应用,产品方向,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9216
-京东,应用,算法工程师-AI Infra,京东科技/京东零售,北京/上海,2027届校招,2026-07-23,https://campus.jd.com/#/details?id=9093
-京东,算法,技术方向-大语言模型,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9203
-京东,算法,技术方向-多模态大模型,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9201
-京东,算法,技术方向-具身智能与机器人开发,京东集团,北京,2027届校招,2026-08-04,https://campus.jd.com/#/details?id=9207
-京东,算法,算法工程师-语言大模型,京东集团/京东健康/京东科技/京东零售/京东工业/京东物流,北京/上海/深圳,2027届校招,2026-07-23,https://campus.jd.com/#/details?id=9090
-京东,算法,算法工程师-语音/音频大模型,京东集团/京东科技,北京,2027届校招,2026-07-23,https://campus.jd.com/#/details?id=9098
-京东,算法,算法工程师-多模态大模型,京东集团/京东健康/京东科技/京东零售/京东物流,北京,2027届校招,2026-07-23,https://campus.jd.com/#/details?id=9112
-科大讯飞,应用,AI产品经理 - 工程平台/方案方向(J13839),产品类,安徽省·合肥市,2027届校招,2026-08-07,https://iflytek.zhiye.com/campus/detail?jobAdId=d37a1c18-53c6-42ff-b874-eb8aae29bae8
-科大讯飞,应用,AI研究算法工程师-大模型训练/推理Infra方向(J13367),研究算法类,安徽省·合肥市/北京市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=19067469-fb46-4ca1-8faf-ad1ea85bc30e
-科大讯飞,应用,AI研究算法工程师-大模型训推框架优化方向(J13368),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=2abfe0c5-b9d0-4c59-8971-dde474e71869
-科大讯飞,应用,AI研究算法工程师-大模型预训练数据研究方向(J13369),研究算法类,安徽省·合肥市/湖北省·武汉市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=4787ae8a-781d-4b93-a9ed-595eac93a9a9
 科大讯飞,应用,Agent研发工程师-Harness方向(J13347),AI研发类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=4808a259-81bf-4523-8866-2ecb63689324
-科大讯飞,应用,AI数据工程师-基座大模型方向(J13364),资源类,安徽省·合肥市/湖北省·武汉市/陕西省·西安市/上海市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=631a6f99-4be7-4246-a30e-e7d575ec8a18
-科大讯飞,应用,大模型数据项目经理(J13404),资源类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=d7d2356c-c888-4d72-932f-b832a460eb8d
-科大讯飞,应用,AI研究算法工程师-高性能算子开发方向(J13373),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=3faf1f4c-e0d0-4a0b-967a-5cbf25f23fc2
-科大讯飞,应用,AI研究算法工程师-具身智能数据方向(J13382),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=5ca91c1e-5050-4db3-958e-23feef04c74d
-科大讯飞,应用,AI研究算法工程师-深度学习框架和平台方向(J13384),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=bfe0d4c5-0328-4f0e-9e58-dcca42965bf9
-科大讯飞,应用,AI研究算法工程师-数据方向(J13385),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=7aaa7dac-6716-41ac-ac56-1f3b953d2a87
-科大讯飞,应用,AI产品经理(J13348),产品类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=d40ffccd-0aaa-4edc-9554-98036e70e518
-科大讯飞,应用,产品经理-AI安全方向(J13400),产品类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=43457693-243f-4b83-9a09-208aebade163
-科大讯飞,应用,AI研发工程师(J13366),AI研发类,安徽省·合肥市/湖北省·武汉市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=cd5c300a-5661-409e-99f3-0fdfe7c9dca0
-科大讯飞,算法,AI研究算法工程师-AIGC方向(J13711),研究算法类,安徽省·合肥市,2027届校招,2026-08-01,https://iflytek.zhiye.com/campus/detail?jobAdId=977b6ec8-0e9e-41e0-87f5-3e9512232f18
-科大讯飞,算法,AI研究算法工程师-时序算法方向(J13714),研究算法类,安徽省·合肥市,2027届校招,2026-08-01,https://iflytek.zhiye.com/campus/detail?jobAdId=bfcc1480-2ee6-48a7-9862-0756c421fc7a
-科大讯飞,算法,AI研究算法工程师-自然语言处理方向(J13390),研究算法类,安徽省·合肥市/陕西省·西安市/广东省·广州市/北京市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=f5f072c2-be0f-4a3e-9e68-08cc5bd85fe1
-科大讯飞,算法,AI研究算法工程师-大模型预训练算法岗位(J13370),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=4c1be2a8-0026-4679-a8c0-898ac6c6361f
-科大讯飞,算法,AI研究算法工程师-多模态理解方向(J13372),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=8c9e76d1-e0b1-4937-a34e-5d56faf1344a
-科大讯飞,算法,AI研究算法工程师-多模态大模型方向(J13371),研究算法类,安徽省·合肥市/广东省·广州市/江苏省·无锡市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=acdd224f-51fc-4e05-84fb-07efa51b1618
-科大讯飞,算法,AI研究算法工程师-后训练强化学习方向(J13374),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=6c84c4a4-753e-43c2-a27c-a6784f6677ee
-科大讯飞,算法,AI研究算法工程师-后训练研究方向(J13375),研究算法类,安徽省·合肥市/湖北省·武汉市/陕西省·西安市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=9b5b2a4f-e1f2-4189-a1db-029090918efc
-科大讯飞,算法,AI研究算法工程师-具身智能大模型方向(J13380),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=348e3ed3-a7cf-426d-bda4-59a83d815a2c
-科大讯飞,算法,AI研究算法工程师-认知大模型方向(J13383),研究算法类,安徽省·合肥市/陕西省·西安市/广东省·广州市/北京市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=027e950a-9fcf-4d92-b91d-9a4a7df99a38
-科大讯飞,算法,AI研究算法工程师-语音大模型方向(J13388),研究算法类,安徽省·合肥市/陕西省·西安市/上海市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=a0184b39-19cc-4891-b4e1-0d05be144507
-科大讯飞,算法,AI研究算法工程师-智能语音方向(J13389),研究算法类,安徽省·合肥市/陕西省·西安市/上海市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=79677941-7bf2-462d-add9-dc0b755a896a
-科大讯飞,算法,AI研究算法工程师-计算机视觉方向(J13378),研究算法类,安徽省·合肥市/广东省·广州市/四川省·成都市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=884d7a31-51db-46e4-8fad-279323cf5e1a
-科大讯飞,算法,AI研究算法工程师-具身机器人交互方向(J13379),研究算法类,安徽省·合肥市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=bb022de7-48a6-4ec0-9b99-74b06258cdaf
-科大讯飞,算法,AI研究算法工程师-具身智能和机器人方向(J13381),研究算法类,江苏省·苏州市,2027届校招,2026-07-23,https://iflytek.zhiye.com/campus/detail?jobAdId=44098793-171e-404b-b73f-c6a3acaa2a5a
-快手,应用,大模型训练引擎研发工程师,-,北京,2027届校招,2026-08-14,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13824
-快手,应用,多模态训练数据质量专家-音视频方向,-,北京,2027届校招,2026-08-14,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13772
-快手,应用,AI Agent产品设计工程师-PDE,-,北京,2027届校招,2026-08-14,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13770
-快手,应用,AI调度工程师,-,北京,2027届校招,2026-08-14,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13823
-快手,应用,技术商业化PDE工程师,-,北京,2027届校招,2026-08-14,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13825
-快手,应用,AI产品经理-导购方向,-,杭州,2027届校招,2026-08-13,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13732
-快手,应用,策略产品经理-大模型数据,-,北京,2027届校招,2026-08-12,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13500
-快手,应用,大模型数据引擎工程师,-,北京,2027届校招,2026-08-12,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13457
-快手,应用,数据FDE工程师,-,北京,2027届校招,2026-08-12,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13613
-快手,应用,数据PDE工程师,-,北京,2027届校招,2026-08-12,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13614
-快手,应用,多模态大模型数据策略算法工程师,-,北京,2027届校招,2026-08-11,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13373
-快手,应用,大模型应用算法工程师-电商方向,-,杭州,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13024
-快手,应用,大模型应用算法工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13061
-快手,应用,大模型推理/训练引擎研发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13093
 快手,应用,大模型 AI Agent 开发工程师,-,杭州/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13091
-快手,应用,大模型训练平台开发工程师,-,深圳/杭州/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13180
 快手,应用,AI Agent 全栈工程师-音视频方向,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13145
-快手,应用,音视频大模型评测工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13135
-快手,应用,多模态Data Infra开发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13095
 快手,应用,大模型系统开发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13157
-快手,应用,大模型推理/训练优化工程师,-,深圳/杭州/上海/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13060
-快手,应用,多模态推理平台工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13083
-快手,应用,大模型推理优化工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13113
-快手,应用,大模型数据工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13114
-快手,应用,AIGC多模态数据系统研发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13039
-快手,应用,大模型评测工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13155
-快手,应用,平台产品经理-大模型AIGC,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13229
 快手,应用,AI应用开发工程师,-,杭州/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13150
-快手,应用,AI Infra研发工程师,-,杭州/深圳/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13048
 快手,应用,AI应用服务端开发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13115
-快手,应用,高性能GPU调度推理研发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13084
-快手,应用,混合云AI推理研发工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13043
-快手,算法,AI搜算法工程师,-,北京,2027届校招,2026-08-12,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13572
-快手,算法,AI Agent算法工程师-智能创作,-,北京/杭州,2027届校招,2026-08-11,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13374
-快手,算法,多模态理解算法研究员,-,深圳/北京,2027届校招,2026-08-11,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13406
-快手,算法,视频生成算法研究员,-,深圳/上海/北京,2027届校招,2026-08-11,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13407
-快手,算法,AIGC视觉生成算法工程师,-,杭州/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13049
-快手,算法,基础大模型算法工程师-强化学习方向,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13067
-快手,算法,大模型应用算法工程师-安全方向,-,北京/深圳,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13119
-快手,算法,大模型视频处理算法工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13022
-快手,算法,多模态大模型算法工程师,-,杭州/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13026
-快手,算法,多模态大模型算法工程师-AIGC,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13096
-快手,算法,多模态理解工程师-视觉生成,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13063
-快手,算法,音频/音乐AIGC算法工程师,-,北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13134
-快手,算法,视频生成强化学习算法工程师,-,深圳/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13140
-快手,算法,多模态理解与生成统一架构核心研究员,-,深圳/上海/北京,2027届校招,2026-08-09,https://campus.kuaishou.cn/recruit/campus/e/#/campus/job-info/13045
-莉莉丝,算法,【2027秋招】算法工程师（AI NPC方向）,-,上海,2027届校招,2026-08-10,https://lilithgames.jobs.feishu.cn/campus/position/7672325843376671030/detail
 蚂蚁集团,应用,FDE AI训练师,-,北京/上海/杭州/成都,2027届校招,2026-08-13,https://talent.antgroup.com/campus-position?positionId=260813011411357
 蚂蚁集团,应用,智能体与大模型应用工程,-,北京/上海/杭州/广州/深圳/重庆/成都,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011006030
-蚂蚁集团,应用,大模型医学评测,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011015453
 蚂蚁集团,应用,智能体与大模型应用工程（金融研究方向）,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011000113
 蚂蚁集团,应用,Agent基础设施工程,-,北京/上海,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010986440
-蚂蚁集团,应用,大模型数据构建与优化,-,北京/杭州/成都,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010984490
-蚂蚁集团,应用,模型基准和评估,-,北京/上海/杭州/重庆,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010993684
-蚂蚁集团,应用,AI基础设施工程,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011015451
-蚂蚁集团,应用,AI产品经理,-,上海/杭州/重庆,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011010330
-蚂蚁集团,应用,AI 解决方案工程师,-,上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010993691
-蚂蚁集团,应用,AI产品经理-智能金融方向,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010991747
-蚂蚁集团,应用,AI产品工程师,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010990540
-蚂蚁集团,应用,AI数据与检索基础设施工程,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010984483
-蚂蚁集团,应用,策略运营,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010986437
-蚂蚁集团,应用,产品解决方案,-,杭州/深圳/中国香港,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010984484
-蚂蚁集团,算法,多模态理解和生成算法,-,北京/上海/杭州/重庆,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011018326
-蚂蚁集团,算法,大模型智能体优化算法,-,北京/上海/杭州/广州/重庆,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010991745
-蚂蚁集团,算法,基础语言大模型预训练,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011011554
-蚂蚁集团,算法,具身智能大模型,-,北京,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011008741
-蚂蚁集团,算法,大模型后训练优化,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011007633
-蚂蚁集团,算法,大模型安全与对齐,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721011002926
-蚂蚁集团,算法,基础多模态大模型训练,-,北京/上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010997125
-蚂蚁集团,算法,大模型算法与系统协同优化,-,上海/杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010993688
-蚂蚁集团,算法,基础与前沿模型研究,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010990539
-蚂蚁集团,算法,算法工程师-语音交互,-,杭州,2027届校招,2026-07-22,https://talent.antgroup.com/campus-position?positionId=260721010984486
-美团,应用,大模型应用算法工程师,-,北京市/上海市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697320023&highlightType=campus
-美团,应用,AI大模型后台开发,-,北京市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4694998440&highlightType=campus
-美团,应用,大模型推理引擎研发工程师,-,北京市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4695094295&highlightType=campus
 美团,应用,AI Agent开发工程师,-,北京市/上海市/成都市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697317646&highlightType=campus
-美团,应用,AI测试开发工程师,-,北京市/上海市/成都市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4694853738&highlightType=campus
-美团,应用,AI Infra / 推理系统工程师,-,北京市/上海市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697320030&highlightType=campus
 美团,应用,AI全栈工程师,-,北京市/上海市/成都市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697320043&highlightType=campus
+美团,应用,AI后端开发工程师,-,北京市/上海市/成都市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697280304&highlightType=campus
 美团,应用,AI应用开发工程师,-,北京市/上海市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4694862735&highlightType=campus
-美团,应用,AI Recruiting Builder,-,成都市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4695078142&highlightType=campus
-美团,应用,廉正AI运营岗,-,北京市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4695038327&highlightType=campus
-美团,应用,AI产品Builder,-,北京市/上海市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4696304163&highlightType=campus
-美团,应用,AI产品经理岗,-,北京市/上海市/成都市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697309845&highlightType=campus
-美团,应用,AI产品经理,-,北京市/上海市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=3524979618&highlightType=campus
-美团,应用,机器学习引擎工程师,-,北京市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697301908&highlightType=campus
-美团,算法,大模型智能体算法工程师,-,北京市/上海市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697304732&highlightType=campus
-美团,算法,大模型算法工程师,-,北京市/上海市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4694958524&highlightType=campus
-美团,算法,多模态生成大模型算法工程师,-,北京市/上海市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697302797&highlightType=campus
-美团,算法,大模型算法工程师（强化方向）,-,北京市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697275345&highlightType=campus
-美团,算法,自然语言处理算法工程师,-,成都市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697274556&highlightType=campus
-美团,算法,具身智能算法工程师,-,北京市/深圳市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697310753&highlightType=campus
-美团,算法,安全AI算法工程师,-,北京市/上海市,2027届校招,-,https://zhaopin.meituan.com/web/position/detail?jobUnionId=4697283165&highlightType=campus
 米哈游,应用,基础研究-游戏AI研发工程师（Agent方向）,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8925
-米哈游,应用,基础研究-3D大模型数据工程师,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9115
-米哈游,应用,大模型-推理平台研发工程师,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9232
-米哈游,应用,大模型产品经理（AI基建）,产品策划类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9234
-米哈游,应用,大模型-LLM Evaluation算法研究员,程序&技术类,北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8957
-米哈游,应用,大模型-大模型推理系统工程师,程序&技术类,北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8904
-米哈游,应用,大模型-大模型训练系统工程师,程序&技术类,北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8905
-米哈游,应用,大模型-LLM数据处理,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9225
 米哈游,应用,平台研发-后端开发工程师（AI 应用方向）,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9250
-米哈游,应用,AI产品经理,产品策划类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9078
-米哈游,应用,平台研发-AI后端开发工程师,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8984
-米哈游,算法,基础研究-AIGC算法研发工程师（AIGC Agent / 多模态 / 视觉 / 3D / 动作 / AI工具方向）,程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8924
-米哈游,算法,基础研究-Agent 算法研究员,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8919
-米哈游,算法,基础研究-LLM Post-train 算法研究员,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8918
-米哈游,算法,基础研究-图形算法研究员 （AI3D绑骨蒙皮大模型),程序&技术类,上海,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/9116
-米哈游,算法,大模型-Code Agentic算法研究员,程序&技术类,北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8930
-米哈游,算法,大模型-LLM预训练数据算法研究员（Agentic Models）,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8935
-米哈游,算法,大模型-LLM预训练数据算法研究员,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8934
-米哈游,算法,大模型-多模态算法工程师（audio方向）,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8933
-米哈游,算法,大模型-通用音频理解大模型研究员,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8932
-米哈游,算法,大模型-LLM Pretrain算法研究员,程序&技术类,上海/北京,2027届校招,-,https://jobs.mihoyo.com/#/campus/position/8903
-商汤,应用,【27届校招】Agent Harness 研究员/算法工程师,-,北京/深圳/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659701067331930410/detail
-商汤,应用,【27届校招】大模型Agentic算法工程师,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659700034489305353/detail
-商汤,应用,【27届校招】大模型推理系统研究员,-,北京/深圳/上海/成都,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659698294603925779/detail
-商汤,应用,【27届校招】AGI智能体研究员,-,北京,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659697948422867243/detail
-商汤,应用,【27届校招】模型推理平台开发工程师（后端）,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659695826600692009/detail
-商汤,应用,【27届校招】模型推理平台开发工程师（全栈）,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659695523616803118/detail
-商汤,应用,【27届校招】AI大模型产品经理,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659692882084956454/detail
-商汤,应用,【27届校招】大模型应用研发研究员,-,北京/深圳/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659692029673785643/detail
-商汤,应用,【27届校招】大模型推理优化工程师-大装置,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659680814178847030/detail
-商汤,应用,【27届校招】模型推理平台开发工程师-大装置,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659662079872682246/detail
-商汤,应用,【27届校招】大模型 Agent 算法研究员-大装置,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659624252253555007/detail
+商汤,应用,【27届校招】AI开发工程师-SCG,-,上海,2027届校招,2026-07-08,https://hr-jobs.sensetime.com/edu/position/7660086799842216230/detail
+商汤,应用,【27届校招】AI开发工程师-SCG,-,深圳,2027届校招,2026-07-08,https://hr-jobs.sensetime.com/edu/position/7660082828068030726/detail
+商汤,应用,【27届校招】AI开发工程师-SCG,-,武汉,2027届校招,2026-07-08,https://hr-jobs.sensetime.com/edu/position/7660080272546236723/detail
 商汤,应用,【27届校招】Agent全栈开发工程师-大装置,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659616422645369139/detail
-商汤,应用,【27届校招】大模型训练推理研发工程师-大装置,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659598774713026822/detail
-商汤,应用,【27届校招】推理Infra开发工程师-大装置,-,北京/杭州,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659663872567331135/detail
-商汤,应用,【27届校招】TokenPlan平台产品运营,-,北京/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659692493729958195/detail
-商汤,应用,【27届校招】Token服务平台产品经理-大装置,-,北京,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659597712514550054/detail
 商汤,应用,【27届校招】Agent开发工程师,-,北京/上海/深圳,2027届校招,2026-07-06,https://hr-jobs.sensetime.com/edu/position/7659330461617178916/detail
 商汤,应用,【27届校招】智能体研发-亚太业务事业群,-,深圳,2027届校招,2026-07-06,https://hr-jobs.sensetime.com/edu/position/7659253281403078975/detail
-商汤,算法,【27届校招】图像视频生成研究员,-,北京/深圳/上海/新界/新加坡,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659701667835087147/detail
-商汤,算法,【27届校招】多模态基模型研究员,-,北京/深圳/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659697063102269732/detail
-商汤,算法,【27届校招】后训练（数据/算法）研究员,-,北京/深圳/上海,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659692156010350899/detail
-商汤,算法,【27届校招】大模型强化学习系统研究员,-,北京/深圳/上海/成都,2027届校招,2026-07-07,https://hr-jobs.sensetime.com/edu/position/7659692156009695539/detail
-商汤,算法,【27届校招】大模型算法研究员-亚太业务事业群,-,深圳,2027届校招,2026-07-06,https://hr-jobs.sensetime.com/edu/position/7659253210259949851/detail
 腾讯,应用,Agent开发工程师,CDG CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州/成都,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707395466077184
 腾讯,应用,AI全栈工程师,CDG CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州/成都/杭州,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707398326592512
 腾讯,应用,AI应用工程师,CDG CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州/成都,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707395466077185
-腾讯,应用,AI产品经理,CDG CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州,2027届校招,-,https://join.qq.com/post_detail.html?postid=1283126456553382912
 腾讯,应用,财经线培训生-AI应用开发,S2,深圳总部,2027届校招,-,https://join.qq.com/post_detail.html?postid=1284634302709277696
-腾讯,应用,技术研究-高性能计算方向,CDG CSIG TEG WXG,深圳总部/北京/上海/广州/成都/合肥,2027届校招,-,https://join.qq.com/post_detail.html?postid=1283126460798018560
-腾讯,算法,算法-多模态方向,CDG CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707403120699393
-腾讯,算法,算法-自然语言处理方向,CSIG IEG PCG TEG WXG S1,深圳总部/北京/上海/广州/成都,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707405033302016
-腾讯,算法,"Senior Researcher, Speech Synthesis and Multimodal LLM",IEG,Singapore-CapitaSky,2027届校招,-,https://tencent.wd1.myworkdayjobs.com/Tencent_Careers/job/Singapore-CapitaSky/Senior-Researcher--Speech-Synthesis-and-Multimodal-LLM_R107809-1
-腾讯,算法,AI算法工程,CSIG IEG PCG TEG WXG,深圳总部/北京/上海/广州,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707395466077186
-腾讯,算法,算法-多媒体处理方向,CSIG IEG TEG WXG,深圳总部/北京/上海/广州,2027届校招,-,https://join.qq.com/post_detail.html?postid=1282707403120699392
 腾讯音乐,应用,Agent开发工程师,集团部门，QQ音乐，酷狗音乐，长音频，内容,深圳市/北京市/广州市,2027届校招,2天前,https://join.tencentmusic.com/campus/post-details?id=15038
 腾讯音乐,应用,AI全栈工程师,集团部门，QQ音乐，酷狗音乐，长音频，内容,深圳市/北京市/广州市,2027届校招,2天前,https://join.tencentmusic.com/campus/post-details?id=15037
 腾讯音乐,应用,AI应用工程师,集团部门，QQ音乐，酷狗音乐，长音频，内容,深圳市/北京市/广州市,2027届校招,2天前,https://join.tencentmusic.com/campus/post-details?id=15039
-腾讯音乐,算法,技术研究-自然语言处理方向,QQ音乐，酷狗音乐,深圳市/广州市,2027届校招,2025-08-06,https://join.tencentmusic.com/campus/post-details?id=11728
-腾讯音乐,算法,AI算法工程,集团部门，QQ音乐，酷狗音乐，长音频，内容,深圳市/北京市/广州市,2027届校招,2天前,https://join.tencentmusic.com/campus/post-details?id=15040
 网易互娱,应用,AI Agent工程师（游戏研发方向）,游戏程序,杭州/上海/广州,2027届校招,2026-08-06,https://campus.game.163.com/app/detail/index?id=4732&projectId=102
-网易互娱,应用,AI数据工程师,技术,广州,2027届校招,2026-07-30,https://campus.game.163.com/app/detail/index?id=4712&projectId=102
 网易互娱,应用,AI Agent工程师（引擎方向）,技术,杭州/广州,2027届校招,2026-07-27,https://campus.game.163.com/app/detail/index?id=4755&projectId=102
 网易互娱,应用,AI应用工程师,技术,广州,2027届校招,2026-07-27,https://campus.game.163.com/app/detail/index?id=4756&projectId=102
-网易互娱,应用,大模型产品经理,产品,广州,2027届校招,2026-07-20,https://campus.game.163.com/app/detail/index?id=4711&projectId=102
-网易互娱,应用,游戏设计师（AI+策划）,游戏策划,杭州/上海/广州,2027届校招,2026-07-20,https://campus.game.163.com/app/detail/index?id=4722&projectId=102
-网易互娱,算法,AI研究工程师,人工智能,杭州/广州,2027届校招,2026-08-06,https://campus.game.163.com/app/detail/index?id=4764&projectId=102
-网易互娱,算法,多模态大模型算法工程师,人工智能,广州,2027届校招,2026-07-30,https://campus.game.163.com/app/detail/index?id=4707&projectId=102
-网易互娱,算法,大语言模型算法工程师,人工智能,广州,2027届校招,2026-07-20,https://campus.game.163.com/app/detail/index?id=4708&projectId=102
-网易雷火,应用,智能体研发工程师（多模态方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4770&projectId=77
-网易雷火,应用,游戏AI算法工程师（用户个性化Agent方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4689&projectId=77
-网易雷火,应用,人工智能算法工程师（LLM Agent方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4692&projectId=77
-网易雷火,应用,游戏AI产品经理,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4702&projectId=77
-网易雷火,应用,虚拟世界架构师（游戏任务策划）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=3746&projectId=77
-网易雷火,算法,人工智能算法工程师（Agent智能体与强化学习方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4691&projectId=77
-网易雷火,算法,人工智能算法工程师（游戏AI Agent方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4701&projectId=77
-网易雷火,算法,游戏Harness算法工程师,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=3758&projectId=77
-网易雷火,算法,大模型算法工程师（智能NPC方向）,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4694&projectId=77
-网易雷火,算法,语音交互算法工程师,雷火事业群,杭州,2027届校招,-,https://campus.163.com/app/detail/index?id=4690&projectId=77
-小米,应用,算法部署工程师-生态链,生态链,武汉,2027届校招,2026-08-12,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671292350148888870/detail
 小米,应用,Agent Harness 研发工程师,生态链,武汉/北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671284471720020243/detail
 小米,应用,Agent工程师,生态链,武汉/北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670928909127223588/detail
-小米,应用,AI Agent产品经理,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670928765471852843/detail
-小米,应用,大模型推理引擎开发工程师（高性能算子）,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923305181301046/detail
-小米,应用,大模型推理框架开发工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924463541782810/detail
-小米,应用,大模型训练框架开发工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924380851259694/detail
 小米,应用,AI Agent开发工程师-汽车,生态链,南京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670914994071046451/detail
 小米,应用,OS软件工程师（AI Agent方向）,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671295351281731850/detail
 小米,应用,AI Agent开发工程师-Java方向,生态链,北京/深圳,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670885684991281471/detail
-小米,应用,MiMo-大模型数据架构工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924300748146970/detail
-小米,应用,AI数据产品经理,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671290609248192795/detail
-小米,应用,AI研发工程师-智能风控方向,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671289294427113737/detail
-小米,应用,算法架构工程师 - 训练框架方向,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923461254416646/detail
-小米,应用,AI算力工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923335837108499/detail
-小米,应用,AI软件测试开发工程师,生态链,北京/上海,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923965112862982/detail
 小米,应用,AI属性工程师-汽车,生态链,南京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670918768222570803/detail
-小米,应用,AI 模型加速优化算法工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670907317923252490/detail
-小米,应用,模型优化工程师,生态链,上海,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670910643553863962/detail
 小米,应用,AIOS 开发工程师,生态链,南京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670892428991269146/detail
 小米,应用,AI研发工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670891807970576686/detail
-小米,应用,AI Native产品经理,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670891616316311858/detail
-小米,应用,AI软件工程师,生态链,北京/西安/上海,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670893035119249690/detail
-小米,应用,服务端工程师,生态链,新加坡,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670935018218932543/detail
 小米,应用,基础架构研发工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671289721684068650/detail
-小米,应用,安全策略产品经理,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924090912065811/detail
-小米,应用,高性能网络研发工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923392069323049/detail
-小米,应用,服务端工程师,生态链,武汉,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923490631239974/detail
-小米,应用,自动化测试架构开发工程师-汽车,生态链,南京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670918384100788507/detail
-小米,应用,逆向分析工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670892129900644646/detail
-小米,应用,MiMo-大模型爬虫工程师,生态链,北京,2027届校招,2026-07-31,https://xiaomi.jobs.f.mioffice.cn/campus/position/7668581703943047433/detail
-小米,算法,大模型agent算法工程师,生态链,北京,2027届校招,2026-08-13,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924118350465321/detail
-小米,算法,AI Agent算法工程师,生态链,上海,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671129633626540331/detail
-小米,算法,多模态算法工程师,生态链,武汉,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671290865545824550/detail
-小米,算法,大模型算法工程师-生态链,生态链,武汉,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671290581923383615/detail
-小米,算法,视觉理解大模型算法工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923980060707115/detail
-小米,算法,视觉生成大模型算法工程师,生态链,武汉,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923868647278854/detail
-小米,算法,大模型智能体算法工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923797172586795/detail
-小米,算法,智能座舱大模型算法工程师-汽车,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924233392572735/detail
-小米,算法,大模型算法工程师-Data Agent方向,生态链,武汉,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670923368716011830/detail
-小米,算法,多模态大模型算法工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670891732025067803/detail
-小米,算法,算法工程师（大模型算法/深度学习）,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670891616315869490/detail
-小米,算法,大语言模型算法工程师,生态链,武汉/北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924160037751082/detail
-小米,算法,语音生成算法工程师,生态链,北京,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7670924032342345993/detail
-小米,算法,视觉算法工程师-人像,生态链,上海,2027届校招,2026-08-11,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671295054066354478/detail
-小米,算法,AI算法工程师-AICoding/Agents方向,生态链,武汉/北京,2027届校招,2026-08-07,https://xiaomi.jobs.f.mioffice.cn/campus/position/7671291137243629878/detail
-小米,算法,大模型推理增强研究员,生态链,北京,2027届校招,2026-07-31,https://xiaomi.jobs.f.mioffice.cn/campus/position/7668582520224844038/detail
-鹰角网络,算法,AI算法开发-语音生成方向,程序技术类,-,2027届校招,2026-08-14,https://jobs.hypergryph.com/campus_apply/hypergryph/26326#/job/32dd53ce-9b73-4438-ab37-a617f286d875
-鹰角网络,算法,AI算法开发-大语言模型方向,程序技术类,上海市,2027届校招,2026-07-31,https://jobs.hypergryph.com/campus_apply/hypergryph/26326#/job/bc4de262-29a0-4d9b-bb68-6684dd2b1b95
-月之暗面,应用,【校招】LLM推理优化工程师,-,北京市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/d5c86bcc-3d38-4e85-8161-01c9f3fdce49
-月之暗面,应用,【校招】训练框架工程师,-,北京市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/5394cb50-a207-4504-896d-ea1b33c1455b
-月之暗面,应用,【校招】推理框架工程师,-,上海市/北京市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/c0afdc4a-1303-4467-b377-9c3eda312845
-月之暗面,应用,【校招】高性能计算工程师,-,上海市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/fc66dea2-c95f-4594-8eb9-06dfc181e28a
-月之暗面,应用,【校招】RL Infra,-,北京市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/6a61db18-b84b-4ea8-a696-c7d6e175cf0e
-月之暗面,算法,【校招】大模型算法研究员/工程师（预训练）,-,北京市,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/e3a6bf00-f9bd-4daa-a03a-f965220c6bf1
-月之暗面,算法,Research Scientist / Engineer – Agentic RL,-,-,2027届校招,2025-07-15,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/5fd59e02-c6f7-4673-8e4d-723d03b12710
-月之暗面,算法,Kimi Post-Training Algorithm Researcher/Engineer (Code),-,-,2027届校招,2025-07-15,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/8bcd1241-2e42-4f70-8b9c-3ab197119d61
-月之暗面,算法,强化学习-大模型算法工程师/研究员（RL方向 校招）,-,-,2027届校招,2025-04-14,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/8bb1d380-465f-4e21-8d9f-4cd37617d3a3
-智谱,应用,27届校招 GLM-Code Agent算法工程师,数据工程团队,北京市,2027届校招,2026-07-28,https://app.mokahr.com/campus-recruitment/zphz/148984#/job/124aa3c6-e4a8-4e7d-a63b-ec8b915611a8
-智谱,算法,Trading Agent 后训练算法工程师,评测团队,-,2027届校招,2026-08-14,https://app.mokahr.com/campus-recruitment/zphz/148984#/job/9f1b5a96-d010-4625-8738-ddfb1cb5f9ca
-智谱,算法,27届校招-大模型算法（预训练数据研究）,数据工程团队,北京市,2027届校招,2026-03-26,https://app.mokahr.com/campus-recruitment/zphz/148984#/job/61b9c710-b1a0-4078-bc86-515646a97271
-字节跳动,应用,机器学习系统调度研发工程师 - 火山方舟,-,杭州/北京/上海,2027届校招,2026-08-11,https://jobs.bytedance.com/campus/position/7672633183888525621/detail
-字节跳动,应用,机器学习平台研发工程师 - Data AML,-,北京/上海,2027届校招,2026-08-06,https://jobs.bytedance.com/campus/position/7670812949539883317/detail
-字节跳动,应用,大模型Agent Infra工程师 - 模型数据工程,-,北京/上海,2027届校招,2026-08-04,https://jobs.bytedance.com/campus/position/7670043468333746485/detail
-字节跳动,应用,大模型推理系统工程师 - 火山方舟,-,杭州/北京/上海,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669717661270608181/detail
+月之暗面,应用,校招研发：Backend Developer (Golang),-,北京市,2027届校招,2025-07-23,https://app.mokahr.com/campus-recruitment/moonshot/148507#/job/6660804b-a448-495d-bcb3-42d36d8df2f8
 字节跳动,应用,Agent基础系统研发工程师 - 火山方舟,-,上海/北京/杭州/深圳,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669725958044518661/detail
-字节跳动,应用,大模型应用开发工程师 - 风控,-,深圳/北京,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669740035771582773/detail
-字节跳动,应用,大模型应用算法研发工程师 - 隐私和数据保护办公室,-,上海,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669663726564673845/detail
-字节跳动,应用,机器学习训练框架研发工程师 - Data AML,-,杭州/北京/上海,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669729911842883893/detail
-字节跳动,应用,机器学习数据系统工程师 - Data AML,-,北京/上海/杭州,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669708613165812021/detail
 字节跳动,应用,Agent开发工程师 - AI Platform,-,上海/北京,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667885791859837237/detail
 字节跳动,应用,AI应用工程师（Agent方向） - 抖音直播,-,深圳/北京,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667851701248739637/detail
-字节跳动,应用,抖音大模型应用策略 - 抖音社区治理,-,北京/上海,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667905030280415493/detail
 字节跳动,应用,大模型应用开发工程师（AI Coding方向） - AI Platform,-,上海/杭州,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667887564768643333/detail
-字节跳动,应用,AI产品经理（AIGC治理方向） - TikTok,-,上海,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667853186406926597/detail
 字节跳动,应用,AI应用开发工程师 - AI Platform,-,深圳/上海,2027届校招,2026-07-29,https://jobs.bytedance.com/campus/position/7667953284506077445/detail
 字节跳动,应用,AI应用工程师（Agent方向） - 抖音直播,-,深圳/北京/广州,2027届校招,2026-07-27,https://jobs.bytedance.com/campus/position/7667137498080512261/detail
 字节跳动,应用,LLM Agent开发工程师 - TRAE,-,北京/上海/深圳/杭州,2027届校招,2026-07-27,https://jobs.bytedance.com/campus/position/7667152802128922885/detail
-字节跳动,应用,后端开发工程师（Agent/LLM） - 抖音用户产品,-,北京/上海,2027届校招,2026-07-20,https://jobs.bytedance.com/campus/position/7664511141422893365/detail
-字节跳动,应用,基于LLM的软件缺陷检测技术的探索和研究-质量技术,-,深圳,2027届校招,2026-04-15,https://jobs.bytedance.com/campus/position/7628832403796543749/detail
-字节跳动,应用,基于LLM的软件缺陷检测技术的探索和研究-质量技术,-,北京,2027届校招,2026-04-15,https://jobs.bytedance.com/campus/position/7628831453627959605/detail
-字节跳动,应用,大模型赋能交易与商业场景的技术创新及落地实践研究（Agent）-Commercial AI,-,北京,2027届校招,2026-04-14,https://jobs.bytedance.com/campus/position/7628612570617825589/detail
-字节跳动,应用,大模型驱动的内容生产与分发：IP跨体裁生成与LLM推荐 - 番茄,-,上海/杭州/北京/深圳,2027届校招,2026-04-14,https://jobs.bytedance.com/campus/position/7628623984851552517/detail
-字节跳动,应用,多模态评测算法工程师-Seed大模型人才校招,-,北京,2027届校招,2026-03-28,https://jobs.bytedance.com/campus/position/7622204336257534261/detail
-字节跳动,算法,大模型算法研究员 - 火山方舟,-,北京/深圳,2027届校招,2026-08-13,https://jobs.bytedance.com/campus/position/7673509678010108213/detail
-字节跳动,算法,大模型安全训练 - 内容质量与数据服务平台,-,成都,2027届校招,2026-08-06,https://jobs.bytedance.com/campus/position/7670743700485949749/detail
-字节跳动,算法,广告场景下的生成式搜广推大模型技术研究 - Global Ads Infra,-,北京/上海,2027届校招,2026-08-05,https://jobs.bytedance.com/campus/position/7670380487499761925/detail
-字节跳动,算法,游戏算法工程师（强化学习方向） - AIGC,-,杭州,2027届校招,2026-08-03,https://jobs.bytedance.com/campus/position/7669716946867374389/detail
-字节跳动,算法,多模态大模型算法工程师 - 搜索,-,北京/上海/杭州,2027届校招,2026-07-31,https://jobs.bytedance.com/campus/position/7668567141327784197/detail
-字节跳动,算法,AIGC视频生成算法工程师 - 火山方舟,-,上海/北京/深圳/杭州,2027届校招,2026-07-31,https://jobs.bytedance.com/campus/position/7668633107578997045/detail
-字节跳动,算法,豆包大模型语音合成算法工程师 - Data语音,-,上海/杭州/北京/深圳,2027届校招,2026-07-31,https://jobs.bytedance.com/campus/position/7668626837901609221/detail
-字节跳动,算法,AIGC图像生成算法工程师 - Data AML,-,上海/北京/深圳/杭州,2027届校招,2026-07-31,https://jobs.bytedance.com/campus/position/7668634491095009541/detail
-字节跳动,算法,AIGC图像生成算法工程师 - 火山方舟,-,上海/北京/深圳/杭州,2027届校招,2026-07-31,https://jobs.bytedance.com/campus/position/7668634222367312133/detail
-字节跳动,算法,大模型算法工程师（企业知识与智能体方向） - 飞书AI,-,上海,2027届校招,2026-07-30,https://jobs.bytedance.com/campus/position/7668276850988566837/detail
-字节跳动,算法,AIGC视觉生成算法工程师 - TikTok Shop,-,上海/杭州/北京,2027届校招,2026-07-28,https://jobs.bytedance.com/campus/position/7667579581055043893/detail
-字节跳动,算法,多模态理解生成强化学习研究员-Seed大模型人才校招,-,上海,2027届校招,2026-03-28,https://jobs.bytedance.com/campus/position/7622202605502581045/detail
-字节跳动,算法,多模态理解生成强化学习研究员-Seed大模型人才校招,-,北京,2027届校招,2026-03-28,https://jobs.bytedance.com/campus/position/7622201889060440325/detail
-字节跳动,算法,多模态与世界模型算法研究员-Seed大模型人才校招,-,上海,2027届校招,2026-03-28,https://jobs.bytedance.com/campus/position/7622200663678388533/detail
-DeepSeek,应用,Code Agent 数据工程师,-,北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/a4ad8628-286e-4395-ac3e-b8117ac695c6
-DeepSeek,应用,通用Agent数据产品经理（办公/生活/搜索）,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/bdffaaf8-5d88-4aa5-9869-8ab76fcd862a
-DeepSeek,应用,大模型训练/推理框架工程师,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/43f8551a-4235-4d5e-a9a7-44386cd79795
-DeepSeek,应用,服务端开发工程师（大模型研究中台/线上核心服务/数据仓库）,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/2eb2e75d-29f3-47b5-bb10-39f12547d398
-DeepSeek,应用,预训练数据工程师,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/8a4c2868-599d-40db-be4d-ab58eec5d7e1
 DeepSeek,应用,Agent Harness 团队,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/8d40c764-d2b2-49b1-826c-e3f2adb75c01
-DeepSeek,应用,Agent Infra 研发工程师,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/bae809fb-1978-4401-b209-34067b26569d
-DeepSeek,应用,AI创作数据产品经理,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/0238c1b1-7f2d-4b53-84da-581127a62954
-DeepSeek,应用,AI 产品经理,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/e8f2004c-6599-42cd-b587-176ffc3ff1a3
-DeepSeek,应用,AI 搜索算法 / 架构工程师,-,北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/1df4597d-6039-4392-9954-0df72510f415
-DeepSeek,应用,情感智能数据产品经理,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/b8e62d9e-5cfb-4f24-bb6b-549bf45e1ee0
-DeepSeek,应用,专业领域数据产品经理（小语种、医学法律等学科）,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/141a78cd-784f-4139-9b72-8046afeec4e4
-DeepSeek,应用,超算集群研发工程师,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/cdccf456-207f-4ea0-9fdd-c30a5ce42d5b
-DeepSeek,应用,高性能分布式存储工程师,-,浙江,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/a7355097-fd57-4219-99a5-8963745d362f
-DeepSeek,应用,高性能算子/通信/编译器工程师,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/aed2a32c-189f-4338-b901-9b45d2b7edfd
-DeepSeek,应用,Agent Harness 产品经理,-,浙江/北京市,社招(无校招批次),2026-05-14,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/54f386a9-913b-4626-9bf4-e1709b62fcda
-DeepSeek,算法,多模态理解（数据/算法）研究员,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/7dcd6fde-84f1-4deb-890c-f1f275df0efc
-DeepSeek,算法,后训练（数据/算法）研究员,-,浙江/北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/5d75f4cd-f626-4f73-80c1-e53b2073de76
-DeepSeek,算法,预训练（数据/算法）研究员,-,北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/25dcb4d9-d250-43ce-8f56-159ddba47c10
-DeepSeek,算法,Frontier（持续学习/自进化/新范式）研究员,-,北京市,社招(无校招批次),2026-06-25,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/c7076ca9-558c-4ec3-804b-f21bdfc6135c
-DeepSeek,算法,深度学习研发工程师,-,北京市,社招(无校招批次),2021-12-28,https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/01416da2-3c8a-4a20-bbb3-1c925d0facf1
-MiniMax,应用(系统),系统研发工程师- AI infra-2027届,-,北京/上海,2027届校园招聘(正式),2026-07-06,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7659321008591259946/detail
-MiniMax,应用,大模型数据链路工程师-2027届,-,北京/上海,2027届校园招聘(正式),2026-07-02,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7657847492860037414/detail
-MiniMax,应用,MaaS 平台研发工程师-2027届,-,北京/上海,2027届校园招聘(正式),2026-07-02,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7657846664309229867/detail
-MiniMax,应用(系统),机器学习系统研发工程师-2027届,-,上海/北京,2027届校园招聘(正式),2026-06-23,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7654500111376156964/detail
-MiniMax,应用(产品),AI产品市场营销,-,上海,2027届校园招聘(正式),2026-05-07,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7637046296842504498/detail
-MiniMax,算法,视频训练研发工程师-2027届,-,北京/上海,2027届校园招聘(正式),2026-07-02,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7657843944982956297/detail
-MiniMax,算法,AI推理框架工程师-2027届,-,北京/上海,2027届校园招聘(正式),2026-04-27,https://vrfi1sk8a0.jobs.feishu.cn/379481/position/7633405814624373030/detail
-OPPO,应用,高级AI研究员（内容生成推荐智能体）-博士,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1745
-OPPO,应用,高级AI研究员（智能体记忆和检索）-博士,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1746
-OPPO,应用,高级AI研究员（AI多模态智能体）-博士,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1741
-OPPO,应用,高级AI研究员（AI智能体）-博士,-,上海市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1743
 OPPO,应用,AI Agent 研发工程师（研发效能方向）,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1850
 OPPO,应用,AI工程师（AI Agent方向）,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1821
-OPPO,应用,AI研究员（内容生成推荐智能体）,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1812
-OPPO,应用,算法工程师（大模型/智能体方向）,-,成都市/北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1799
-OPPO,应用,AI研究员（AI多模态智能体）,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1808
-OPPO,应用,高级算法测试开发工程师-博士,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1739
-OPPO,应用,AI工程师（AI Infra方向）,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1824
-OPPO,应用,AI系统工程师（AI工程化方向）,-,深圳市/南京市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1843
 OPPO,应用,IT开发工程师（AI应用方向）,-,东莞市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1807
-OPPO,应用,互联网产品经理（AI方向）,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1825
-OPPO,应用,算法测试开发工程师,-,成都市/深圳市/东莞市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1758
-OPPO,应用,AI研究员（推理加速）,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1793
-OPPO,应用,AI系统工程师,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1845
-OPPO,应用,AI工程师（AI应用方向）,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1819
-OPPO,应用,应用工程师,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1847
-OPPO,应用,应用开发工程师,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1784
 OPPO,应用,全栈开发工程师,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1810
-OPPO,应用,后端工程师,-,成都市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1852
-OPPO,应用,深度学习工程师,-,南京市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1773
-OPPO,算法,高级NLP算法工程师（预训练模型及轻量化方向）-博士,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1740
-OPPO,算法,高级多模态算法工程师-博士,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1751
-OPPO,算法,高级大模型算法工程师-博士,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1744
-OPPO,算法,高级多模态算法工程师（理解方向）-博士,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1748
-OPPO,算法,多模态算法工程师（理解方向）,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1817
-OPPO,算法,AIGC算法工程师（生成方向）,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1846
-OPPO,算法,NLP算法工程师（预训练模型及轻量化方向）,-,北京市/深圳市/上海市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1805
-OPPO,算法,多模态算法工程师,-,北京市/深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1778
-OPPO,算法,大模型算法工程师,-,深圳市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1820
-OPPO,算法,NLP算法工程师（大语言模型方向）,-,上海市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1795
-OPPO,算法,语音算法工程师,-,北京市,2027届校招,2026-07-15,https://careers.oppo.com/university/oppo/campus/post/1797

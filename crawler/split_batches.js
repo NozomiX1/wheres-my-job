@@ -8,16 +8,21 @@ const SIZE = parseInt(process.argv[3] || '20', 10);
 const FULL = process.argv.includes('--full');
 if (!KEY) { console.log('用法: node split_batches.js <siteKey> [batchSize] [--full]'); process.exit(1); }
 
-const src = path.join(__dirname, 'out', KEY + '_recall.json');
+// 窄过滤优先：存在 out/<key>_narrow.json 时用窄集切批，否则回退全量召回
+let src = path.join(__dirname, 'out', KEY + '_narrow.json');
+if (!fs.existsSync(src)) src = path.join(__dirname, 'out', KEY + '_recall.json');
 if (!fs.existsSync(src)) { console.log('无召回文件，先 node recall.js ' + KEY); process.exit(1); }
 const dir = path.join(__dirname, 'out', 'batches');
 fs.mkdirSync(dir, { recursive: true });
 
 // 清除旧批次 + 旧判定批次（本次会重新生成；缓存不受影响，aggregate 读缓存兜底）
+// 注意：narrow 生成的 partial/<key>_narrow.json（fit=false）要保留，供 write_cache 覆盖旧缓存
 for (const old of fs.readdirSync(dir)) if (old.startsWith(KEY + '_') && old.endsWith('.json')) fs.unlinkSync(path.join(dir, old));
 const partialDir = path.join(__dirname, 'out', 'judge', 'partial');
 if (fs.existsSync(partialDir)) {
-  for (const old of fs.readdirSync(partialDir)) if (old.startsWith(KEY + '_') && old.endsWith('.json')) fs.unlinkSync(path.join(partialDir, old));
+  for (const old of fs.readdirSync(partialDir)) {
+    if (old.startsWith(KEY + '_') && old.endsWith('.json') && !old.endsWith('_narrow.json')) fs.unlinkSync(path.join(partialDir, old));
+  }
 }
 
 let jobs = JSON.parse(fs.readFileSync(src, 'utf8'));
