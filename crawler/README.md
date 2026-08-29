@@ -1,22 +1,40 @@
-# 招聘岗位爬虫 + Agent 判定 工具箱（可复用）
+# 招聘岗位爬虫 + 打分排序 工具箱（可复用）
 
-把「逐个反爬」沉淀成一套可复用的工具。核心思路从「关键字命中」升级为 **三段式：脚本爬取 → agent(flash) 逐岗读判 → 脚本汇总**。
+把「逐个反爬」沉淀成一套可复用的工具。核心思路：**脚本爬取全量 → 打分器排序（应用 > 算法 > infra > 非技术）→ 网页展示**。
 
-> 价值点：判定不是「标题撞关键词」，而是用 **flash 模型读岗位标题+描述**，判断「是不是 LLM 算法 / Agent·LLM 应用 岗」，能正确砍掉「生成式搜推/推荐系统、AIGC美术设计、数据中心运维」这类误报，也能捞回「标题看不出、描述里藏着 LLM」的漏报。
+> **当前方案（v2，打分器）**：`crawl.js` 抓全量 → `score.js` 锚点加权打分 → `build_score_html.js` 生成得分降序网页。
+> **旧方案（flash 逐岗读判，暂缓）**：脚本保留（`recall.js` / `split_batches.js` / `write_cache.js` / `aggregate.js` / `narrow.js`），见下文「flash 判定（暂缓）」章节。
 
-## 流水线总览
+## 打分算法（score.js）
+
+给每个岗位算「应用相关度得分」，四档锚点：**应用100 / 算法66 / infra33 / 非技术0**。
+
+- 标题分 = 加权锚点平均：`Σ(锚点×命中次数×词权重) / Σ(命中次数×词权重)`
+  - 词权重（标题）：应用3 / 算法2 / infra1 / 非技术1
+- 描述分 = 同公式，词权重折半，命中次数上限 3（防长 JD 灌水）
+- 总分 = 标题分 × 0.6 + 描述分 × 0.4
+- 混合岗（如「算法工程师-AI Agent」）因同时命中应用+算法，分数自然落在两锚点之间
+- 非技术词（产品经理/运营/美术/测试…）作为负向信号（锚点0）拉低分数
+
+## 流水线总览（当前）
 
 ```
-阶段① 抓取+召回（纯脚本，计划任务每天自动跑）
+阶段① 抓取（纯脚本，计划任务每天自动跑）
   crawl.js  →  out/<key>_raw.json           全量原始岗
-  recall.js →  out/<key>_recall.json        宽召回候选（≤200/公司，带 hash）
 
+阶段② 打分 + 网页（纯脚本）
+  score.js           打分器（锚点加权）
+  build_score_html.js  读 raw 全量打分 → 生成 index.html（得分降序）
+```
+
+### 旧流水线（flash，暂缓）
+
+```
+阶段① 抓取+召回
+  crawl.js → recall.js → split_batches.js
 阶段② flash 判定（agent，harness workflow，非全自动）
-  子代理读 out/batches/<key>_NNN.json → 判定 → 写 out/judge/partial/<key>_NNN.json
-
-阶段③ 汇总（纯脚本）
-  write_cache.js → out/judge_cache/<key>.json  增量缓存
-  aggregate.js   → 重建 CSV + HTML
+阶段③ 汇总
+  write_cache.js → aggregate.js → 重建 CSV + HTML
 ```
 
 ## 目录结构
@@ -25,12 +43,15 @@
 crawler/
 ├── sites.json           # 站点注册表（27 家：ATS 类型 + 接口参数 + 排除项 + 批次）
 ├── crawl.js             # 阶段①：node crawl.js <key>  拉全量 → out/<key>_raw.json
-├── recall.js            # 阶段①：宽召回 + 硬排除 + 排序 + 200上限 → out/<key>_recall.json
-├── split_batches.js     # 阶段①：切批（增量，只切需重判的）→ out/batches/<key>_NNN.json
-├── write_cache.js       # 阶段③：判定写入增量缓存 out/judge_cache/<key>.json
-├── merge_judge.js       # 口径放宽时「只增不减」合并（旧 fit=true 保留 + 新 fit=true 追加）
-├── aggregate.js         # 阶段③：缓存+判定 → 重建 CSV + HTML
-├── build_html.js        # CSV → 可排序/筛选 HTML
+├── score.js             # 打分器（锚点加权：应用100/算法66/infra33/非技术0）
+├── build_score_html.js  # 阶段②：读 raw 全量打分 → 生成 ../index.html（得分降序）
+├── recall.js            # 旧方案：宽召回 + 硬排除 + 排序 + 200上限 → out/<key>_recall.json
+├── split_batches.js     # 旧方案：切批（增量，只切需重判的）→ out/batches/<key>_NNN.json
+├── write_cache.js       # 旧方案：判定写入增量缓存 out/judge_cache/<key>.json
+├── merge_judge.js       # 旧方案：口径放宽时「只增不减」合并
+├── narrow.js            # 旧方案：窄过滤（收窄到应用研发）
+├── aggregate.js         # 旧方案：缓存+判定 → 重建 CSV + HTML
+├── build_html.js        # 旧方案：CSV → 可排序/筛选 HTML
 ├── run_daily.ps1        # 阶段① 全量脚本（计划任务调用）
 ├── lib/
 │   ├── cdp_capture.js   # 通用逆向：抓包(请求/响应/body)+dump DOM，找未知站接口

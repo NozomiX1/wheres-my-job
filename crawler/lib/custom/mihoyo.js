@@ -26,6 +26,15 @@ async function post(pathname, body) {
   return r.json();
 }
 
+// 列表接口 jobSummary 大多为空，详情接口 /v1/job/info 有完整 description/jobRequire
+async function fetchDetail(id) {
+  try {
+    const r = await post('/v1/job/info', { id: String(id), channelDetailIds: [1], hireType: 1 });
+    const d = (r && r.data) || {};
+    return [d.description, d.jobRequire].filter(Boolean).join('\n');
+  } catch (e) { return ''; }
+}
+
 async function fetchAll() {
   const jobs = [];
   const pageSize = 50;
@@ -44,7 +53,7 @@ async function fetchAll() {
         city: (it.addressDetailList || []).map(a => a && a.addressDetail).filter(Boolean).join('/') || '-',
         date: '-',
         url: 'https://jobs.mihoyo.com/#/campus/position/' + it.id,
-        desc: String(it.jobSummary || ''),
+        desc: '',
         commitment: String(it.jobNature || '全职'),
         id: String(it.id || '')
       });
@@ -53,6 +62,11 @@ async function fetchAll() {
     if (total && jobs.length >= total) break;
     pageNo++;
     await new Promise(r => setTimeout(r, 200));
+  }
+  // 逐岗拉详情补 desc
+  for (const j of jobs) {
+    j.desc = await fetchDetail(j.id);
+    await new Promise(r => setTimeout(r, 120));
   }
   return jobs;
 }

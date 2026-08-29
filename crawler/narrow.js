@@ -22,9 +22,17 @@ const CUT_ALGO = /算法|研究员|预训练|后训练|微调|SFT|RLHF|\bRL\b|�
 const CUT_INFRA = /训练框架|推理框架|推理优化|推理加速|训练系统|推理系统|Infra|MaaS|大模型平台|高性能计算|高性能网络|算力|存储|CUDA|GPU|算子|数据链路|评测|部署|编译器/i;
 // 非研发：产品/运营/营销/销售/市场/设计/美术/内容等（只收研发类应用岗）
 const CUT_NONDEV = /产品经理|产品|运营|营销|销售|市场|品牌|解决方案|售前|交付|策划|商务|客户|客服|编辑|美术|设计师|文案/i;
+// 应用方向豁免：标题带这些词时，不因「算法/研究员」砍掉（游戏 AI Agent/智能 NPC/Harness 归应用，优先于算法字样）
+const AGENT_EXEMPT = /Agent|智能体|NPC|Harness|Agentic/i;
 
 function cutReason(title) {
   const t = title || '';
+  // 应用豁免：Agent/智能体/NPC/Harness 岗 → 放行给 flash（infra/非研发仍砍）
+  if (AGENT_EXEMPT.test(t)) {
+    if (CUT_INFRA.test(t)) return 'infra类';
+    if (CUT_NONDEV.test(t)) return '非研发类';
+    return '';
+  }
   if (CUT_ALGO.test(t)) return '算法类';
   if (CUT_INFRA.test(t)) return 'infra类';
   if (CUT_NONDEV.test(t)) return '非研发类';
