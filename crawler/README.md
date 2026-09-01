@@ -41,7 +41,7 @@
 
 ```
 crawler/
-├── sites.json           # 站点注册表（27 家：ATS 类型 + 接口参数 + 排除项 + 批次）
+├── sites.json           # 站点注册表（31 家：ATS 类型 + 接口参数 + 排除项 + 批次）
 ├── crawl.js             # 阶段①：node crawl.js <key>  拉全量 → out/<key>_raw.json
 ├── score.js             # 打分器（锚点加权：应用100/算法66/infra33/非技术0）
 ├── build_score_html.js  # 阶段②：读 raw 全量打分 → 生成 ../index.html（得分降序）
@@ -77,7 +77,7 @@ node recall.js kimi       # 宽召回 → out/kimi_recall.json
 node split_batches.js kimi 20   # 切批 → out/batches/kimi_000.json
 ```
 
-27 家全部接入。`node crawl.js <key>` 即可复跑任意一家；四类 ATS（moka/beisen/feishu/custom）都已在 `crawl.js` 里调度。
+31 家全部接入。`node crawl.js <key>` 即可复跑任意一家；四类 ATS（moka/beisen/feishu/custom）都已在 `crawl.js` 里调度。
 
 ## 阶段② flash 判定（给未来 agent 的操作手册）
 
@@ -156,7 +156,7 @@ const r = await agent(`你是校招岗位筛选助手。以下是岗位列表（
 
 ```powershell
 # ① 全量重切（强制）
-node split_batches.js <key> 20 --full    # 27 家都跑一遍
+node split_batches.js <key> 20 --full    # 31 家都跑一遍
 
 # ② agent 用【新口径】跑判定工作流，覆盖 out/judge/partial/
 

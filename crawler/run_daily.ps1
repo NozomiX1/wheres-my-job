@@ -9,13 +9,14 @@ Set-Location $root
 # 默认 $false，保持宽口径；本次收窄为手动执行，不常开。
 $NARROW = $false
 
-# 全部 27 个站点 key（moka/beisen/custom 纯 HTTP 快；feishu 需无头 Chrome，约 30-60s/站）
+# 全部 31 个站点 key（moka/beisen/custom 纯 HTTP 快；feishu 需无头 Chrome，约 30-60s/站）
 $siteKeys = @(
   'kimi','zhipu','deepseek','stepfun','hypergryph','iflytek',          # moka/beisen
   'bytedance','sensetime','minimax','lilith','papegames',              # feishu
   'alibaba','tencent','tme','jd','huawei','oppo','xiaomi','ant',       # custom
   'meituan','kuaishou','mihoyo','netease_huyu','netease_leihuo',       # custom
-  'baidu','baichuan','shlab'                                           # custom
+  'baidu','baichuan','shlab',                                          # custom
+  'xiaohongshu','ctrip','bilibili','vivo'                              # custom（2026-09-01 新增）
 )
 
 $logDir = Join-Path $root 'log'

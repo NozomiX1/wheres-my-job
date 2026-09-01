@@ -28,7 +28,11 @@
     {"key":"mihoyo","company":"米哈游","ats":"custom","api":"POST https://ats.openout.mihoyo.com/ats-portal/v1/job/list","body":"{\"channelDetailIds\":[1],\"hireType\":1}","batch":"2027届校招","exclude":"(无)","note":"hireType 1=校招"},
     {"key":"netease_huyu","company":"网易互娱","ats":"custom","api":"GET https://campus.game.163.com/api/campuspc/position/getJobList?projectId=102","body":"pageSize=100&currentPage=1","batch":"2027届校招","exclude":"(无)"},
     {"key":"netease_leihuo","company":"网易雷火","ats":"custom","api":"GET https://xiaozhao.leihuo.netease.com/api/apply/job/list/show?project_id=77","body":"page_size=200&page_number=1","batch":"2027届校招","exclude":"(无)"},
-    {"key":"baidu","company":"百度","ats":"custom","api":"SSR https://talent.baidu.com/jobs/list?projectType=1","body":"__INITIAL_DATA__","batch":"2027届校招","exclude":"AIDU"},
+    {"key":"baidu","company":"百度","ats":"custom","api":"POST https://talent.baidu.com/httservice/getPostListNew","body":"recruitType=GRADUATE&pageSize=20&keyWord=&curPage=N&projectType=1（pageSize上限20，翻页拉全量）","batch":"2027届校招","exclude":"AIDU"},
+    {"key":"xiaohongshu","company":"小红书","ats":"custom","api":"POST https://job.xiaohongshu.com/websiterecruit/position/pageQueryPosition","body":"{\"recruitType\":\"campus\",\"positionName\":\"\",\"pageNum\":N,\"pageSize\":100}","batch":"2027届校招（混实习，build按isIntern排除）","exclude":"REDstar"},
+    {"key":"ctrip","company":"携程集团","ats":"custom","api":"POST https://careers.ctrip.com/api/hrrecruit/getJobAd","body":"{\"condition\":{...category:2},\"pager\":{\"index\":\"N\",\"size\":\"100\"}}（category=2校招）","batch":"2027届校招","exclude":"Eagle Program"},
+    {"key":"bilibili","company":"B站","ats":"custom","api":"POST https://jobs.bilibili.com/api/campus/position/positionList","body":"{\"pageSize\":200,\"pageNum\":N}+header X-CSRF（先GET /api/auth/v1/csrf/token，需X-UserType:2/X-AppKey:ops.ehr-api.auth）","batch":"2027届校招（混实习，build按isIntern排除）","exclude":"B-UP|B-STAR"},
+    {"key":"vivo","company":"vivo","ats":"custom","api":"POST https://hr-campus.vivo.com/api/Jobad/GetJobAdPageList","body":"{\"PageIndex\":N,\"PageSize\":100,\"ClassificationOne\":[\"2\"]}（北森zhiye门户，ClassificationOne 2=秋季校园招聘）","batch":"2027届校招","exclude":"蓝极星"},
     {"key":"baichuan","company":"百川智能","ats":"custom","api":"SSR --dump-dom https://campus.baichuan-inc.com/","body":"-","batch":"2027届校招","exclude":"(星耀=校招品牌，勿排)"},
     {"key":"shlab","company":"上海AI实验室","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=campus","body":"page_token/limit","batch":"实习(留用)","exclude":"(无)"}
   ]
