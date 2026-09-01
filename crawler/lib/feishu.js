@@ -86,7 +86,7 @@ async function main() {
     const first = all[0] || {};
     console.log('RAWKEYS ' + Object.keys(first).join(','));
     console.log('DESCSAMPLE ' + JSON.stringify({ description: first.description, job_description: first.job_description, jobDescription: first.jobDescription, desc: first.desc, summary: first.summary }).slice(0, 400));
-    return { total, n: all.length, all: all.map(x => ({ id: x.id, title: x.title, recruitType: x.recruit_type && x.recruit_type.name, recruitParent: x.recruit_type && x.recruit_type.parent && x.recruit_type.parent.name, cities: (x.city_list || []).map(c => c.name), category: x.job_category && x.job_category.name, publish: x.publish_time, subject: x.job_subject && x.job_subject.name, description: x.description || x.job_description || x.jobDescription || '' })) };
+    return { total, n: all.length, all: all.map(x => ({ id: x.id, title: x.title, recruitType: x.recruit_type && x.recruit_type.name, recruitParent: x.recruit_type && x.recruit_type.parent && x.recruit_type.parent.name, cities: (x.city_list || []).map(c => c.name), category: x.job_category && x.job_category.name, jobFunction: x.job_function && x.job_function.name, publish: x.publish_time, subject: x.job_subject && x.job_subject.name, description: x.description || x.job_description || x.jobDescription || '' })) };
   })()`;
   const r = await call('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
   const val = r && r.result && r.result.value;

@@ -16,7 +16,7 @@ for (const s of registry) { keyToCompany[s.key] = s.company; keyToSite[s.key] = 
 
 // 与 recall.js 一致的字段映射（descDuty/descRequire 供打分器 v3 职责/要求分权，缺失则启发式切分 desc）
 const fieldMaps = {
-  feishu: { title: ['title'], city: ['cities'], date: ['publish'], commitment: ['recruitType'], recruitParent: ['recruitParent'], dept: ['subject', 'category'], desc: ['description', 'jobDescription'], descDuty: [], descRequire: [], category: ['category'] },
+  feishu: { title: ['title'], city: ['cities'], date: ['publish'], commitment: ['recruitType'], recruitParent: ['recruitParent'], dept: ['subject', 'category'], desc: ['description', 'jobDescription'], descDuty: [], descRequire: [], category: ['category', 'jobFunction'] },
   moka: { title: ['name', 'jobTitle', 'title'], dept: ['department'], city: ['locations', 'cityList'], date: ['createdAt', 'openedAt', 'publishTime'], commitment: ['commitment'], desc: ['jobDescription', 'description'], descDuty: [], descRequire: [], category: ['zhineng', 'category'] },
   beisen: { title: ['JobAdName', 'JobName', 'name', 'title'], dept: ['ClassificationOne', 'Org'], city: ['LocNames', 'WorkLocationName', 'workPlaceName', 'city'], date: ['PostDate', 'PublishTime', 'publishTime'], commitment: ['Kind', 'Commitment', 'commitment'], desc: ['Duty', 'jobDescription', 'description'], descDuty: ['Duty', 'jobDescription', 'description'], descRequire: ['Require', 'Requirement'], category: ['ClassificationOne', 'Category'] },
   custom: { title: ['title'], dept: ['dept'], city: ['city'], date: ['date'], commitment: ['commitment'], desc: ['desc'], descDuty: ['descDuty'], descRequire: ['descRequire'], category: ['category'] }

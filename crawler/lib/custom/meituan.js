@@ -55,6 +55,8 @@ async function fetchAll() {
       jobs.push({
         title: String(x.name || '').trim(),
         dept: dept || '-',
+        // jobFamily=官方职类（技术类/职能类/销售客服与支持类…），jobFamilyGroup=细分（算法/后端…）
+        category: String(x.jobFamily || ''),
         city: city || '-',
         date: fmtDate(x.firstPostTime),
         url: 'https://zhaopin.meituan.com/web/position/detail?jobUnionId=' + x.jobUnionId + '&highlightType=campus',

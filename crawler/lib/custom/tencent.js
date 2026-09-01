@@ -5,8 +5,9 @@
 const fs = require('fs');
 const path = require('path');
 
-const COMPANY = '腾讯';
-const KEY = 'tencent';
+const COMPANY = '腾讯';const KEY = 'tencent';
+// positionFamily 官方职族字典（GET /api/v1/position/getPositionFamily）
+const TENCENT_FAMILY = { 2: '技术族', 3: '产品族', 4: '设计族', 5: '市场族', 6: '职能族', 7: 'AI方向' };
 const BASE = 'https://join.qq.com';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -91,6 +92,8 @@ async function fetchAll() {
       results[i] = {
         title: title || '-',
         dept: String(p.bgs || '').trim() || '-',
+        // positionFamily: 2=技术 3=产品 4=设计 5=市场 6=职能（官方职族，来自 getPositionFamily 字典）
+        category: TENCENT_FAMILY[p.positionFamily] || String(p.positionFamily || ''),
         city: city || '-',
         date: '-',
         url,
