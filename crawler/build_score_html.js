@@ -14,12 +14,12 @@ const keyToCompany = {};
 const keyToSite = {};
 for (const s of registry) { keyToCompany[s.key] = s.company; keyToSite[s.key] = s; }
 
-// 与 recall.js 一致的字段映射
+// 与 recall.js 一致的字段映射（descDuty/descRequire 供打分器 v3 职责/要求分权，缺失则启发式切分 desc）
 const fieldMaps = {
-  feishu: { title: ['title'], city: ['cities'], date: ['publish'], commitment: ['recruitType'], recruitParent: ['recruitParent'], dept: ['subject', 'category'], desc: ['description', 'jobDescription'] },
-  moka: { title: ['name', 'jobTitle', 'title'], dept: ['department'], city: ['locations', 'cityList'], date: ['createdAt', 'openedAt', 'publishTime'], commitment: ['commitment'], desc: ['jobDescription', 'description'] },
-  beisen: { title: ['JobAdName', 'JobName', 'name', 'title'], dept: ['ClassificationOne', 'Org'], city: ['LocNames', 'WorkLocationName', 'workPlaceName', 'city'], date: ['PostDate', 'PublishTime', 'publishTime'], commitment: ['Kind', 'Commitment', 'commitment'], desc: ['Duty', 'jobDescription', 'description'] },
-  custom: { title: ['title'], dept: ['dept'], city: ['city'], date: ['date'], commitment: ['commitment'], desc: ['desc'] }
+  feishu: { title: ['title'], city: ['cities'], date: ['publish'], commitment: ['recruitType'], recruitParent: ['recruitParent'], dept: ['subject', 'category'], desc: ['description', 'jobDescription'], descDuty: [], descRequire: [], category: ['category'] },
+  moka: { title: ['name', 'jobTitle', 'title'], dept: ['department'], city: ['locations', 'cityList'], date: ['createdAt', 'openedAt', 'publishTime'], commitment: ['commitment'], desc: ['jobDescription', 'description'], descDuty: [], descRequire: [], category: ['zhineng', 'category'] },
+  beisen: { title: ['JobAdName', 'JobName', 'name', 'title'], dept: ['ClassificationOne', 'Org'], city: ['LocNames', 'WorkLocationName', 'workPlaceName', 'city'], date: ['PostDate', 'PublishTime', 'publishTime'], commitment: ['Kind', 'Commitment', 'commitment'], desc: ['Duty', 'jobDescription', 'description'], descDuty: ['Duty', 'jobDescription', 'description'], descRequire: ['Require', 'Requirement'], category: ['ClassificationOne', 'Category'] },
+  custom: { title: ['title'], dept: ['dept'], city: ['city'], date: ['date'], commitment: ['commitment'], desc: ['desc'], descDuty: ['descDuty'], descRequire: ['descRequire'], category: ['category'] }
 };
 
 function buildUrl(site, id) {
@@ -55,6 +55,9 @@ for (const site of registry) {
 
     let dept = pick(j, fm.dept, '-');
     if (dept && typeof dept === 'object') dept = dept.name || dept.title || '';
+    // 官方职位类别（moka 的 zhineng 是 {id,name} 对象）
+    let category = pick(j, fm.category || [], null);
+    if (category && typeof category === 'object') category = category.name || '';
     let city = pick(j, fm.city, '-');
     if (Array.isArray(city)) city = city.map(c => (c && typeof c === 'object') ? (c.provinceName || c.name || c.cityName || c.city) : c).filter(Boolean).join('/');
     const rawDate = pick(j, fm.date, '-');
@@ -63,16 +66,19 @@ for (const site of registry) {
     const id = String(pick(j, ['id', 'Id', 'JobAdId', 'jobAdId'], ''));
     const url = String(pick(j, ['url'], '') || '') || buildUrl(site, id);
 
-    const s = scoreJob({ title, desc }, { isGame });
+    const s = scoreJob({ title, desc, category: category || null, descDuty: pick(j, fm.descDuty, null), descRequire: pick(j, fm.descRequire, null) }, { isGame });
     data.push({
       company: keyToCompany[key] || key,
       key,
       title,
+      category: String(category || ''),
       dept: String(dept || '-'),
       city: String(city || '-'),
       date,
       url,
       score: s.total,
+      strength: s.strength,
+      words: s.words,
       titleScore: s.titleScore,
       descScore: s.descScore,
       titleTier: s.titleTier,
@@ -81,8 +87,8 @@ for (const site of registry) {
   }
 }
 
-// 按分数降序
-data.sort((a, b) => (b.score - a.score) || (b.date.localeCompare(a.date)));
+// 按分数降序；同分看信号强度（标题+职责加权命中数），再看新鲜度
+data.sort((a, b) => (b.score - a.score) || (b.strength - a.strength) || (b.date.localeCompare(a.date)));
 
 const ts = new Date().toISOString().slice(0, 10);
 const companyCount = new Set(data.map(r => r.company)).size;
@@ -133,6 +139,9 @@ main{max-width:1080px;margin:0 auto;padding:24px 22px 12px}
 .l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .l1 .t{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.35}
 .l2{margin-top:3px;font-size:12.5px;color:var(--ink2)}
+.l2 .cat{font-weight:600;color:var(--focus)}
+.l3{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px}
+.l3 .kw{font-size:11px;line-height:1.5;padding:0 6px;border-radius:4px;background:var(--blue2-bg);color:var(--blue2)}
 .barwrap{margin-top:6px;height:5px;background:var(--segtrack);border-radius:999px;overflow:hidden}
 .barfill{height:100%;border-radius:999px;background:var(--focus)}
 .tag{display:inline-block;padding:1px 9px;border-radius:999px;font-size:11px;font-weight:600;line-height:1.7;white-space:nowrap}
@@ -224,7 +233,8 @@ function rowHtml(r){
     '<div class="scorebox"><div class="num" style="color:'+tierColor(r.titleTier)+'">'+r.score.toFixed(1)+'</div><div class="lbl">标题'+r.titleScore.toFixed(0)+' 描述'+r.descScore.toFixed(0)+'</div></div>'+
     '<div class="rowmain">'+
       '<div class="l1"><span class="t">'+esc(r.title)+'</span><span class="tag '+r.titleTier+'">'+r.titleTier+'</span><span class="tag '+r.descTier+'">描述:'+r.descTier+'</span></div>'+
-      '<div class="l2">'+esc(r.company)+' · '+esc(r.city)+' · '+esc(r.date)+'</div>'+
+      '<div class="l2">'+esc(r.company)+(r.category?' · <b class="cat">'+esc(r.category)+'</b>':'')+' · '+esc(r.city)+' · '+esc(r.date)+'</div>'+
+      (r.words&&r.words.length?'<div class="l3">'+r.words.map(function(w){return '<span class="kw">'+esc(w)+'</span>';}).join('')+'</div>':'')+
       '<div class="barwrap"><div class="barfill" style="width:'+pct+'%;background:'+tierColor(r.titleTier)+'"></div></div>'+
     '</div>'+
     '<div class="rowside">'+(r.url?'<a class="cta" href="'+esc(r.url)+'" target="_blank" rel="noopener">投递↗</a>':'')+'</div>'+

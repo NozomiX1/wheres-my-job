@@ -63,6 +63,7 @@ async function fetchAll() {
       jobs.push({
         title: String(d.positionName || '').trim(),
         dept: String(d.postCodeName || '-'),
+        category: String(d.postCodeName || ''),
         city: String(d.workLocation || '-'),
         date: String(d.pushTime || '').slice(0, 10) || '-',
         url: d.id ? ('https://campus.bilibili.com/index.html#/positions/' + d.id) : '',

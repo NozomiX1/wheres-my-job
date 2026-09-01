@@ -74,6 +74,9 @@ async function fetchAll() {
         date: fmtDate(x.modifyTime ?? x.publishTime),
         url: BASE + '/campus/position/' + x.id,
         desc: [x.description, x.requirement].filter(Boolean).join('\n'),
+        // 职责/要求分开存，打分器 v3 对要求段降权
+        descDuty: String(x.description || ''),
+        descRequire: String(x.requirement || ''),
         commitment: '全职',
         id: String(x.id),
       });

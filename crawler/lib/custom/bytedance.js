@@ -119,8 +119,9 @@ async function fetchAll() {
           const url = path + (sig ? '&_signature=' + encodeURIComponent(sig) : '');
           const r = await fetch(url);
           const j = await r.json();
-          out[jid] = (j.data && j.data.job_post_detail && j.data.job_post_detail.description) || '';
-        } catch (e) { out[jid] = ''; }
+          const det = (j.data && j.data.job_post_detail) || {};
+          out[jid] = { d: det.description || '', c: (det.job_category && det.job_category.name) || '' };
+        } catch (e) { out[jid] = { d: '', c: '' }; }
         await new Promise(r => setTimeout(r, 100));
       }
       return out;
@@ -137,10 +138,11 @@ async function fetchAll() {
     return {
       title: p.title || '',
       dept: (p.subject && (typeof p.subject === 'object' ? p.subject.name : p.subject)) || p.category || '-',
+      category: (descMap[String(p.id)] && descMap[String(p.id)].c) || p.category || '',
       city: cityList.join('/') || '-',
       date: p.publish ? new Date(Number(p.publish) + 8 * 3600 * 1000).toISOString().slice(0, 10) : '-',
       url: `https://jobs.bytedance.com/campus/position/${p.id}/detail`,
-      desc: descMap[String(p.id)] || '',
+      desc: (descMap[String(p.id)] && descMap[String(p.id)].d) || '',
       commitment: (p.recruitType || ''),
       recruitType: (p.recruitType || ''),
       recruitParent: (p.recruitParent || ''),

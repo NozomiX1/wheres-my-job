@@ -50,10 +50,14 @@ async function fetchAll() {
       jobs.push({
         title,
         dept: String(d.orgName || '-'),
+        category: String(d.postType || ''),
         city: String(d.workPlace || '-'),
         date: String(d.publishDate || '').slice(0, 10) || '-',
         url: d.jobId ? (BASE + '/jobs/detail/GRADUATE/' + d.jobId) : '',
         desc: [d.workContent, d.serviceCondition].filter(Boolean).join('\n'),
+        // 职责/要求分开存，打分器 v3 对要求段降权（"熟悉LLM者优先"≠"负责LLM研发"）
+        descDuty: String(d.workContent || ''),
+        descRequire: String(d.serviceCondition || ''),
         commitment: '全职',
         id,
       });

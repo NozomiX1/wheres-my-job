@@ -50,6 +50,7 @@ async function fetchAll() {
       jobs.push({
         title: String(it.title || '').trim(),
         dept: String(it.competencyType || '-'),
+        category: String(it.competencyType || ''),
         city: (it.addressDetailList || []).map(a => a && a.addressDetail).filter(Boolean).join('/') || '-',
         date: '-',
         url: 'https://jobs.mihoyo.com/#/campus/position/' + it.id,

@@ -71,6 +71,7 @@ async function fetchAll() {
       jobs.push({
         title: String(d.jobTitle || '').trim(),
         dept: String(d.jobFamilyGroupName || d.buName || '-'),
+        category: String(d.jobFamilyGroupName || ''),
         city: CITY_MAP[cityName] || cityName || '-',
         date: String(d.publishDate || '').slice(0, 10) || '-',
         url: d.jobId ? ('https://campus.ctrip.com/#/campus/job-detail/' + d.jobId) : '',

@@ -53,6 +53,9 @@ async function fetchAll() {
         date: String(d.ChangeDate || d.PostDate || '').slice(0, 10) || '-',
         url: LIST_URL,
         desc: [d.Duty, d.Require].filter(Boolean).join('\n'),
+        // 职责/要求分开存，打分器 v3 对要求段降权
+        descDuty: String(d.Duty || ''),
+        descRequire: String(d.Require || ''),
         commitment: '全职',
         id: String(d.Id || d.JobAdId || ''),
       });

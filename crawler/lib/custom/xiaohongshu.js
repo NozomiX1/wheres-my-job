@@ -41,10 +41,14 @@ async function fetchAll() {
       jobs.push({
         title: String(d.positionName || '').trim(),
         dept: String(d.jobProjectName || '-'),
+        category: String(d.jobType || ''),
         city: String(d.workplace || '-'),
         date: String(d.publishTime || '').slice(0, 10) || '-',
         url: d.positionId ? (BASE + '/campus/position/' + d.positionId) : '',
         desc: [d.duty, d.qualification].filter(Boolean).join('\n'),
+        // 职责/要求分开存，打分器 v3 对要求段降权
+        descDuty: String(d.duty || ''),
+        descRequire: String(d.qualification || ''),
         commitment: '全职',
         id: String(d.positionId || ''),
       });
