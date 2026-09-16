@@ -23,7 +23,7 @@
 
 ```
 阶段① 抓取（纯脚本，计划任务每天自动跑）
-  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 18 站）
+  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 26 站）
 
 阶段② 打分 + 网页（纯脚本）
   score.js           打分器（锚点加权）
@@ -36,7 +36,7 @@
 - **识别**：`sites.json` 里 `track:"social"` 或 key 以 `_social` 结尾；`build_score_html.js` 对社招轨道不排 `isSocial`，改为年限过滤（优先结构化字段如腾讯 `RequireWorkYearsName` / 百度要求段，否则解析 JD 文本「3-5年/三年以上/经验不限」等，见 `lib/filter.js` `parseYearsReq`）。
 - **页面**：`index.html` 顶部「校招 (N) | 社招 (M)」切换，社招行带「经验:x年」角标。
 
-### 已接入社招站（18）与接入要点
+### 已接入社招站（27）与接入要点
 
 | 站点 | ats | 要点 |
 |---|---|---|
@@ -45,7 +45,7 @@
 | minimax_social | feishu | 根路径即社招站，`website-path: index`，**需 acrawler 签名**（plain 模式 405；校招同理已修：website-path 为路径本身 379481） |
 | bytedance_social | feishu | `jobs.bytedance.com/experienced`，`website-path: society`（不是 social！），翻页上限 10000 |
 | sensetime_social | feishu | 根路径即社招站，`website-path: exp`；签名校验偶发 405，重试即可 |
-| lilith_social | feishu | `/index` 即社招站，`website-path: index` |
+| lilith_social / papegames_social | feishu | `lilithgames.jobs.feishu.cn/index`（`index`）/ `career.papegames.com/social`（`social`） |
 | mihoyo_social | custom | 同一 API，`hireType: 0`（社招）/ 1（校招）；desc 需逐岗调 `/v1/job/info` |
 | baidu_social | custom | `recruitType=SOCIAL` 且 **projectType 留空**；列表 workYears 为空，年限从要求段解析 |
 | meituan_social | custom | 同一 API，`jobShareType: 2` |
@@ -56,8 +56,16 @@
 | xiaohongshu_social | custom | 同一 API，`recruitType: social`；详情 /social/position/{id} |
 | ctrip_social | custom | 同一 API，**category: 1**（1=社招 2=校招）；详情 `careers.ctrip.com/#/experienced/job-detail/{fromId}`（用 fromId 非 jobId） |
 | shlab_social | custom | 同一 API，`mode: social`（研究员/青年科学家岗密集，高价值） |
-| **待接（B 类需 CDP 逆向）** | | tme（join.tencentmusic.com/social）、jd（zhaopin.jd.com）、kuaishou（zhaopin.kuaishou.cn）、huawei（career.huawei.com）、oppo（careers.oppo.com 找社招项目id）、vivo（hr.vivo.com）、ant（talent.antgroup.com）、netease（hr.163.com）、bilibili（jobs.bilibili.com/social）、baichuan、papegames（/social 无头下不渲染） |
-| **待接（C 类）** | | alibaba（talent.alibaba.com Baxia 滑块，无头不出数据） |
+| kuaishou_social | custom | `zhaopin.kuaishou.cn/recruit/e/api/v1/open/positions/simple`（GET，`recruitProject=socialr&positionNatureCode=C001`）；**需 sign 头**：HMAC-SHA256(ts+canonicalQuery+盐, 盐)，已逆向复现；workExperienceCode 为结构化年限 |
+| jd_social | custom | `zhaopin.jd.com/web/job/job_list`（form-urlencoded）；老式页面无独立详情路由，URL 用列表页+jobSearch 预填 |
+| ant_social | custom | `hrcareersweb.antgroup.com/api/social/position/search`（pageSize 上限 10）；**ctoken 为客户端自造随机值**（cookie+query 同值即可过）；experience{from,to} 结构化年限 |
+| huawei_social | custom | 同一 API，**jobType=SR**（校招 CR）；workYear 为结构化年限下限 |
+| vivo_social | custom | `hr.vivo.com/api/social/webSite/portal/page`；yoe_min/yoe_max 结构化经验；详情页从路由 state 传参无深链，URL 用列表页+keyword |
+| bilibili_social | custom | 同域 `/api/srs/position/positionList`（srs=社招系统），同校招鉴权（X-CSRF），workTypeList/positionTypeList=["3"] |
+| tme_social | custom | 同域 `/api/job/list`（/social/ 页）；列表自带 duty；详情 /social/post-details?id= |
+| netease_social | custom | `hr.163.com/api/hr163/position/queryPage`，**一站覆盖全集团**（互娱/雷火/有道/云音乐/伏羲/传媒）；reqWorkYearsName 结构化年限 |
+| **无公开社招** | | 百川（只有校招站，已迁飞书） |
+| **待接（反爬/入口待确认）** | | alibaba（Baxia 滑块）、oppo（社招入口未找到，路由表有 /recruitment 但当前部署未启用） |
 
 社招站点只走阶段① 抓取 + 阶段② 打分，不参与旧 flash 流水线（recall.js 硬排除社招岗）。
 

@@ -52,6 +52,15 @@
     {"key":"hypergryph_social","company":"鹰角网络","track":"social","ats":"custom","api":"POST https://jobs.hypergryph.com/api/outer/ats-apply/website/jobs/v2","body":"siteId 26325 + site:social（302 解析）","batch":"社招","exclude":"(无)","matchKeyword":"AI算法|算法开发"},
     {"key":"xiaohongshu_social","company":"小红书","track":"social","ats":"custom","api":"POST https://job.xiaohongshu.com/websiterecruit/position/pageQueryPosition","body":"recruitType:social","batch":"社招","exclude":"(无)"},
     {"key":"ctrip_social","company":"携程集团","track":"social","ats":"custom","api":"POST https://careers.ctrip.com/api/hrrecruit/getJobAd","body":"category:1(社招)","batch":"社招","exclude":"(无)"},
-    {"key":"shlab_social","company":"上海AI实验室","track":"social","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=social","body":"page_token/limit","batch":"社招","exclude":"(无)"}
+    {"key":"shlab_social","company":"上海AI实验室","track":"social","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=social","body":"page_token/limit","batch":"社招","exclude":"(无)"},
+    {"key":"kuaishou_social","company":"快手","track":"social","ats":"custom","api":"GET https://zhaopin.kuaishou.cn/recruit/e/api/v1/open/positions/simple","body":"recruitProject=socialr+positionNatureCode=C001；需 sign 头（HMAC-SHA256，已逆向复现）","batch":"社招","exclude":"(无)"},
+    {"key":"jd_social","company":"京东","track":"social","ats":"custom","api":"POST https://zhaopin.jd.com/web/job/job_list","body":"form-urlencoded 翻页；详情无独立页，URL 用列表页+jobSearch","batch":"社招","exclude":"(无)"},
+    {"key":"ant_social","company":"蚂蚁集团","track":"social","ats":"custom","api":"POST https://hrcareersweb.antgroup.com/api/social/position/search","body":"pageSize上限10；ctoken为客户端自造随机值（cookie+query同值即可）","batch":"社招","exclude":"(无)"},
+    {"key":"huawei_social","company":"华为","track":"social","ats":"custom","api":"POST https://apigw-dgg-b0.huawei.com/api/apig/channelhw/recruitmentPosition/pub/getJobPage","body":"jobType=SR（校招CR）；workYear为结构化年限下限","batch":"社招","exclude":"(无)"},
+    {"key":"vivo_social","company":"vivo","track":"social","ats":"custom","api":"POST https://hr.vivo.com/api/social/webSite/portal/page","body":"yoe_min/yoe_max结构化经验；详情无深链，URL用列表页+keyword","batch":"社招","exclude":"(无)"},
+    {"key":"bilibili_social","company":"B站","track":"social","ats":"custom","api":"POST https://jobs.bilibili.com/api/srs/position/positionList","body":"同校招鉴权（X-CSRF）；srs=社招职位系统，workTypeList/positionTypeList=[3]","batch":"社招","exclude":"(无)"},
+    {"key":"tme_social","company":"腾讯音乐","track":"social","ats":"custom","api":"POST https://join.tencentmusic.com/api/job/list","body":"同域 /social/ 页；列表自带duty","batch":"社招","exclude":"(无)"},
+    {"key":"netease_social","company":"网易","track":"social","ats":"custom","api":"POST https://hr.163.com/api/hr163/position/queryPage","body":"覆盖全集团（互娱/雷火/有道/云音乐/伏羲）；reqWorkYearsName结构化年限","batch":"社招","exclude":"(无)"},
+    {"key":"papegames_social","company":"叠纸游戏","track":"social","ats":"feishu","url":"https://career.papegames.com/social","aid":1658,"websitePath":"social","subjectIdList":[],"batch":"社招","exclude":"(无)","linkTemplate":"https://career.papegames.com/social/position/{id}/detail"}
   ]
 }
