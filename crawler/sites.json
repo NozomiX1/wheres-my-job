@@ -64,6 +64,12 @@
     {"key":"papegames_social","company":"叠纸游戏","track":"social","ats":"feishu","url":"https://career.papegames.com/social","aid":1658,"websitePath":"social","subjectIdList":[],"batch":"社招","exclude":"(无)","linkTemplate":"https://career.papegames.com/social/position/{id}/detail"},
     {"key":"oppo_social","company":"OPPO","track":"social","ats":"custom","api":"POST https://career.oppo.com/ats-candidate-api/open-api/position/queryPositionList","body":"recruitTypeList=[SOCIAL-RECRUITMENT]；min/maxWorkYears结构化年限；career.oppo.com(单数)为社招部署，careers为校招","batch":"社招","exclude":"(无)"},
     {"key":"alibaba_social","company":"阿里巴巴","track":"social","ats":"custom","api":"POST https://talent-holding.alibaba.com/position/search","body":"同校招 XSRF 鉴权；talent-holding 域无 Baxia（talent.alibaba.com 才有）；experience{from,to}结构化年限","batch":"社招","exclude":"(无)"},
-    {"key":"taotian_social","company":"淘天集团","track":"social","ats":"custom","api":"POST https://talent.taotian.com/position/search","body":"同阿里集团（共享 ali_social_common.js），淘天独立社招站","batch":"社招","exclude":"(无)"}
+    {"key":"taotian_social","company":"淘天集团","track":"social","ats":"custom","api":"POST https://talent.taotian.com/position/search","body":"同阿里集团（共享 ali_social_common.js），淘天独立社招站","batch":"社招","exclude":"(无)"},
+    {"key":"ele_social","company":"饿了么","track":"social","ats":"custom","api":"POST https://talent.ele.me/position/search","body":"阿里系同构（共享 ali_social_common.js）","batch":"社招","exclude":"(无)"},
+    {"key":"aidc_social","company":"阿里国际","track":"social","ats":"custom","api":"POST https://aidc-jobs.alibaba.com/position/search","body":"阿里系同构","batch":"社招","exclude":"(无)"},
+    {"key":"aliyun_social","company":"阿里云","track":"social","ats":"custom","api":"POST https://careers.aliyun.com/position/search","body":"阿里系同构","batch":"社招","exclude":"(无)"},
+    {"key":"tongyi_social","company":"通义","track":"social","ats":"custom","api":"POST https://careers-tongyi.alibaba.com/position/search","body":"阿里系同构","batch":"社招","exclude":"(无)"},
+    {"key":"dingtalk_social","company":"钉钉","track":"social","ats":"custom","api":"POST https://talent.dingtalk.com/position/search","body":"阿里系同构","batch":"社招","exclude":"(无)"},
+    {"key":"quark_social","company":"夸克","track":"social","ats":"custom","api":"POST https://talent.quark.cn/position/search","body":"阿里系同构","batch":"社招","exclude":"(无)"}
   ]
 }

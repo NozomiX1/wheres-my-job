@@ -20,7 +20,7 @@ $siteKeys = @(
 )
 
 # 社招站点 key（track=social）：只抓取，不跑召回/切批（旧 flash 流水线硬排除社招岗，对社招无意义）
-# 已全覆盖：30 家公司社招；百川无公开社招（只有校招站）
+# 已全覆盖：36 家公司社招（阿里系 8 站：集团/淘天/饿了么/国际/云/通义/钉钉/夸克）；百川无公开社招
 $socialKeys = @(
   'kimi_social','zhipu_social','stepfun_social',                      # moka 社招（deepseek 在 siteKeys 里，本就是社招站）
   'minimax_social','bytedance_social','sensetime_social','lilith_social','papegames_social',  # feishu 社招（需无头 Chrome）
@@ -29,7 +29,9 @@ $socialKeys = @(
   'hypergryph_social','xiaohongshu_social','ctrip_social','shlab_social',  # custom 社招
   'kuaishou_social','jd_social','ant_social','huawei_social',          # custom 社招（B类已逆向）
   'vivo_social','bilibili_social','tme_social','netease_social',       # custom 社招（B类已逆向）
-  'oppo_social','alibaba_social','taotian_social'                      # custom 社招（用户提供入口）
+  'oppo_social',                                                        # custom 社招（用户提供入口）
+  'alibaba_social','taotian_social','ele_social','aidc_social',        # 阿里系同构 ×8（共享 ali_social_common.js，城市分片）
+  'aliyun_social','tongyi_social','dingtalk_social','quark_social'    # 阿里系同构续
 )
 
 $logDir = Join-Path $root 'log'
