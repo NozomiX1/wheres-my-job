@@ -3,7 +3,7 @@
   "sites": [
     {"key":"bytedance","company":"字节跳动","ats":"custom","batch":"2027届校招","exclude":"(无，Seed=普通校招)","linkTemplate":"https://jobs.bytedance.com/campus/position/{id}/detail","note":"关键词搜索+CDP抓响应，见 lib/custom/bytedance.js"},
     {"key":"sensetime","company":"商汤","ats":"feishu","url":"https://hr-jobs.sensetime.com/edu","aid":0,"websitePath":"edu","subjectIdList":["7657490082207058226"],"batch":"2027届校招","exclude":"无限原力","linkTemplate":"https://hr-jobs.sensetime.com/edu/position/{id}/detail"},
-    {"key":"minimax","company":"MiniMax","ats":"feishu","url":"https://vrfi1sk8a0.jobs.feishu.cn/379481/","aid":1658,"websitePath":"campus","subjectIdList":["7495675705720965415"],"plain":true,"batch":"2027届校招","exclude":"Top Talent","linkTemplate":"https://vrfi1sk8a0.jobs.feishu.cn/379481/position/{id}/detail"},
+    {"key":"minimax","company":"MiniMax","ats":"feishu","url":"https://vrfi1sk8a0.jobs.feishu.cn/379481/","aid":1658,"websitePath":"379481","subjectIdList":[],"batch":"2027届校招","exclude":"Top Talent","linkTemplate":"https://vrfi1sk8a0.jobs.feishu.cn/379481/position/{id}/detail","note":"website-path 即路径本身 379481（2026-09 验证，旧 campus/plain 配置均失效）"},
     {"key":"lilith","company":"莉莉丝","ats":"feishu","url":"https://lilithgames.jobs.feishu.cn/campus","aid":1658,"websitePath":"campus","subjectIdList":[],"batch":"2027届校招","exclude":"(无)","matchKeyword":"算法|AI|NPC","linkTemplate":"https://lilithgames.jobs.feishu.cn/campus/position/{id}/detail"},
     {"key":"papegames","company":"叠纸游戏","ats":"feishu","url":"https://career.papegames.com/campus","aid":1658,"websitePath":"campus","subjectIdList":[],"batch":"2027届校招","exclude":"(无)","linkTemplate":"https://career.papegames.com/campus/position/{id}/detail"},
 
@@ -45,6 +45,13 @@
     {"key":"baidu_social","company":"百度","track":"social","ats":"custom","api":"POST https://talent.baidu.com/httservice/getPostListNew","body":"recruitType=SOCIAL&projectType=(空)","batch":"社招","exclude":"(无)"},
     {"key":"meituan_social","company":"美团","track":"social","ats":"custom","api":"POST https://zhaopin.meituan.com/api/official/job/getJobList","body":"jobShareType=2(社招)","batch":"社招","exclude":"(无)"},
     {"key":"xiaomi_social","company":"小米","track":"social","ats":"custom","api":"GET https://hr.xiaomi.com/website/api/agent/searchJobPage?type=1","body":"type=1(社招)","batch":"社招","exclude":"(无)"},
-    {"key":"tencent_social","company":"腾讯","track":"social","ats":"custom","api":"GET https://careers.tencent.com/tencentcareer/api/post/Query","body":"公开接口，列表自带JD+经验年限+PostURL","batch":"社招","exclude":"(无)","note":"接口偶发限频，模块内已加重试"}
+    {"key":"tencent_social","company":"腾讯","track":"social","ats":"custom","api":"GET https://careers.tencent.com/tencentcareer/api/post/Query","body":"公开接口，列表自带JD+经验年限+PostURL","batch":"社招","exclude":"(无)","note":"接口偶发限频，模块内已加重试"},
+    {"key":"iflytek_social","company":"科大讯飞","track":"social","ats":"beisen","api":"https://iflytek.zhiye.com/api/Jobad/GetJobAdPageList","category":["1"],"batch":"社招","exclude":"(无)","linkTemplate":"https://iflytek.zhiye.com/social/detail?jobAdId={id}","note":"北森 Category 1=社招 2=校招"},
+    {"key":"sensetime_social","company":"商汤","track":"social","ats":"feishu","url":"https://hr-jobs.sensetime.com/","aid":0,"websitePath":"exp","subjectIdList":[],"batch":"社招","exclude":"(无)","note":"根路径即社招站，website-path: exp；签名校验偶发 405 需重试","linkTemplate":"https://hr-jobs.sensetime.com/exp/position/{id}/detail"},
+    {"key":"lilith_social","company":"莉莉丝","track":"social","ats":"feishu","url":"https://lilithgames.jobs.feishu.cn/index","aid":1658,"websitePath":"index","subjectIdList":[],"batch":"社招","exclude":"(无)","matchKeyword":"算法|AI|NPC","linkTemplate":"https://lilithgames.jobs.feishu.cn/index/position/{id}/detail"},
+    {"key":"hypergryph_social","company":"鹰角网络","track":"social","ats":"custom","api":"POST https://jobs.hypergryph.com/api/outer/ats-apply/website/jobs/v2","body":"siteId 26325 + site:social（302 解析）","batch":"社招","exclude":"(无)","matchKeyword":"AI算法|算法开发"},
+    {"key":"xiaohongshu_social","company":"小红书","track":"social","ats":"custom","api":"POST https://job.xiaohongshu.com/websiterecruit/position/pageQueryPosition","body":"recruitType:social","batch":"社招","exclude":"(无)"},
+    {"key":"ctrip_social","company":"携程集团","track":"social","ats":"custom","api":"POST https://careers.ctrip.com/api/hrrecruit/getJobAd","body":"category:1(社招)","batch":"社招","exclude":"(无)"},
+    {"key":"shlab_social","company":"上海AI实验室","track":"social","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=social","body":"page_token/limit","batch":"社招","exclude":"(无)"}
   ]
 }
