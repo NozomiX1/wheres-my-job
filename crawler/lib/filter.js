@@ -89,4 +89,37 @@ function isSocial(job) {
   return /社招/.test(t);
 }
 
-module.exports = { KW, CORE_KW, APP_KW, ELITE_KW, NOISE_KW, TITLE_SIGNAL, isElite, isNoise, matchAI, matchTight, classifyType, pick, normalize, isIntern, isSocial };
+// 社招：经验年限解析（口径：只收 1-3 年 / 不限经验，即「要求下限 ≤ 3 年」）。
+// 优先用结构化字段（baidu workYears 等），否则解析 JD 文本：
+//   「3-5年」「1-3年」「1至3年」「3年以上」「五年及以上」「3年工作经验」「经验不限」…
+// 返回 { min: number|null, label } ：min=null 表示未识别（按不限处理），min=0 表示明确不限。
+const CN_NUM = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+function cnNum(s) {
+  s = String(s == null ? '' : s).trim();
+  if (/^\d+$/.test(s)) return Number(s);
+  if (s === '十') return 10;
+  const m = s.match(/^([一二三四五六七八九])?十([一二三四五六七八九])?$/);
+  if (m) return (m[1] ? CN_NUM[m[1]] : 1) * 10 + (m[2] ? CN_NUM[m[2]] : 0);
+  return CN_NUM[s] != null ? CN_NUM[s] : null;
+}
+const YEARS_PATTERNS = [
+  /([0-9一二三四五六七八九十]{1,4})\s*[-–~至]\s*([0-9一二三四五六七八九十]{1,4})\s*年/,  // 3-5年 / 1至3年
+  /([0-9一二三四五六七八九十]{1,4})\s*年(?:以上|及以上|\+)/,                              // 3年以上 / 五年+
+  /([0-9一二三四五六七八九十]{1,4})\s*年(?:工作经验|工作经历|相关经验|经验)/,             // 3年工作经验
+];
+function parseYearsReq(text) {
+  const t = String(text || '').replace(/\s+/g, ' ');
+  if (!t) return { min: null, label: '' };
+  if (/经验不限|不限经验|年限不限|工作年限[:：]?\s*不限/.test(t)) return { min: 0, label: '经验不限' };
+  for (const re of YEARS_PATTERNS) {
+    const m = t.match(re);
+    if (m) {
+      const lo = cnNum(m[1]);
+      if (lo == null) continue;
+      return { min: lo, label: m[0].replace(/\s+/g, '') };
+    }
+  }
+  return { min: null, label: '' };
+}
+
+module.exports = { KW, CORE_KW, APP_KW, ELITE_KW, NOISE_KW, TITLE_SIGNAL, isElite, isNoise, matchAI, matchTight, classifyType, pick, normalize, isIntern, isSocial, parseYearsReq };

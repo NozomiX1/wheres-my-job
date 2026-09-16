@@ -23,12 +23,35 @@
 
 ```
 阶段① 抓取（纯脚本，计划任务每天自动跑）
-  crawl.js  →  out/<key>_raw.json           全量原始岗
+  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 10 站）
 
 阶段② 打分 + 网页（纯脚本）
   score.js           打分器（锚点加权）
-  build_score_html.js  读 raw 全量打分 → 生成 index.html（得分降序）
+  build_score_html.js  读 raw 全量打分 → 生成 index.html（得分降序，校招/社招双轨切换）
 ```
+
+## 社招轨道（2026-09 新增）
+
+- **口径**：只收 **1-3 年 / 不限经验**（要求下限 ≤3 年；未标注年限按不限保留）；仍排实习/精英/职能岗；**零分噪声不入页**（字节一家社招就 1 万条，无技术命中的 HR/财务/行政不入数据）。
+- **识别**：`sites.json` 里 `track:"social"` 或 key 以 `_social` 结尾；`build_score_html.js` 对社招轨道不排 `isSocial`，改为年限过滤（优先结构化字段如腾讯 `RequireWorkYearsName` / 百度要求段，否则解析 JD 文本「3-5年/三年以上/经验不限」等，见 `lib/filter.js` `parseYearsReq`）。
+- **页面**：`index.html` 顶部「校招 (N) | 社招 (M)」切换，社招行带「经验:x年」角标。
+
+### 已接入社招站（11）与接入要点
+
+| 站点 | ats | 要点 |
+|---|---|---|
+| kimi/zhipu/stepfun 社招 | moka | `site:"social"`；社招 siteId 用 `app.mokahr.com/social-recruitment/<orgId>` 的 302 解析（moonshot 148506 / zphz 148983 / step 94904） |
+| deepseek | moka | 本就是社招站（siteId 140576，已加 track:social） |
+| minimax_social | feishu | 根路径即社招站，`website-path: index`，**需 acrawler 签名**（plain 模式 405；校招的 plain 配置同理已失效） |
+| bytedance_social | feishu | `jobs.bytedance.com/experienced`，`website-path: society`（不是 social！），翻页上限 10000 |
+| mihoyo_social | custom | 同一 API，`hireType: 0`（社招）/ 1（校招）；desc 需逐岗调 `/v1/job/info` |
+| baidu_social | custom | `recruitType=SOCIAL` 且 **projectType 留空**；列表 workYears 为空，年限从要求段解析 |
+| meituan_social | custom | 同一 API，`jobShareType: 2` |
+| xiaomi_social | custom | 同一 API，`type: 1` |
+| tencent_social | custom | `careers.tencent.com/tencentcareer/api/post/Query` 公开接口，列表自带 JD/经验年限/PostURL；**偶发限频，模块内重试×4** |
+| alibaba_social | ✕ | talent.alibaba.com/off-campus/position-list 有 Baxia 滑块，无头下不出数据，待逆向（C 类） |
+
+社招站点只走阶段① 抓取 + 阶段② 打分，不参与旧 flash 流水线（recall.js 硬排除社招岗）。
 
 ### 旧流水线（flash，暂缓）
 

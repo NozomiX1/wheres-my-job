@@ -9,7 +9,7 @@ Set-Location $root
 # 默认 $false，保持宽口径；本次收窄为手动执行，不常开。
 $NARROW = $false
 
-# 全部 31 个站点 key（moka/beisen/custom 纯 HTTP 快；feishu 需无头 Chrome，约 30-60s/站）
+# 全部 31 个校招站点 key（moka/beisen/custom 纯 HTTP 快；feishu 需无头 Chrome，约 30-60s/站）
 $siteKeys = @(
   'kimi','zhipu','deepseek','stepfun','hypergryph','iflytek',          # moka/beisen
   'bytedance','sensetime','minimax','lilith','papegames',              # feishu
@@ -17,6 +17,14 @@ $siteKeys = @(
   'meituan','kuaishou','mihoyo','netease_huyu','netease_leihuo',       # custom
   'baidu','baichuan','shlab',                                          # custom
   'xiaohongshu','ctrip','bilibili','vivo'                              # custom（2026-09-01 新增）
+)
+
+# 社招站点 key（track=social）：只抓取，不跑召回/切批（旧 flash 流水线硬排除社招岗，对社招无意义）
+# 阿里社招因 Baxia 滑块暂未接入，接入后加 'alibaba_social'
+$socialKeys = @(
+  'kimi_social','zhipu_social','stepfun_social',                      # moka 社招（deepseek 在 siteKeys 里，本就是社招站）
+  'minimax_social','bytedance_social',                                # feishu 社招（需无头 Chrome）
+  'mihoyo_social','baidu_social','meituan_social','xiaomi_social','tencent_social'  # custom 社招
 )
 
 $logDir = Join-Path $root 'log'
@@ -27,14 +35,18 @@ Start-Transcript -Path $log | Out-Null
 
 Write-Output "[$stamp] 开始每日刷新（抓取 + 召回 + 增量切批）"
 
-# 1) 抓取全量
-foreach ($k in $siteKeys) {
+# 1) 抓取全量（校招 + 社招）
+foreach ($k in ($siteKeys + $socialKeys)) {
   Write-Output "---- crawl $k ----"
   node (Join-Path $root 'crawl.js') $k
   if ($LASTEXITCODE -ne 0) { Write-Output "!! $k 抓取失败 (exit $LASTEXITCODE)，沿用旧 raw" }
 }
 
-# 2) 宽召回（≤200/公司）
+# 1.5) 打分 + 重建双轨网页（校招/社招切换）
+Write-Output "---- build_score_html ----"
+node (Join-Path $root 'build_score_html.js')
+
+# 2) 宽召回（≤200/公司，仅校招站；社招站不走旧 flash 流水线）
 foreach ($k in $siteKeys) {
   Write-Output "---- recall $k ----"
   node (Join-Path $root 'recall.js') $k

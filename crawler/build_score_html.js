@@ -1,10 +1,14 @@
 // 打分网页生成：跳过宽召回，直接对 raw 全量岗位打分，按得分降序生成主站网页。
+// v2：双轨（校招/社招）。社招轨道（sites.json track=social 或 key 以 _social 结尾）：
+//   - 不排 isSocial（它就是目标），仍排实习/精英/职能
+//   - 经验年限口径：只收 1-3 年 / 不限（要求下限 ≤3 年），优先结构化字段（workYears 等），
+//     否则解析 JD 要求段/全文；解析不到按不限保留；社招行展示「经验:x年」角标
 // 输出 ../index.html + ../2026秋招_LLM_Agent岗位筛选.html（两者内容一致）。
 // 用法：node build_score_html.js
 const fs = require('fs');
 const path = require('path');
 const { scoreJob, isGameCompany } = require('./score');
-const { isIntern, isSocial, isElite, isNoise, pick } = require('./lib/filter');
+const { isIntern, isSocial, isElite, isNoise, pick, parseYearsReq } = require('./lib/filter');
 
 const OUT = path.join(__dirname, 'out');
 const CACHE = path.join(OUT, 'judge_cache');
@@ -13,6 +17,9 @@ const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 
 const keyToCompany = {};
 const keyToSite = {};
 for (const s of registry) { keyToCompany[s.key] = s.company; keyToSite[s.key] = s; }
+
+// 社招经验年限上限（要求下限 > 3 年的岗位剔除）
+const SOCIAL_YEARS_MAX = 3;
 
 // 与 recall.js 一致的字段映射（descDuty/descRequire 供打分器 v3 职责/要求分权，缺失则启发式切分 desc）
 const fieldMaps = {
@@ -29,6 +36,7 @@ function buildUrl(site, id) {
 }
 
 const data = [];
+let socialZeroDropped = 0;
 for (const site of registry) {
   const key = site.key;
   const rawFile = path.join(OUT, key + '_raw.json');
@@ -41,6 +49,7 @@ for (const site of registry) {
   const fm = fieldMaps[site.ats] || fieldMaps.custom;
   const extra = new RegExp(site.exclude || '(?!)', 'i');
   const isGame = isGameCompany(key);
+  const socialTrack = site.track === 'social' || /_social$/.test(key);
 
   for (const j of jobs) {
     const title = String(pick(j, fm.title, '')).trim();
@@ -49,9 +58,20 @@ for (const site of registry) {
     if (desc && typeof desc === 'object') desc = '';
     desc = String(desc || '');
 
-    // 只做硬排除（实习/社招/精英/职能），不做宽召回
-    if (isIntern(j) || isSocial(j)) continue;
+    // 硬排除（实习/精英/职能），不做宽召回。
+    // 校招轨道仍排社招岗；社招轨道不排（它就是目标），改为过滤经验年限。
+    if (isIntern(j)) continue;
     if (isElite(title) || isNoise(title) || extra.test(title)) continue;
+    if (!socialTrack && isSocial(j)) continue;
+
+    // 社招：经验年限（口径 1-3 年 / 不限）。优先结构化字段，其次要求段，最后全文。
+    let years = '';
+    if (socialTrack) {
+      let yrs = parseYearsReq(pick(j, ['workYears', 'workYearsName', 'workYear', 'requireWorkYear', 'experience'], ''));
+      if (yrs.min == null) yrs = parseYearsReq([pick(j, fm.descRequire, null), desc].filter(Boolean).join('\n'));
+      if (yrs.min != null && yrs.min > SOCIAL_YEARS_MAX) continue;
+      years = yrs.label;
+    }
 
     let dept = pick(j, fm.dept, '-');
     if (dept && typeof dept === 'object') dept = dept.name || dept.title || '';
@@ -67,15 +87,20 @@ for (const site of registry) {
     const url = String(pick(j, ['url'], '') || '') || buildUrl(site, id);
 
     const s = scoreJob({ title, desc, category: category || null, descDuty: pick(j, fm.descDuty, null), descRequire: pick(j, fm.descRequire, null) }, { isGame });
+    // 社招池远大于校招（字节一家 1 万条），零分纯噪声（HR/财务/行政等无任何技术命中）不入页，
+    // 只要有技术信号（score>0）就保留，低分岗仍可在页内按分数段筛选查看。
+    if (socialTrack && s.total <= 0) { socialZeroDropped++; continue; }
     data.push({
       company: keyToCompany[key] || key,
       key,
+      track: socialTrack ? '社招' : '校招',
       title,
       category: String(category || ''),
       dept: String(dept || '-'),
       city: String(city || '-'),
       date,
       url,
+      years,
       score: s.total,
       strength: s.strength,
       words: s.words,
@@ -92,13 +117,15 @@ data.sort((a, b) => (b.score - a.score) || (b.strength - a.strength) || (b.date.
 
 const ts = new Date().toISOString().slice(0, 10);
 const companyCount = new Set(data.map(r => r.company)).size;
+const campusCount = data.filter(r => r.track === '校招').length;
+const socialCount = data.filter(r => r.track === '社招').length;
 
 const html = `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>2026秋招 · LLM/Agent 岗位</title>
+<title>LLM/Agent 岗位 · 校招 & 社招</title>
 <style>
 :root{color-scheme:light;--bg:#f5f5f7;--surface:#fdfdfe;--hairline:#e8e8ed;--hover:rgba(0,0,0,.024);--ink:#1d1d1f;--ink2:#6e6e73;--muted:#86868b;--focus:#0071e3;--halo:rgba(0,113,227,.22);--segtrack:#e9e9eb;--segthumb:#fdfdfe;--segshadow:0 1px 3px rgba(0,0,0,.10);--green:#177a4c;--green-bg:#e3f2ea;--blue2:#3464d6;--blue2-bg:#e8eefc;--neutral:#5f6470;--neutral-bg:#ebebee;--red:#bb3a2e;--red-bg:#fbe9e7;--amber:#96660a;--amber-bg:#faf1da;--bar-bg:rgba(245,245,247,.82);--shadow-sm:0 1px 2px rgba(0,0,0,.05);--shadow-md:0 8px 28px rgba(0,0,0,.07);--mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace}
 *{box-sizing:border-box}
@@ -120,6 +147,7 @@ button:focus-visible,select:focus-visible,a:focus-visible,input:focus-visible{bo
 .segbtn{border:none;background:transparent;border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap}
 .segbtn .cnt{font-weight:500;opacity:.66;font-variant-numeric:tabular-nums}
 .segbtn.on{background:var(--segthumb);color:var(--ink);box-shadow:var(--segshadow)}
+.segtrack-lg .segbtn{padding:7px 18px;font-size:13.5px}
 select,button.pill{font:inherit;font-size:13px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:7px 14px;cursor:pointer}
 .spacer{flex:1}
 main{max-width:1080px;margin:0 auto;padding:24px 22px 12px}
@@ -150,6 +178,7 @@ main{max-width:1080px;margin:0 auto;padding:24px 22px 12px}
 .tag.infra{background:var(--neutral-bg);color:var(--neutral)}
 .tag.非技术{background:var(--red-bg);color:var(--red)}
 .tag.-{background:var(--neutral-bg);color:var(--muted)}
+.tag.years{background:var(--amber-bg);color:var(--amber)}
 .rowside{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 a.cta{display:inline-block;padding:6px 16px;border-radius:999px;background:#0071e3;color:#fff;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap}
 .foot{max-width:1080px;margin:26px auto 0;padding:0 22px 44px;text-align:center;font-size:12px;color:var(--muted)}
@@ -159,12 +188,13 @@ a.cta{display:inline-block;padding:6px 16px;border-radius:999px;background:#0071
 <body>
 <section class="hero">
   <h1>下一份工作，和 AI 一起。</h1>
-  <p class="sub">2026 秋招 LLM/Agent 方向校招岗位一站汇总，覆盖 ${companyCount} 家公司，按应用相关度打分排序，每天 08:00 自动更新。</p>
+  <p class="sub">LLM/Agent 方向岗位一站汇总，覆盖 ${companyCount} 家公司，校招 ${campusCount} 个 · 社招 ${socialCount} 个（1-3 年/不限经验），按应用相关度打分排序，每天自动更新。</p>
   <div class="searchbar"><input type="text" id="q" placeholder="搜索岗位、公司或城市"></div>
 </section>
 
 <div class="bar">
   <div class="wrap barin">
+    <div class="seg segtrack-lg" id="segTrack" role="group" aria-label="切换校招/社招"></div>
     <div class="seg" id="seg" role="group" aria-label="按标题档筛选"></div>
     <select id="fCompany" title="按公司筛选"><option value="">全部公司</option></select>
     <select id="fScore" title="按分数段筛选">
@@ -191,24 +221,26 @@ a.cta{display:inline-block;padding:6px 16px;border-radius:999px;background:#0071
     <span><span class="dot" style="background:var(--blue2)"></span>算法(66)</span>
     <span><span class="dot" style="background:var(--neutral)"></span>infra(33)</span>
     <span><span class="dot" style="background:var(--red)"></span>非技术(0)</span>
-    <span style="margin-left:8px">已排除实习/社招/精英/职能岗 · 分数 = 应用相关度（越高越靠前）</span>
+    <span style="margin-left:8px">已排除实习/精英/职能岗 · 校招=2027届全职 · 社招=1-3年/不限经验 · 分数 = 应用相关度（越高越靠前）</span>
   </div>
   <div class="rows" id="rows"></div>
 </main>
 
-<footer class="foot">数据由爬虫全量抓取，按 LLM/Agent 应用相关度打分排序。口径：2027届校招全职，LLM 算法与 Agent 应用方向。更新于 ${ts}</footer>
+<footer class="foot">数据由爬虫全量抓取，按 LLM/Agent 应用相关度打分排序。口径：校招 = 2027届全职；社招 = 1-3 年/不限经验。更新于 ${ts}</footer>
 
 <script>
 const DATA = __DATA__;
 const $ = id => document.getElementById(id);
-var state = { q:'', company:'', tier:'', fscore:'', sortKey:'score', sortDir:-1 };
+var state = { q:'', company:'', tier:'', fscore:'', sortKey:'score', sortDir:-1, track:'校招' };
 
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function tierColor(t){return ({'应用':'var(--green)','算法':'var(--blue2)','infra':'var(--neutral)','非技术':'var(--red)'})[t]||'var(--muted)'}
+function trackData(){return DATA.filter(r=>r.track===state.track)}
 
 function filtered(){
   var q=state.q.trim().toLowerCase();
   return DATA.filter(function(r){
+    if(r.track!==state.track) return false;
     if(state.company && r.company!==state.company) return false;
     if(state.tier && r.titleTier!==state.tier) return false;
     if(state.fscore==='hi' && r.score<83) return false;
@@ -232,7 +264,7 @@ function rowHtml(r){
   return '<div class="row">'+
     '<div class="scorebox"><div class="num" style="color:'+tierColor(r.titleTier)+'">'+r.score.toFixed(1)+'</div><div class="lbl">标题'+r.titleScore.toFixed(0)+' 描述'+r.descScore.toFixed(0)+'</div></div>'+
     '<div class="rowmain">'+
-      '<div class="l1"><span class="t">'+esc(r.title)+'</span><span class="tag '+r.titleTier+'">'+r.titleTier+'</span><span class="tag '+r.descTier+'">描述:'+r.descTier+'</span></div>'+
+      '<div class="l1"><span class="t">'+esc(r.title)+'</span><span class="tag '+r.titleTier+'">'+r.titleTier+'</span><span class="tag '+r.descTier+'">描述:'+r.descTier+'</span>'+(r.years?'<span class="tag years">经验:'+esc(r.years)+'</span>':'')+'</div>'+
       '<div class="l2">'+esc(r.company)+(r.category?' · <b class="cat">'+esc(r.category)+'</b>':'')+' · '+esc(r.city)+' · '+esc(r.date)+'</div>'+
       (r.words&&r.words.length?'<div class="l3">'+r.words.map(function(w){return '<span class="kw">'+esc(w)+'</span>';}).join('')+'</div>':'')+
       '<div class="barwrap"><div class="barfill" style="width:'+pct+'%;background:'+tierColor(r.titleTier)+'"></div></div>'+
@@ -245,23 +277,40 @@ function render(){
   $('total').textContent=rows.length;
   $('rows').innerHTML=rows.map(rowHtml).join('');
 }
+function buildTrackSeg(){
+  var box=$('segTrack'); box.innerHTML='';
+  ['校招','社招'].forEach(function(t){
+    var n=DATA.filter(r=>r.track===t).length;
+    if(!n) return;
+    var b=document.createElement('button'); b.type='button'; b.className='segbtn'+(state.track===t?' on':'');
+    b.textContent=t+' '; var s=document.createElement('span'); s.className='cnt'; s.textContent=n; b.appendChild(s);
+    b.addEventListener('click',function(){
+      if(state.track===t) return;
+      state.track=t; state.tier=''; state.company='';
+      buildTrackSeg(); buildSeg(); buildCompany(); render();
+    });
+    box.appendChild(b);
+  });
+}
 function buildSeg(){
-  var counts={}; DATA.forEach(r=>{counts[r.titleTier]=(counts[r.titleTier]||0)+1});
+  var rows=trackData();
+  var counts={}; rows.forEach(r=>{counts[r.titleTier]=(counts[r.titleTier]||0)+1});
+  var box=$('seg'); box.innerHTML='';
   var tiers=['','应用','算法','infra','非技术'];
   var labels={ '':'全部','应用':'应用','算法':'算法','infra':'infra','非技术':'非技术' };
-  var box=$('seg');
   tiers.forEach(function(t){
     if(t && !counts[t]) return;
-    var n=t===''?DATA.length:counts[t];
-    var b=document.createElement('button'); b.type='button'; b.className='segbtn'; b.setAttribute('data-t',t);
+    var n=t===''?rows.length:counts[t];
+    var b=document.createElement('button'); b.type='button'; b.className='segbtn'+(state.tier===t?' on':''); b.setAttribute('data-t',t);
     b.textContent=labels[t]+' '; var s=document.createElement('span'); s.className='cnt'; s.textContent=n; b.appendChild(s);
-    b.addEventListener('click',function(){ state.tier=b.getAttribute('data-t'); render(); });
+    b.addEventListener('click',function(){ state.tier=b.getAttribute('data-t'); buildSeg(); render(); });
     box.appendChild(b);
   });
 }
 function buildCompany(){
-  var counts={}; DATA.forEach(r=>{counts[r.company]=(counts[r.company]||0)+1});
-  var sel=$('fCompany');
+  var counts={}; trackData().forEach(r=>{counts[r.company]=(counts[r.company]||0)+1});
+  var sel=$('fCompany'); sel.innerHTML='';
+  var o0=document.createElement('option'); o0.value=''; o0.textContent='全部公司'; sel.appendChild(o0);
   Object.keys(counts).sort((a,b)=>a.localeCompare(b,'zh')).forEach(v=>{var o=document.createElement('option');o.value=v;o.textContent=v+'（'+counts[v]+'）';sel.appendChild(o)});
 }
 function bind(){
@@ -271,7 +320,7 @@ function bind(){
   $('mSort').addEventListener('change',e=>{state.sortKey=e.target.value;render()});
   $('mFlip').addEventListener('click',function(){state.sortDir=-state.sortDir;render()});
 }
-buildSeg(); buildCompany(); bind(); render();
+buildTrackSeg(); buildSeg(); buildCompany(); bind(); render();
 </script>
 </body>
 </html>`;
@@ -281,4 +330,4 @@ const destHtml = path.join(__dirname, '..', '2026秋招_LLM_Agent岗位筛选.ht
 const destIndex = path.join(__dirname, '..', 'index.html');
 fs.writeFileSync(destHtml, out, 'utf8');
 fs.writeFileSync(destIndex, out, 'utf8');
-console.log('生成 ' + destHtml + ' + index.html （岗位 ' + data.length + ' 条，按得分降序）');
+console.log('生成 ' + destHtml + ' + index.html （校招 ' + campusCount + ' + 社招 ' + socialCount + ' 岗，按得分降序；社招零分噪声已剔 ' + socialZeroDropped + ' 条）');

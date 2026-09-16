@@ -1,5 +1,5 @@
 {
-  "说明": "站点注册表：一家公司一条。ats 取值 feishu|moka|beisen|custom。custom 表示该站是自建 API，靠 cdp_capture.js 逆向后按 api/body/note 复现。exclude 为该司需排除的精英计划关键词(regex)。",
+  "说明": "站点注册表：一家公司一条。ats 取值 feishu|moka|beisen|custom。custom 表示该站是自建 API，靠 cdp_capture.js 逆向后按 api/body/note 复现。exclude 为该司需排除的精英计划关键词(regex)。track=social 表示社招轨道（key 约定以 _social 结尾；deepseek 无校招为特例）。",
   "sites": [
     {"key":"bytedance","company":"字节跳动","ats":"custom","batch":"2027届校招","exclude":"(无，Seed=普通校招)","linkTemplate":"https://jobs.bytedance.com/campus/position/{id}/detail","note":"关键词搜索+CDP抓响应，见 lib/custom/bytedance.js"},
     {"key":"sensetime","company":"商汤","ats":"feishu","url":"https://hr-jobs.sensetime.com/edu","aid":0,"websitePath":"edu","subjectIdList":["7657490082207058226"],"batch":"2027届校招","exclude":"无限原力","linkTemplate":"https://hr-jobs.sensetime.com/edu/position/{id}/detail"},
@@ -9,7 +9,7 @@
 
     {"key":"kimi","company":"月之暗面","ats":"moka","orgId":"moonshot","siteId":148507,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(无)"},
     {"key":"zhipu","company":"智谱","ats":"moka","orgId":"zphz","siteId":148984,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(无)"},
-    {"key":"deepseek","company":"DeepSeek","ats":"moka","orgId":"high-flyer","siteId":140576,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招(无校招批次)","exclude":"(无)"},
+    {"key":"deepseek","company":"DeepSeek","track":"social","ats":"moka","orgId":"high-flyer","siteId":140576,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招(无校招批次)","exclude":"(无)"},
     {"key":"stepfun","company":"阶跃星辰","ats":"moka","orgId":"step","siteId":141903,"site":"campus","aesIv":"de7c21ed8d6f50fe","batch":"2027届校招","exclude":"(StepStar=校招品牌，勿排)"},
     {"key":"hypergryph","company":"鹰角网络","ats":"custom","batch":"2027届校招","exclude":"(无)","matchKeyword":"AI算法|算法开发"},
 
@@ -34,6 +34,17 @@
     {"key":"bilibili","company":"B站","ats":"custom","api":"POST https://jobs.bilibili.com/api/campus/position/positionList","body":"{\"pageSize\":200,\"pageNum\":N}+header X-CSRF（先GET /api/auth/v1/csrf/token，需X-UserType:2/X-AppKey:ops.ehr-api.auth）","batch":"2027届校招（混实习，build按isIntern排除）","exclude":"B-UP|B-STAR"},
     {"key":"vivo","company":"vivo","ats":"custom","api":"POST https://hr-campus.vivo.com/api/Jobad/GetJobAdPageList","body":"{\"PageIndex\":N,\"PageSize\":100,\"ClassificationOne\":[\"2\"]}（北森zhiye门户，ClassificationOne 2=秋季校园招聘）","batch":"2027届校招","exclude":"蓝极星"},
     {"key":"baichuan","company":"百川智能","ats":"custom","api":"SSR --dump-dom https://campus.baichuan-inc.com/","body":"-","batch":"2027届校招","exclude":"(星耀=校招品牌，勿排)"},
-    {"key":"shlab","company":"上海AI实验室","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=campus","body":"page_token/limit","batch":"实习(留用)","exclude":"(无)"}
+    {"key":"shlab","company":"上海AI实验室","ats":"custom","api":"GET https://www.shlab.org.cn/api/getJobList?mode=campus","body":"page_token/limit","batch":"实习(留用)","exclude":"(无)"},
+
+    {"key":"kimi_social","company":"月之暗面","track":"social","ats":"moka","orgId":"moonshot","siteId":148506,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招","exclude":"(无)","note":"社招 siteId 由 app.mokahr.com/social-recruitment/moonshot 302 解析"},
+    {"key":"zhipu_social","company":"智谱","track":"social","ats":"moka","orgId":"zphz","siteId":148983,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招","exclude":"(无)"},
+    {"key":"stepfun_social","company":"阶跃星辰","track":"social","ats":"moka","orgId":"step","siteId":94904,"site":"social","aesIv":"de7c21ed8d6f50fe","batch":"社招","exclude":"(无)"},
+    {"key":"minimax_social","company":"MiniMax","track":"social","ats":"feishu","url":"https://vrfi1sk8a0.jobs.feishu.cn/","aid":1658,"websitePath":"index","subjectIdList":[],"batch":"社招","exclude":"(无)","note":"社招根路径即社招站（website-path: index），需 acrawler 签名（非 plain）","linkTemplate":"https://vrfi1sk8a0.jobs.feishu.cn/index/position/{id}/detail"},
+    {"key":"bytedance_social","company":"字节跳动","track":"social","ats":"feishu","url":"https://jobs.bytedance.com/experienced","aid":1943,"websitePath":"society","subjectIdList":[],"batch":"社招","exclude":"(无)","note":"社招 website-path: society，翻页上限约 1400 条","linkTemplate":"https://jobs.bytedance.com/experienced/position/{id}/detail"},
+    {"key":"mihoyo_social","company":"米哈游","track":"social","ats":"custom","api":"POST https://ats.openout.mihoyo.com/ats-portal/v1/job/list","body":"hireType:0(社招)","batch":"社招","exclude":"(无)"},
+    {"key":"baidu_social","company":"百度","track":"social","ats":"custom","api":"POST https://talent.baidu.com/httservice/getPostListNew","body":"recruitType=SOCIAL&projectType=(空)","batch":"社招","exclude":"(无)"},
+    {"key":"meituan_social","company":"美团","track":"social","ats":"custom","api":"POST https://zhaopin.meituan.com/api/official/job/getJobList","body":"jobShareType=2(社招)","batch":"社招","exclude":"(无)"},
+    {"key":"xiaomi_social","company":"小米","track":"social","ats":"custom","api":"GET https://hr.xiaomi.com/website/api/agent/searchJobPage?type=1","body":"type=1(社招)","batch":"社招","exclude":"(无)"},
+    {"key":"tencent_social","company":"腾讯","track":"social","ats":"custom","api":"GET https://careers.tencent.com/tencentcareer/api/post/Query","body":"公开接口，列表自带JD+经验年限+PostURL","batch":"社招","exclude":"(无)","note":"接口偶发限频，模块内已加重试"}
   ]
 }
