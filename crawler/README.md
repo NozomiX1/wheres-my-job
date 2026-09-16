@@ -23,7 +23,7 @@
 
 ```
 阶段① 抓取（纯脚本，计划任务每天自动跑）
-  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 26 站）
+  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 29 站）
 
 阶段② 打分 + 网页（纯脚本）
   score.js           打分器（锚点加权）
@@ -36,7 +36,7 @@
 - **识别**：`sites.json` 里 `track:"social"` 或 key 以 `_social` 结尾；`build_score_html.js` 对社招轨道不排 `isSocial`，改为年限过滤（优先结构化字段如腾讯 `RequireWorkYearsName` / 百度要求段，否则解析 JD 文本「3-5年/三年以上/经验不限」等，见 `lib/filter.js` `parseYearsReq`）。
 - **页面**：`index.html` 顶部「校招 (N) | 社招 (M)」切换，社招行带「经验:x年」角标。
 
-### 已接入社招站（27）与接入要点
+### 已接入社招站（30 家公司）与接入要点
 
 | 站点 | ats | 要点 |
 |---|---|---|
@@ -64,8 +64,10 @@
 | bilibili_social | custom | 同域 `/api/srs/position/positionList`（srs=社招系统），同校招鉴权（X-CSRF），workTypeList/positionTypeList=["3"] |
 | tme_social | custom | 同域 `/api/job/list`（/social/ 页）；列表自带 duty；详情 /social/post-details?id= |
 | netease_social | custom | `hr.163.com/api/hr163/position/queryPage`，**一站覆盖全集团**（互娱/雷火/有道/云音乐/伏羲/传媒）；reqWorkYearsName 结构化年限 |
+| oppo_social | custom | **career.oppo.com（单数）= 社招部署**（careers=校招）；`/ats-candidate-api/open-api/position/queryPositionList`，`recruitTypeList=[SOCIAL-RECRUITMENT]`；min/maxWorkYears 结构化年限 |
+| alibaba_social | custom | **talent-holding.alibaba.com（集团社招，无 Baxia）**；同校招 XSRF 鉴权；experience{from,to} 结构化年限；与淘天共事 `ali_social_common.js` |
+| taotian_social | custom | talent.taotian.com（淘天集团社招），同阿里集团 |
 | **无公开社招** | | 百川（只有校招站，已迁飞书） |
-| **待接（反爬/入口待确认）** | | alibaba（Baxia 滑块）、oppo（社招入口未找到，路由表有 /recruitment 但当前部署未启用） |
 
 社招站点只走阶段① 抓取 + 阶段② 打分，不参与旧 flash 流水线（recall.js 硬排除社招岗）。
 
