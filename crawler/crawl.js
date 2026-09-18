@@ -15,37 +15,52 @@ if (!site) { console.log('未找到站点 ' + KEY + '，可用 key：' + registr
 const OUT_DIR = path.join(__dirname, 'out');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 const rawFile = path.join(OUT_DIR, KEY + '_raw.json');
+// 记录运行前 mtime（须在拉数据之前），供校验段判断本次是否真的写了文件
+const hadOld = fs.existsSync(rawFile);
+const oldMtime = hadOld ? fs.statSync(rawFile).mtimeMs : 0;
 
 function runLib(script, args, timeout = 180000) {
   const r = spawnSync('node', [path.join(__dirname, 'lib', script), ...args], { encoding: 'utf8', timeout });
   if (r.stdout) console.log(r.stdout.trim().slice(0, 600));
   if (r.stderr) console.log('[stderr] ' + r.stderr.trim().slice(0, 400));
-  return r.status === 0;
+  // 模块失败必须显式暴露（静默保留基线曾导致字节校招长达半月用旧数据）
+  if (r.status !== 0) { console.log('【失败】lib/' + script + ' exit=' + r.status + (r.signal ? ' signal=' + r.signal : '') + '，保留旧基线'); return false; }
+  return true;
 }
 
 // ---- 拉原始数据 ----
+let libOk = true;
 if (site.ats === 'moka') {
-  runLib('moka.js', [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile]);
+  libOk = runLib('moka.js', [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile]);
 } else if (site.ats === 'beisen') {
-  runLib('beisen.js', [site.api, (site.category || ['2']).join(','), rawFile]);
+  libOk = runLib('beisen.js', [site.api, (site.category || ['2']).join(','), rawFile]);
 } else if (site.ats === 'feishu') {
   const subjects = (site.subjectIdList || []).join(',');
-  runLib('feishu.js', [site.url, rawFile.replace(/\.json$/, ''), String(site.aid || 1943), site.websitePath || 'campus', subjects, site.plain ? 'plain' : ''], 600000);
+  libOk = runLib('feishu.js', [site.url, rawFile.replace(/\.json$/, ''), String(site.aid || 1943), site.websitePath || 'campus', subjects, site.plain ? 'plain' : ''], 600000);
 } else if (site.ats === 'custom') {
   const mod = path.join(__dirname, 'lib', 'custom', KEY + '.js');
   if (!fs.existsSync(mod)) { console.log('【custom】模块缺失 ' + mod + '，配方：' + site.api + ' / ' + (site.body || '')); process.exit(0); }
   const r = spawnSync('node', [mod], { encoding: 'utf8', timeout: 300000 });
   if (r.stdout) console.log(r.stdout.trim().slice(0, 500));
   if (r.stderr) console.log('[stderr] ' + r.stderr.trim().slice(0, 500));
+  // 模块失败（超时 signal=SIGTERM / 非零退出）必须显式暴露并 exit 1（run_daily 靠退出码打 !! 警告）；
+  // 旧基线文件保留不动，下次成功时覆盖
+  if (r.status !== 0) { console.log('【失败】custom 模块 ' + KEY + ' exit=' + r.status + (r.signal ? ' signal=' + r.signal : '') + '，保留旧基线'); libOk = false; }
 } else {
   console.log('未知 ats: ' + site.ats);
   process.exit(0);
 }
+if (!libOk) process.exit(1);
 
-// ---- 校验 raw（0 条视为失败，保留基线旧数据）----
+// ---- 校验 raw（0 条视为失败，保留基线旧数据；另检查本次是否真的写了文件，防模块静默失败伪装成功）----
 let raw = null;
-if (fs.existsSync(rawFile)) { try { raw = JSON.parse(fs.readFileSync(rawFile, 'utf8')); } catch (e) {} }
+if (hadOld) { try { raw = JSON.parse(fs.readFileSync(rawFile, 'utf8')); } catch (e) {} }
 if (!raw) { console.log('未拿到数据'); process.exit(1); }
 const jobs = Array.isArray(raw) ? raw : (raw.all || raw.list || raw.jobs || []);
 if (!jobs.length) { console.log('未拿到数据(0 条，视为失败保留基线)'); process.exit(1); }
-console.log('已抓取 ' + jobs.length + ' 条 -> ' + rawFile);
+if (fs.existsSync(rawFile) && fs.statSync(rawFile).mtimeMs === oldMtime) {
+  // 模块没有写文件（超时/崩溃在上文已报过【失败】），这里提示数据是旧基线
+  console.log('【注意】' + KEY + ' 本次未更新（模块失败或未写文件），当前为旧基线 ' + jobs.length + ' 条');
+} else {
+  console.log('已抓取 ' + jobs.length + ' 条 -> ' + rawFile);
+}

@@ -1,8 +1,8 @@
-// 字节跳动校招：全量抓「校招研发」岗位（约 1210 条）。
-// 分两阶段（都在无头 Chrome 页面内执行，页面自带 acrawler 签名）：
-//   1) 列表：翻页拉全量 /api/v1/search/job/posts
-//   2) desc：逐岗调详情 /api/v1/job/posts/<id>?portal_type=3
-// 每阶段带进度打印与失败重试，避免单次 evaluate 无限挂起。
+// 字节跳动校招：全量抓「校招研发」岗位（约 1200 条）。
+// 单阶段（无头 Chrome 页面内翻页，页面自带 acrawler 签名）：
+//   /api/v1/search/job/posts 的列表响应**自带 description/requirement**，
+//   无需逐岗调详情接口（旧版阶段2逐岗拉 desc 需 40 分钟+，导致每日任务 5 分钟超时、
+//   长期静默用旧基线；2026-09-16 发现列表自带 desc 后砍掉，全程约 1 分钟）。
 const { spawn } = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -57,7 +57,7 @@ async function fetchAll() {
     }
   `;
 
-  // ---- 阶段1：列表翻页 ----
+  // ---- 列表翻页（响应自带 description/requirement，一步到位） ----
   const listExpr = `(async () => {
     ${BOOTSTRAP}
     const CATEGORY = ${JSON.stringify(CATEGORY)};
@@ -68,7 +68,6 @@ async function fetchAll() {
     while (true) {
       const body = { keyword: '', limit, offset, job_category_id_list: CATEGORY.split(','), tag_id_list: [], location_code_list: [], subject_id_list: [PROJECT], recruitment_id_list: [], portal_type: 3, job_function_id_list: [], storefront_id_list: [], portal_entrance: 1 };
       let res = await signed('/api/v1/search/job/posts?' + qsBase + '&offset=' + offset, body);
-      // 失败重试一次
       if (res.__err) { await new Promise(r => setTimeout(r, 1000)); res = await signed('/api/v1/search/job/posts?' + qsBase + '&offset=' + offset, body); }
       if (res.__err) return { __err: res.__err, n: all.length, all };
       const d = res.data || {};
@@ -87,11 +86,13 @@ async function fetchAll() {
       cities: (x.city_list || []).map(c => c.name),
       category: x.job_category && x.job_category.name,
       publish: x.publish_time,
-      subject: x.job_subject && x.job_subject.name
+      subject: x.job_subject && x.job_subject.name,
+      desc: x.description || '',
+      descRequire: x.requirement || ''
     })) };
   })()`;
 
-  console.log('[阶段1] 开始翻页拉列表…');
+  console.log('[列表] 开始翻页拉全量（含 desc）…');
   const r1 = await call('Runtime.evaluate', { expression: listExpr, awaitPromise: true, returnByValue: true });
   const val1 = r1 && r1.result && r1.result.value;
   if (!val1 || val1.__err) {
@@ -99,38 +100,7 @@ async function fetchAll() {
     throw new Error('列表抓取失败: ' + JSON.stringify(val1 && val1.__err).slice(0, 200));
   }
   const list = val1.all || [];
-  console.log('[阶段1] 完成：total=' + val1.total + ' 实抓 ' + list.length + ' 条');
-
-  // ---- 阶段2：逐岗拉 desc（分批，每批在独立 evaluate 里执行，避免单次挂起） ----
-  const ids = list.map(p => p.id).filter(Boolean);
-  const descMap = {};
-  const BATCH = 100;
-  for (let bi = 0; bi < ids.length; bi += BATCH) {
-    const batchIds = ids.slice(bi, bi + BATCH);
-    const descExpr = `(async () => {
-      ${BOOTSTRAP}
-      const IDS = ${JSON.stringify(batchIds)};
-      const out = {};
-      for (const jid of IDS) {
-        try {
-          const path = '/api/v1/job/posts/' + jid + '?portal_type=3&with_recommend=true';
-          let sig = '';
-          if (window.byted_acrawler && window.byted_acrawler.sign) { sig = await window.byted_acrawler.sign({ url: location.origin + path }); }
-          const url = path + (sig ? '&_signature=' + encodeURIComponent(sig) : '');
-          const r = await fetch(url);
-          const j = await r.json();
-          const det = (j.data && j.data.job_post_detail) || {};
-          out[jid] = { d: det.description || '', c: (det.job_category && det.job_category.name) || '' };
-        } catch (e) { out[jid] = { d: '', c: '' }; }
-        await new Promise(r => setTimeout(r, 100));
-      }
-      return out;
-    })()`;
-    const rd = await call('Runtime.evaluate', { expression: descExpr, awaitPromise: true, returnByValue: true });
-    const dv = rd && rd.result && rd.result.value;
-    if (dv && typeof dv === 'object') Object.assign(descMap, dv);
-    console.log('[阶段2] desc 进度 ' + Math.min(bi + BATCH, ids.length) + '/' + ids.length);
-  }
+  console.log('[列表] 完成：total=' + val1.total + ' 实抓 ' + list.length + ' 条');
   chrome.kill();
 
   return list.map(p => {
@@ -138,11 +108,13 @@ async function fetchAll() {
     return {
       title: p.title || '',
       dept: (p.subject && (typeof p.subject === 'object' ? p.subject.name : p.subject)) || p.category || '-',
-      category: (descMap[String(p.id)] && descMap[String(p.id)].c) || p.category || '',
+      category: p.category || '',
       city: cityList.join('/') || '-',
       date: p.publish ? new Date(Number(p.publish) + 8 * 3600 * 1000).toISOString().slice(0, 10) : '-',
       url: `https://jobs.bytedance.com/campus/position/${p.id}/detail`,
-      desc: (descMap[String(p.id)] && descMap[String(p.id)].d) || '',
+      desc: p.desc || '',
+      descDuty: p.desc || '',
+      descRequire: p.descRequire || '',
       commitment: (p.recruitType || ''),
       recruitType: (p.recruitType || ''),
       recruitParent: (p.recruitParent || ''),
@@ -156,6 +128,7 @@ module.exports = { fetchAll };
 if (require.main === module) {
   fetchAll().then(jobs => {
     fs.writeFileSync(path.join(__dirname, '..', '..', 'out', 'bytedance_raw.json'), JSON.stringify(jobs, null, 2), 'utf8');
-    console.log('raw=' + jobs.length);
+    const withDesc = jobs.filter(j => j.desc && j.desc.length > 50).length;
+    console.log('raw=' + jobs.length + '（带desc ' + withDesc + '）');
   }).catch(e => { console.error('ERR ' + e.message); process.exit(1); });
 }
