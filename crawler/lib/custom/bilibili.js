@@ -3,7 +3,7 @@
 // 两步：
 //   ① GET /api/auth/v1/csrf/token（需 X-UserType:2 + X-AppKey:ops.ehr-api.auth）拿 X-CSRF
 //   ② POST /api/campus/position/positionList，header X-CSRF，body {"pageSize":200,"pageNum":N}
-// 列表混有实习岗（positionTypeName=实习），由 build_score_html.js 按标题 isIntern 排除。
+// 列表混有实习岗（positionTypeName=实习），保留官方性质；该旧适配器完整性尚待核验。
 // 详情路由：campus.bilibili.com/index.html#/positions/{id}
 const fs = require('fs');
 const path = require('path');

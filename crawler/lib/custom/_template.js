@@ -1,42 +1,30 @@
-// ============================================================
-// custom 站点模块契约（复制此文件改成 <key>.js）
-//
-// 职责：拉取该站「校招全职」全量岗位 → 归一化成统一结构 → 写入 out/<key>_raw.json
-// 硬排除（实习/社招/精英）与 LLM/Agent 判定在 recall.js + flash 阶段做，模块只负责「抓 + 归一化」。
-//
-// 归一化后的每个岗位对象必须是：
-//   { title, dept, city, date, url, desc, commitment, id }
-//   title      : 岗位名（字符串）
-//   dept       : 部门/事业群（字符串，无则 '-'）
-//   city       : 城市（多城用 '/' 连接，如 "北京/上海"）
-//   date       : 发布时间 'YYYY-MM-DD'（无则 '-'）
-//   url        : 岗位详情/投递链接（无则 ''）
-//   desc       : 岗位描述原文（用于 flash 判定读岗，无则 ''）
-//   commitment : '全职' / '实习' / '社招' 等（供 isIntern/isSocial 判断）
-//   id         : 岗位唯一 id（字符串，可选）
-//
-// 运行方式：node lib/custom/<key>.js   → 写 out/<key>_raw.json 并打印 "raw=N"
-// ============================================================
-const fs = require('fs');
-const path = require('path');
-
+// Custom adapter template. Existing custom adapters remain unverified and are not
+// automatically executed by crawl.js until source-specific completeness is reviewed.
+// Collect every occupation/experience/plan in the declared official source scope.
+// Never truncate JD, silently skip a failed detail/page, or mark a capped list complete.
+// On HTTP/auth/shape/count/pagination failure: throw BEFORE writing any candidate.
+// Success contract: {complete:true,total:<proven count>,jobs:[...]}; total=0 needs
+// an authoritative successful response, not a missing list or swallowed exception.
+// Jobs need official id/title, full available duty/requirements/description and URL.
+// Keep unknown dateKind/employment/talentPlan unknown; preserve channel parameters.
+// Changing registry coverage after a verified publication requires explicit migration.
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
 const COMPANY = '公司名';
 const KEY = 'sitekey';
 
 async function fetchAll() {
-  // TODO: 用 node fetch 拉全量（含翻页），返回归一化后的岗位数组
-  // 提示：接口 URL/请求体/字段名见 sites.json（api/body 字段）；未知站先用 lib/cdp_capture.js 抓包定位接口
-  const jobs = [];
-  // ... 翻页抓取 + 归一化 push({ title, dept, city, date, url, desc, commitment, id })
-  return jobs;
+  // Implement and test source-specific pagination, count and full-detail proof first.
+  // Do not turn this placeholder into an apparently valid empty result.
+  throw new Error('Source adapter not implemented or verified');
 }
 
 module.exports = { fetchAll, COMPANY, KEY };
-
 if (require.main === module) {
-  fetchAll().then(jobs => {
-    const raw = path.join(__dirname, '..', '..', 'out', KEY + '_raw.json');
-    fs.writeFileSync(raw, JSON.stringify(jobs, null, 2), 'utf8');
-    console.log('raw=' + jobs.length);
-  }).catch(e => { console.error('ERR ' + e.message); process.exit(1); });
+  fetchAll().then(envelope => {
+    const out = path.join(__dirname, '..', '..', 'out');
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, KEY + '_raw.json'), JSON.stringify(envelope, null, 2) + '\n');
+  }).catch(error => { console.error('ERR ' + error.message); process.exitCode = 1; });
 }

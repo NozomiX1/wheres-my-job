@@ -1,66 +1,109 @@
-// 站点爬取调度器（阶段①）：node crawl.js <siteKey>
-// 读 sites.json，按 ats 类型调用对应 lib 拉全量岗位，写入 out/<key>_raw.json。
-// 筛选/判定不在这里（见 recall.js → flash 判定 → aggregate.js）。
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+// node crawl.js <siteKey>: run one adapter, validate, then promote a complete snapshot.
+// Feishu qualifies only within individually reviewed registered scopes; other custom sources are not run.
+'use strict';
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const { loadSites, coverageFor, atomicWrite, normalizeJobs, validTimestamp } = require('./publish');
+const { verifiedSource, classifiedScope, portalNotice, CLASSIFIED_NOTICE } = require('./lib/feishu');
+const moka = require('./lib/moka');
+const beisen = require('./lib/beisen');
 
-const KEY = process.argv[2];
-if (!KEY) { console.log('用法: node crawl.js <siteKey>  （key 见 sites.json）'); process.exit(1); }
-
-const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 'utf8')).sites;
-const site = registry.find(s => s.key === KEY);
-if (!site) { console.log('未找到站点 ' + KEY + '，可用 key：' + registry.map(s => s.key).join(', ')); process.exit(1); }
-
-const OUT_DIR = path.join(__dirname, 'out');
-fs.mkdirSync(OUT_DIR, { recursive: true });
-const rawFile = path.join(OUT_DIR, KEY + '_raw.json');
-// 记录运行前 mtime（须在拉数据之前），供校验段判断本次是否真的写了文件
-const hadOld = fs.existsSync(rawFile);
-const oldMtime = hadOld ? fs.statSync(rawFile).mtimeMs : 0;
-
-function runLib(script, args, timeout = 180000) {
-  const r = spawnSync('node', [path.join(__dirname, 'lib', script), ...args], { encoding: 'utf8', timeout });
-  if (r.stdout) console.log(r.stdout.trim().slice(0, 600));
-  if (r.stderr) console.log('[stderr] ' + r.stderr.trim().slice(0, 400));
-  // 模块失败必须显式暴露（静默保留基线曾导致字节校招长达半月用旧数据）
-  if (r.status !== 0) { console.log('【失败】lib/' + script + ' exit=' + r.status + (r.signal ? ' signal=' + r.signal : '') + '，保留旧基线'); return false; }
-  return true;
+function adapterCommand(site, rawFile) {
+  if (moka.requiresVerification(site) && !moka.verifiedSource(site)) return null;
+  if (beisen.requiresVerification(site) && !beisen.verifiedSource(site)) return null;
+  if (site.ats === 'moka') return { script: path.join(__dirname, 'lib', 'moka.js'), args: [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile, ...(site.fetchDetails ? ['--details'] : site.listJD ? ['--list-jd'] : []), ...(site.apiOrigin ? ['--origin=' + site.apiOrigin] : [])], timeout: site.fetchDetails || site.listJD ? 900000 : 180000 };
+  if (site.ats === 'beisen') return { script: path.join(__dirname, 'lib', 'beisen.js'), args: beisen.verifiedSource(site) ? [JSON.stringify(site), rawFile] : [site.api, (site.category || ['2']).join(','), rawFile], timeout: beisen.verifiedSource(site) ? 900000 : 180000 };
+  if (verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'feishu.js'), args: [JSON.stringify(site), rawFile], timeout: classifiedScope(site) ? 1200000 : 900000 };
+  return null;
 }
 
-// ---- 拉原始数据 ----
-let libOk = true;
-if (site.ats === 'moka') {
-  libOk = runLib('moka.js', [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile]);
-} else if (site.ats === 'beisen') {
-  libOk = runLib('beisen.js', [site.api, (site.category || ['2']).join(','), rawFile]);
-} else if (site.ats === 'feishu') {
-  const subjects = (site.subjectIdList || []).join(',');
-  libOk = runLib('feishu.js', [site.url, rawFile.replace(/\.json$/, ''), String(site.aid || 1943), site.websitePath || 'campus', subjects, site.plain ? 'plain' : ''], 600000);
-} else if (site.ats === 'custom') {
-  const mod = path.join(__dirname, 'lib', 'custom', KEY + '.js');
-  if (!fs.existsSync(mod)) { console.log('【custom】模块缺失 ' + mod + '，配方：' + site.api + ' / ' + (site.body || '')); process.exit(0); }
-  const r = spawnSync('node', [mod], { encoding: 'utf8', timeout: 300000 });
-  if (r.stdout) console.log(r.stdout.trim().slice(0, 500));
-  if (r.stderr) console.log('[stderr] ' + r.stderr.trim().slice(0, 500));
-  // 模块失败（超时 signal=SIGTERM / 非零退出）必须显式暴露并 exit 1（run_daily 靠退出码打 !! 警告）；
-  // 旧基线文件保留不动，下次成功时覆盖
-  if (r.status !== 0) { console.log('【失败】custom 模块 ' + KEY + ' exit=' + r.status + (r.signal ? ' signal=' + r.signal : '') + '，保留旧基线'); libOk = false; }
-} else {
-  console.log('未知 ats: ' + site.ats);
-  process.exit(0);
+function readIfPresent(file) {
+  return fs.existsSync(file) ? fs.readFileSync(file) : null;
 }
-if (!libOk) process.exit(1);
 
-// ---- 校验 raw（0 条视为失败，保留基线旧数据；另检查本次是否真的写了文件，防模块静默失败伪装成功）----
-let raw = null;
-if (hadOld) { try { raw = JSON.parse(fs.readFileSync(rawFile, 'utf8')); } catch (e) {} }
-if (!raw) { console.log('未拿到数据'); process.exit(1); }
-const jobs = Array.isArray(raw) ? raw : (raw.all || raw.list || raw.jobs || []);
-if (!jobs.length) { console.log('未拿到数据(0 条，视为失败保留基线)'); process.exit(1); }
-if (fs.existsSync(rawFile) && fs.statSync(rawFile).mtimeMs === oldMtime) {
-  // 模块没有写文件（超时/崩溃在上文已报过【失败】），这里提示数据是旧基线
-  console.log('【注意】' + KEY + ' 本次未更新（模块失败或未写文件），当前为旧基线 ' + jobs.length + ' 条');
-} else {
-  console.log('已抓取 ' + jobs.length + ' 条 -> ' + rawFile);
+function restore(file, backup) {
+  if (backup !== null) fs.writeFileSync(file, backup);
+  else if (fs.existsSync(file)) fs.unlinkSync(file);
+}
+
+function parseOptional(buffer) {
+  try { return buffer === null ? null : JSON.parse(buffer.toString('utf8')); } catch { return null; }
+}
+
+function validateEnvelope(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.complete !== true || !Number.isSafeInteger(raw.total) || raw.total < 0 || !Array.isArray(raw.jobs) || raw.total !== raw.jobs.length) {
+    const error = new Error('Adapter did not prove a complete result with an explicit matching total');
+    error.unverified = true;
+    throw error;
+  }
+  return raw.jobs;
+}
+
+function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSync, now = () => new Date().toISOString(), log = () => {} } = {}) {
+  if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
+  const lastAttempt = now();
+  if (!validTimestamp(lastAttempt)) throw new Error('Invalid attempt timestamp');
+  fs.mkdirSync(outDir, { recursive: true });
+  const rawFile = path.join(outDir, site.key + '_raw.json');
+  const snapshotFile = path.join(outDir, site.key + '_snapshot.json');
+  const statusFile = path.join(outDir, site.key + '_status.json');
+  // Backup BEFORE invoking the child. Remove the raw path so exit-0/no-write cannot reuse it.
+  const oldRaw = readIfPresent(rawFile);
+  const oldSnapshot = readIfPresent(snapshotFile);
+  const previousStatus = parseOptional(readIfPresent(statusFile));
+  const previousSnapshot = parseOptional(oldSnapshot);
+  const lastSuccess = previousStatus?.key === site.key && validTimestamp(previousStatus.lastSuccess)
+    ? previousStatus.lastSuccess
+    : previousSnapshot?.key === site.key && previousSnapshot.complete === true && validTimestamp(previousSnapshot.completedAt) ? previousSnapshot.completedAt : null;
+  const coverage = coverageFor(site);
+  let promoted = false;
+  const saveStatus = (status, message, success = lastSuccess) => {
+    const result = { version: 1, key: site.key, status, lastAttempt, lastSuccess: success, message, coverage };
+    atomicWrite(statusFile, JSON.stringify(result, null, 2) + '\n');
+    return { code: status === 'ready' ? 0 : 1, ...result };
+  };
+  const command = adapterCommand(site, rawFile);
+  if (!command) return saveStatus('unverified', '此适配器尚未复验分页完整性；未运行，保留已发布基线');
+  try {
+    if (oldRaw !== null) fs.unlinkSync(rawFile);
+    const child = runner(process.execPath, [command.script, ...command.args], { encoding: 'utf8', timeout: command.timeout });
+    if (child?.stdout) log(child.stdout.trim());
+    if (child?.stderr) log(child.stderr.trim());
+    if (!child || child.error || child.status !== 0 || child.signal) throw new Error('Adapter failed: ' + (child?.error?.message || 'exit=' + child?.status + (child?.signal ? ' signal=' + child.signal : '')));
+    if (!fs.existsSync(rawFile)) throw new Error('Adapter did not write new raw data');
+    const raw = JSON.parse(fs.readFileSync(rawFile, 'utf8'));
+    const jobs = validateEnvelope(raw);
+    if (beisen.verifiedSource(site)) beisen.validateEvidence(raw.verification, jobs, site);
+    normalizeJobs(jobs, site); // Reject the WHOLE source before replacing either baseline.
+    const completedAt = now();
+    if (!validTimestamp(completedAt) || Date.parse(completedAt) < Date.parse(lastAttempt)) throw new Error('Invalid completion timestamp');
+    const snapshot = { version: 1, key: site.key, complete: true, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) ? { verification: raw.verification } : {}) };
+    atomicWrite(snapshotFile, JSON.stringify(snapshot, null, 2) + '\n');
+    promoted = true;
+    // Ready metadata identifies this same completed attempt, not the invocation start time.
+    const status = { version: 1, key: site.key, status: 'ready', lastAttempt, lastSuccess: completedAt, message: '已验证完整来源快照：' + jobs.length + ' 个岗位（仅此来源范围）' + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : ''), coverage };
+    atomicWrite(statusFile, JSON.stringify(status, null, 2) + '\n');
+    return { code: 0, ...status, total: jobs.length };
+  } catch (error) {
+    restore(rawFile, oldRaw);
+    if (promoted) restore(snapshotFile, oldSnapshot);
+    return saveStatus(error.unverified ? 'unverified' : 'failed', error.message + '；保留旧 raw、快照及已发布基线');
+  }
+}
+
+module.exports = { adapterCommand, validateEnvelope, runCrawl };
+if (require.main === module) {
+  try {
+    const key = process.argv[2];
+    const sites = loadSites();
+    const site = sites.find(item => item.key === key);
+    if (!site) throw new Error('Usage: node crawl.js <siteKey>; keys: ' + sites.map(item => item.key).join(', '));
+    const result = runCrawl(site, { log: console.log });
+    console.log(key + ': ' + result.status + ' — ' + result.message);
+    process.exitCode = result.code;
+  } catch (error) {
+    console.error('ERR ' + error.message);
+    process.exitCode = 1;
+  }
 }

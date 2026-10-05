@@ -1,313 +1,120 @@
-# 招聘岗位爬虫 + 打分排序 工具箱（可复用）
+# 安得采集工具
 
-把「逐个反爬」沉淀成一套可复用的工具。核心思路：**脚本爬取全量 → 打分器排序（应用 > 算法 > infra > 非技术）→ 网页展示**。
+原生 CommonJS / Node.js 22+，不调用 LLM/Agent。采集不应按求职者方向删岗，用户关键词排序只在浏览器完成。[产品与当前数据限制](../README.md) · [需求](../SPEC.md)
 
-> **当前方案（v3，打分器）**：`crawl.js` 抓全量 → `score.js` 锚点加权打分 → `build_score_html.js` 生成得分降序网页。
-> **旧方案（flash 逐岗读判，暂缓）**：脚本保留（`recall.js` / `split_batches.js` / `write_cache.js` / `aggregate.js` / `narrow.js`），见下文「flash 判定（暂缓）」章节。
+## 唯一流程
 
-## 打分算法（score.js，v3）
-
-给每个岗位算「应用相关度得分」，三档锚点：**应用100 / 算法66 / infra33**（非技术=无技术命中时兜底 0 分）。
-
-- **官方职位类别门**：12 家 ATS 自带类别字段（moka 系 zhineng、北森 ClassificationOne、小红书 jobType、B站 postCodeName、米哈游 competencyType、百度 postType 等），有官方类别时由它定技术/非技术（覆盖关键词判定），类别词还并入标题参与档位匹配
-- 标题分 = 加权锚点平均：`Σ(锚点×命中次数×词权重) / Σ(命中次数×词权重)`
-  - 词权重（标题）：应用3 / 算法2 / infra1
-- 描述分 = 职责段（全权重、命中上限3）+ 要求段与团队介绍段（各×0.1——"熟悉LLM者优先"和 org 级 boilerplate 不算数），再乘信号密度因子（孤零一个关键词拿不到满锚点分）
-- 总分 = 标题×0.6 + 描述×0.4（无命中侧不参与、权重归一化），再乘负向惩罚
-  - 强负向（销售/策划/运营/产品经理/美术…，只看主标题、可被官方类别覆盖）：×0.1
-  - 弱负向（测试/客服/数据分析…）：每处×0.85，下限×0.6
-- 混合岗（如「算法工程师-AI Agent」）因同时命中应用+算法，分数自然落在两锚点之间
-- 同分 tiebreak：信号强度（标题+职责加权命中数）→ 发布日期
-
-## 流水线总览（当前）
-
-```
-阶段① 抓取（纯脚本，计划任务每天自动跑）
-  crawl.js  →  out/<key>_raw.json           全量原始岗（校招 31 站 + 社招 35 站）
-
-阶段② 打分 + 网页（纯脚本）
-  score.js           打分器（锚点加权）
-  build_score_html.js  读 raw 全量打分 → 生成 index.html（得分降序，校招/社招双轨切换）
+```text
+sites.json（39 公司、66 来源：30 校招来源／36 社招来源）
+  → update.js 按注册表串行调用 crawl.js
+  → 已验证完整成功快照
+  → publish.js 整理真实字段、按来源替换数据
+  → ../data/jobs.js
+  → ../index.html + ../assets/app.js 用户查询时匹配排序
 ```
 
-## 社招轨道（2026-09 新增）
-
-- **口径**：只收 **1-3 年 / 不限经验**（要求下限 ≤3 年；未标注年限按不限保留）；仍排实习/精英/职能岗；**零分噪声不入页**（字节一家社招就 1 万条，无技术命中的 HR/财务/行政不入数据）。
-- **识别**：`sites.json` 里 `track:"social"` 或 key 以 `_social` 结尾；`build_score_html.js` 对社招轨道不排 `isSocial`，改为年限过滤（优先结构化字段如腾讯 `RequireWorkYearsName` / 百度要求段，否则解析 JD 文本「3-5年/三年以上/经验不限」等，见 `lib/filter.js` `parseYearsReq`）。
-- **页面**：`index.html` 顶部「校招 (N) | 社招 (M)」切换，社招行带「经验:x年」角标。
-
-### 已接入社招站（36 家公司）与接入要点
-
-| 站点 | ats | 要点 |
-|---|---|---|
-| kimi/zhipu/stepfun 社招 | moka | `site:"social"`；社招 siteId 用 `app.mokahr.com/social-recruitment/<orgId>` 的 302 解析（moonshot 148506 / zphz 148983 / step 94904） |
-| deepseek | moka | 本就是社招站（siteId 140576，已加 track:social） |
-| minimax_social | feishu | 根路径即社招站，`website-path: index`，**需 acrawler 签名**（plain 模式 405；校招同理已修：website-path 为路径本身 379481） |
-| bytedance_social | feishu | `jobs.bytedance.com/experienced`，`website-path: society`（不是 social！），翻页上限 10000 |
-| sensetime_social | feishu | 根路径即社招站，`website-path: exp`；签名校验偶发 405，重试即可 |
-| lilith_social / papegames_social | feishu | `lilithgames.jobs.feishu.cn/index`（`index`）/ `career.papegames.com/social`（`social`） |
-| mihoyo_social | custom | 同一 API，`hireType: 0`（社招）/ 1（校招）；desc 需逐岗调 `/v1/job/info` |
-| baidu_social | custom | `recruitType=SOCIAL` 且 **projectType 留空**；列表 workYears 为空，年限从要求段解析 |
-| meituan_social | custom | 同一 API，`jobShareType: 2` |
-| xiaomi_social | custom | 同一 API，`type: 1` |
-| tencent_social | custom | `careers.tencent.com/tencentcareer/api/post/Query` 公开接口，列表自带 JD/经验年限/PostURL；**偶发限频，模块内重试×4** |
-| iflytek_social | beisen | 同一 API，**Category ["1"]**（1=社招 2=校招）；详情路由 /social/detail |
-| hypergryph_social | custom | Moka 自定义域，社招 siteId 26325（`jobs.hypergryph.com/social-recruitment/hypergryph` 302 解析），URL 前缀 social-recruitment |
-| xiaohongshu_social | custom | 同一 API，`recruitType: social`；详情 /social/position/{id} |
-| ctrip_social | custom | 同一 API，**category: 1**（1=社招 2=校招）；详情 `careers.ctrip.com/#/experienced/job-detail/{fromId}`（用 fromId 非 jobId） |
-| shlab_social | custom | 同一 API，`mode: social`（研究员/青年科学家岗密集，高价值） |
-| kuaishou_social | custom | `zhaopin.kuaishou.cn/recruit/e/api/v1/open/positions/simple`（GET，`recruitProject=socialr&positionNatureCode=C001`）；**需 sign 头**：HMAC-SHA256(ts+canonicalQuery+盐, 盐)，已逆向复现；workExperienceCode 为结构化年限 |
-| jd_social | custom | `zhaopin.jd.com/web/job/job_list`（form-urlencoded）；老式页面无独立详情路由，URL 用列表页+jobSearch 预填 |
-| ant_social | custom | `hrcareersweb.antgroup.com/api/social/position/search`（pageSize 上限 10）；**ctoken 为客户端自造随机值**（cookie+query 同值即可过）；experience{from,to} 结构化年限 |
-| huawei_social | custom | 同一 API，**jobType=SR**（校招 CR）；workYear 为结构化年限下限 |
-| vivo_social | custom | `hr.vivo.com/api/social/webSite/portal/page`；yoe_min/yoe_max 结构化经验；详情页从路由 state 传参无深链，URL 用列表页+keyword |
-| bilibili_social | custom | 同域 `/api/srs/position/positionList`（srs=社招系统），同校招鉴权（X-CSRF），workTypeList/positionTypeList=["3"] |
-| tme_social | custom | 同域 `/api/job/list`（/social/ 页）；列表自带 duty；详情 /social/post-details?id= |
-| netease_social | custom | `hr.163.com/api/hr163/position/queryPage`，**一站覆盖全集团**（互娱/雷火/有道/云音乐/伏羲/传媒）；reqWorkYearsName 结构化年限 |
-| oppo_social | custom | **career.oppo.com（单数）= 社招部署**（careers=校招）；`/ats-candidate-api/open-api/position/queryPositionList`，`recruitTypeList=[SOCIAL-RECRUITMENT]`；min/maxWorkYears 结构化年限 |
-| **阿里系 ×8** | custom | 同构平台（共享 `ali_social_common.js`）：`talent-holding.alibaba.com` 集团 / `talent.taotian.com` 淘天 / `talent.ele.me` 饿了么 / `aidc-jobs.alibaba.com` 阿里国际 / `careers.aliyun.com` 阿里云 / `careers-tongyi.alibaba.com` 通义 / `talent.dingtalk.com` 钉钉 / `talent.quark.cn` 夸克；同校招 XSRF 鉴权；experience{from,to} 结构化年限；**翻页深度封顶 ~500，总量 >450 时自动按城市分片**（region/hot 字典 + 全量兜底片）；仅 talent.alibaba.com 大黄页有 Baxia 滑块，其余域无 |
-| **无公开社招** | | 百川（只有校招站，已迁飞书） |
-
-社招站点只走阶段① 抓取 + 阶段② 打分，不参与旧 flash 流水线（recall.js 硬排除社招岗）。
-
-### 旧流水线（flash，暂缓）
-
-```
-阶段① 抓取+召回
-  crawl.js → recall.js → split_batches.js
-阶段② flash 判定（agent，harness workflow，非全自动）
-阶段③ 汇总
-  write_cache.js → aggregate.js → 重建 CSV + HTML
+```sh
+node crawler/update.js             # 所有注册来源；部分失败返回非零
+node crawler/update.js stepfun     # 指定 key；可给多个
+node crawler/crawl.js stepfun      # 仅采集，不发布
+node crawler/publish.js stepfun    # 仅发布该来源已验证的新快照
 ```
 
-## 目录结构
+无参数的 `publish.js` 检查全部来源。`run_daily.ps1` 是主入口的薄兼容包装，不另维护名单。没有 HTML 生成器、CSV 聚合、召回切批或个人评分入口。
 
-```
-crawler/
-├── sites.json           # 站点注册表（31 家：ATS 类型 + 接口参数 + 排除项 + 批次）
-├── crawl.js             # 阶段①：node crawl.js <key>  拉全量 → out/<key>_raw.json
-├── score.js             # 打分器（锚点加权：应用100/算法66/infra33，含官方职位类别门）
-├── build_score_html.js  # 阶段②：读 raw 全量打分 → 生成 ../index.html（得分降序）
-├── recall.js            # 旧方案：宽召回 + 硬排除 + 排序 + 200上限 → out/<key>_recall.json
-├── split_batches.js     # 旧方案：切批（增量，只切需重判的）→ out/batches/<key>_NNN.json
-├── write_cache.js       # 旧方案：判定写入增量缓存 out/judge_cache/<key>.json
-├── merge_judge.js       # 旧方案：口径放宽时「只增不减」合并
-├── narrow.js            # 旧方案：窄过滤（收窄到应用研发）
-├── aggregate.js         # 旧方案：缓存+判定 → 重建 CSV + HTML
-├── build_html.js        # 旧方案：CSV → 可排序/筛选 HTML
-├── run_daily.ps1        # 阶段① 全量脚本（计划任务调用）
-├── lib/
-│   ├── cdp_capture.js   # 通用逆向：抓包(请求/响应/body)+dump DOM，找未知站接口
-│   ├── moka.js          # Moka ATS（AES 解密 + 翻页）
-│   ├── feishu.js        # 飞书/字节 ATS（acrawler 签名 + 翻页，支持 plain 模式）
-│   ├── beisen.js        # 北森 ATS
-│   ├── filter.js        # 共享筛选：关键词 + 硬排除（实习/社招/精英/职能）+ 分类
-│   └── custom/          # 18 个自建站模块（见「custom 模块契约」）
-└── out/
-    ├── <key>_raw.json           # 全量
-    ├── <key>_recall.json        # 宽召回候选（含 hash）
-    ├── batches/<key>_NNN.json   # 待判定批次（每批 ≤20）
-    ├── judge/partial/<key>_NNN.json  # flash 判定结果（瞬态）
-    └── judge_cache/<key>.json   # 增量缓存（durable，判定唯一真相源）
-```
+整理阶段的保护检查为离线验证。此后已真实接入阶跃星辰 `stepfun`（94905 校招入口 128 条）与 `stepfun_social`（94904 社招入口 231 条），逐岗取详情并经全文/字段/浏览器检查后仅发布这两个来源到本地页面。原 141903 的 20 条完全包含于新校招范围，不重复收录；v0.18发布当时其他13,340条岗位及来源状态保持原样。详见[核验记录](../docs/stepfun-verification.md)。v0.18历史成功不赋予其他来源资格；v0.25七个Moka来源已另独立核验，见下文。v0.26北森三源已独立在线复验及本地发布，其余未核官网仍不得自动放行；未部署或配置定时任务。
 
-## 快速上手（阶段①，脚本）
+字节校招完成两轮各150页、7,492个唯一ID及完整职责/要求核验。v0.23按用户明确授权，采用既有两轮核验的11,093个已分类社招候选，迁移为官网九类/75分类ID的限定登记范围，替换该来源3,849历史并本地发布；其余16,131条、其它来源元数据与目录精确不变。全社招未分类/旧类别/树外仍未知，范围迁移不等于官网下架；没有伪称本次采用重新发了HTTP或用采用时刻代替原采集时刻。详见[字节核验记录](../docs/bytedance-verification.md)。
 
-```powershell
-cd C:\Users\fengxi01\Desktop\jobs\crawler
-node crawl.js kimi        # 抓月之暗面全量 → out/kimi_raw.json
-node recall.js kimi       # 宽召回 → out/kimi_recall.json
-node split_batches.js kimi 20   # 切批 → out/batches/kimi_000.json
-```
+v0.24按同协议批次只采集并本地发布MiniMax/商汤/莉莉丝/叠纸八source，正常门户portal6、无个人条件、每门户严格双全扫；共1,098替换316条历史，其余26,908及来源元数据/目录不变。莉莉丝既有校园key联合campus+intern，社会key联合career+index活水平台，按同租户同postingID及身份/原JD事实一致合并54条，保留index-only。5个官网无正文保留false，其他1,093可读，scope/非下架说明常驻，不说公司全球全集。详见[八来源核验记录](../docs/feishu-batch-verification.md)。未全站更新/提交/部署。
 
-31 家全部接入。`node crawl.js <key>` 即可复跑任意一家；四类 ATS（moka/beisen/feishu/custom）都已在 `crawl.js` 里调度。
+v0.25同Moka协议七个既有来源（含确认后的鹰角校/社）已完整采集和本地发布：月之暗面93/106、智谱23/135、DeepSeek37、鹰角103/353，共850替换237历史，其他27,769与元数据/目录精确不变。845可读/5官网空正文，813发布日期/37未知、性质40未知、pause22保留；不按职业/标题删岗或扩大公司全集。166离线及同版本真实HTTP/file397/0通过，详见[Moka批次记录](../docs/moka-batch-verification.md)。未全站更新/提交/部署，阶跃/飞书不重采或发布。
 
-## 阶段② flash 判定（给未来 agent 的操作手册）
+v0.26北森三既有来源按共享协议正常采集/本地发布：讯飞非社会六频道联合166/社会727、vivo校园广全项目253，共1,146替换370历史，其他28,249及已成功19来源20,892事实/metadata/57out不动。1,146原JD/发布日期有第一方证据，含一条两栏仅`1`诚实保留；vivo社会5历史另套协议不收编。195离线/独立35+11闭合/同版本HTTP/file705/0及父三图/hash/清理通过，公开29,395。详见[北森批次](../docs/beisen-batch-verification.md)，实际仓库根HTTP/file另68/0小烟测与父三图/当前hash-mtime/实际清理通过，仅每协议3JD及自然50→100。未全站更新/提交/部署。
 
-> 关键：flash 只在 harness 里能调（走 workflow 工具派子代理），普通 Node 脚本调不了。所以阶段②由 **agent** 执行，不在计划任务里。
+[v0.20的66来源覆盖审计](../docs/source-coverage-audit.md)已完成：当时7可复用、58需改造、1建议局部重写；逐源记录实际条件、分页/失败、正文和身份。它保留历史版本，静态风险不冒充官网证明，当前改造及状态以独立核验记录为准。
 
-### 调 flash 的正确姿势
-- 在 harness 的 **workflow** 工具里，用 `agent(prompt, { model: 'deepseek-v4-flash' })` 派子代理。
-- **不要带 `provider`**（实测带 `Comaker` 会返回 null；只给 `model:'deepseek-v4-flash'` 即可）。
-- 子代理有 `read`/`write` 工具，能直接读批次文件、写判定结果文件。
+## 采集与发布保护
 
-### 判定工作流脚本模板
-```js
-// workflow 工具：meta 见工具参数；args 传 { companies:[{key,n},...] }
-const base = 'C:\\Users\\fengxi01\\Desktop\\jobs\\crawler\\out\\batches\\';
-const outBase = 'C:\\Users\\fengxi01\\Desktop\\jobs\\crawler\\out\\judge\\partial\\';
-const batches = [];
-for (const c of args.companies) for (let i = 0; i < c.n; i++) batches.push(c.key + '_' + String(i).padStart(3, '0'));
+工作文件全部在被 Git 忽略的 `out/`：
 
-function prompt(batch) {
-  const file = base + batch + '.json', outFile = outBase + batch + '.json';
-  return `你是校招岗位筛选助手。按三步做：
-1. 用 read 读取文件 ${file}（JSON 数组，每项含 id/title/dept/city/date/url/desc）。
-2. 对【每一个】岗位逐条判断是否符合口径（见下「判定口径」）。
-3. 用 write 把结果写成 JSON 数组写到 ${outFile}，每项 {"id":"<id>","fit":true或false,"type":"应用或算法","reason":"一句话理由"}（fit=false 时 type 填 "算法"）。
-完成后只回一行：OK N条 fit=M。`;
-}
+| 文件 | 职责 |
+|---|---|
+| `<key>_raw.json` | 当前候选；失败或未证实完整时恢复旧文件，首次失败删除候选 |
+| `<key>_snapshot.json` | 完整成功后才晋升的 raw 快照，含完成时刻和来源覆盖标识 |
+| `<key>_status.json` | 最近尝试、上次成功、失败／未验证／ready 状态及原因 |
 
-const results = [];
-const WAVE = 18;   // 每波并发 18 个子代理，多波串行，避免撞并发上限
-for (let i = 0; i < batches.length; i += WAVE) {
-  const r = await parallel(batches.slice(i, i + WAVE).map(b => async () => {
-    const out = await agent(prompt(b), { model: 'deepseek-v4-flash' });
-    return { b, reply: out === null ? 'FAILED' : String(out).slice(0, 120) };
-  }));
-  results.push(...r);
-}
-return results;   // 检查哪些 reply=FAILED，单独重跑
-```
+- 子进程退出 0 **不等于成功**。必须写出新的 `{complete:true,total:N,jobs:[...]}`，计数一致，每条身份和字段合法；不复用旧 raw 来“证明”新成功。
+- 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
+- 同一注册范围内的新成功快照才可替换旧来源。未发布的旧成功、最新失败、未验证适配器及元数据不匹配不能晋升。
+- 已验证发布后如果接口／渠道／批次等范围改变，拒绝自动替换；需另行明确迁移策略，不能据此判原范围岗位下架。历史个人基线没有已验证范围，首次完整快照是一次迁移，不把旧记录消失说成已核验下架。
+- 部分成功时只替换成功来源，其他来源保留原数据和成功时间；整体命令仍返回非零。无已验证新快照、无 `out/` 或坏基线时不写公开文件，原 `index.html` 不受采集影响。
+- 文件按临时文件＋rename 写入；同一来源不应同时执行多个更新。失败状态可随其他成功来源发布；如果全部没有有效更新，公开文件不变，失败详情暂看状态文件和命令输出。
 
-### 判定口径（写死在 prompt 里，逐条判断）
-- 目标：**2027届校招全职**，方向为「LLM/大模型算法」「Agent 应用 / LLM 应用」或「游戏 AI / 游戏 Agent / 智能 NPC」。
-- type 分类：
-  - Agent开发/LLM应用/大模型平台/评测/部署/数据/产品/AI Infra → `应用`；
-  - 大模型算法/预训练后训练微调/多模态/生成式/NLP/语音图像视频生成/强化学习(LLM方向) → `算法`；
-  - 游戏 AI / 游戏 Agent / 智能 NPC（LLM/NPC 对话、AI 队友、AI 剧情、游戏智能体等）→ `应用`（明确是游戏 AI 模型/算法研发则 `算法`）。
-- 不符合（`fit=false`）：推荐/搜广推/广告算法、传统CV、风控、非大模型机器人、与 LLM 无关的纯前后端/运维/测试/数据分析、纯传统算法、AIGC美术/设计（纯美术岗，非 AI 应用）等。
-- 只依据 title + desc 判断，不臆测；每条都要有结论。
+`out/` 只是本机可复用快照，不是临时 Actions runner 的持久存储。以后接定时采集时还需落实成功快照持久化和 Pages 发布，不能把 Pages 自动部署当作采集定时器。
 
-### 失败重跑
-- 偶发单批 `FAILED`：单独再派一个子代理跑该批即可。
-- **字节跳动批次若 desc 全空**（CDP 只抓到标题），flash 可能反复失败——改用「标题内联进 prompt + schema 返回」的方式重判（见下例），再把结果手动写到对应 partial 文件：
+## 目前能被流水线验证的适配器
 
-```js
-const schema = { type:'object', properties:{ verdicts:{ type:'array', items:{ type:'object',
-  properties:{ id:{type:'string'}, fit:{type:'boolean'}, type:{type:'string'}, reason:{type:'string'} },
-  required:['id','fit'] } } }, required:['verdicts'] };
-const r = await agent(`你是校招岗位筛选助手。以下是岗位列表（每行 "id | 标题"，无描述，按标题判断）：
-<id1> | <标题1>
-...
-逐条判断（口径同上）。严格返回 {"verdicts":[{"id":"...","fit":true或false,"type":"应用或算法","reason":"..."}]}`,
-  { model: 'deepseek-v4-flash', schema });
+**Moka（9 来源）**：阶跃两个既有详情模式＋v0.25分别核验的七个固定`moka-portal-v1`来源；共享AES/正文/分页，不继承同系统资格。七个固定keys在调度/空snapshot归一化前核key/company/org/siteId/site/url、取得模式及受约束origin，删除模式标记不能退回宽松路径。
+
+六个`listJD:true`来源两轮完整列表核HTTP200、原生jobStats.total/org、明确成功业务状态、页长/唯一ID/组织及所有raw字段稳定，不为已有全文逐岗请求；非法外封套或解密内层状态不被另一层成功掩盖。官网可选正文缺失/空/符号保留false，未知结构/total fallback不是空正文例外。只用具名原生职能、字符串性质、地点数组与一手证实的publishedAt，非原生alias/canonical字段不供事实。DeepSeek严格140576及官方部门2028422，不扩大high-flyer，37条列表日期/性质缺失保持未知。
+
+鹰角两源实际API origin`https://jobs.hypergryph.com`和官网链接固定，校园26326 `fetchDetails:true/listJD:false`需要103份串行详情，社会26325列表已有全文；两key不跨源联合。新门户每请求至少150ms、15s超时、200页安全触顶拒绝、子进程15分钟（非SLA）；末尾列表核原字段不漂移，任何后续失败/冲突不写部分raw。CLI仅既有共享入口可用`--list-jd`或`--details`及受约束`--origin=...`，正常update/crawl从登记传参，不另做发布链。
+
+阶跃星辰两个来源保持原site94905/94904及fetchDetails模式，现校招已完全包含原141903，不并行重收。本轮仅回归其既有359条规范化事实及36旧out保护，不重新采集/发布阶跃或飞书；其他新门户不得只翻模式flag自动放行。
+
+**北森（3 来源）**：固定 `iflytek`/`iflytek_social`/`vivo` 的 `beisen-portal-v1` 精确profile，在调度和空快照前核身份/URL/scope/mode；标准URL识别已知真实hostname的大小写/default443等拼写，不让删mode/改key退generic取得资格。旧string函数仅离线兼容，不放行这两个真实门户。
+
+严格HTTP200/Code200/TipTypeSuccess/原生Count/Data，串行>=150ms/15s超时/15分钟子进程、50页触顶拒绝，Node原生UA及redirect:error；两完整列表所有raw按UUID核稳定，不为列表已有全文逐岗请求。讯飞2–7联合还需首末无Category全门户双扫、已知类别且与选源原raw精确分区，未分类/新增频道或原文漂移均拒源；权威社会727不重复塞入iflytek166。实际请求body/HTTP/完整native response.Data保存snapshot.verification，crawl/publisher两边复验原封套/Count/页长/全raw/权威分区，缺证的准确profile伪空也不得清旧。真正两轮已证0可单源替换。
+
+UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验，UUID大小写等价查重，raw保真/publicID小写。固定原生metadata要求own且区分空/null与缺字段/非法类型，JobVideoJd未知非空拒源。两租户正文D4五实体单遍解码→普通文本，不HTML解析或重复解码，职责/要求同文也分别保留，不加description副本；官方空/符号诚实false，但不豁免缺total/字段或未知业务。各租户职能独立核：讯飞ClassOne职能/ClassTwo部门，vivoClassOne项目/ClassTwo职能；Kind才映性质、Category映渠道且实习频道不强推校园/性质。0001/0日期未知，完整原生PostDate及合法日历须与已证UTC8 PostDateInt同日后映published，不走generic epoch/date-prefix，不回退ChangeDate/采集钟。范围与首次历史迁移提示随公开展示，不称公司全球全集或退出历史为下架。
+
+**飞书（10 来源）**：共享 `lib/feishu.js` 仅放行字节校园/限定社招及v0.24逐源审查的四公司八个SaaS profile，严格固定adapter/key/company/url/websitePath/portalType/空项目/门户集合等，不依赖可复制的verified布尔。正常隔离Chrome观察全部同scope启动列表，HTTP/body/业务全部成功才扫描，失败粘滞；内存复用官网普通header/匿名CSRF，不记录token、不外注/逆向签名SDK、不改指纹或TLS、不登录/申请/操作验证。字节此前fetch传输保留，SaaS沿自身普通原生XHR和已加载官方会话。
+
+每门户两轮全量校验HTTP/code、稳定总数、精确完整页长、唯一ID和全部原始字段/JD一致；500页保护、提前短/空、漂移或count>=10000拒整源。至少150ms间隔，普通源（含门户联合）子进程15分钟、字节限定社招20分钟预算。字节此前实际346/605秒、此次八源71.813秒均不是SLA。正文独立纯文本，不截断、HTML剥离或解码尖括号；发布再从rawPost逐字段重算。莉莉丝固定portalPaths先每门户完整，再核同ID核心事实/原JD，只对已证明同posting重叠合并、优先career，保留各alias；冲突或后门户失败整源不写，coverage含门户集合，scope及非下架提示常驻。
+
+字节社招真实portal_type为2（校园3；其他SaaS8源6），默认count10000及分页空仍不能证明全集。限定profile固定九根/75个分类ID和原树hash，前后核树，每片同样严格双扫，跨片重复ID拒绝；coverage含root/groups/treeHash。complete只表示此限定范围，source.message/notices持续披露范围及迁移。增删、更名、迁叶或parent变化都拒绝，不能自动清空/扩范围。原partial候选仍false，不直接当全源成功；v0.23按明确授权派生限定envelope经runCrawl/publish，不放宽已验证覆盖变化拒绝。8源新资格独立逐源核验，不是继承字节成功或全站授权。
+
+**custom（44 来源）**：保留旧站点请求/解密基础，但主入口不执行，标unverified，不替换公开岗位；仍可能有限定方向/届次/计划及混合字段，不能盲加complete。旧字节custom文件仅是调用新共享实现的薄兼容入口，单独生成的raw仍须走crawl快照/publish护栏，不是第二套发布。
+
+部分 custom 需要 Chrome/CDP，历史路径偏 Windows、`CHROME_PATH` 支持也尚不统一。不要假定这轮整理已经解决各来源运行环境。
+
+## 发布数据契约
+
+`../data/jobs.js` 为静态脚本：`globalThis.ANDE_DATA = <JSON>;`，文件及 Pages 直接可用，不做动态招聘请求。
+
+- 顶层：`version,legacy,notices,companies,sources,jobs`；目录来源独立于当前关键词结果。历史覆盖与数据缺失必须保留提示。
+- 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。成功时间是实际完成时刻，未知用 null，不拿旧页面展示日期补齐。
+- 岗位：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。旧 schema-1 记录可缺 category/sourceStatus，保留来源时不为它们补写字段。
+- 新 ID 为“来源 key＋官方 ID”；同标题不合并，无 ID 或重复官方 ID 拒绝整个来源，不静默跳过。跨来源去重仍待验证，不以名字相同自动合并。
+- 正文保留完整可得文字、职责及要求，不截 600 字。已核验的 Moka 列表HTML或必要详情经 `lib/jd-text.js` 去真实标签、解码实体、保留段落，仅按明确标题分职责/要求；不能判断则全文留 description，分段时 description 为空，不重复计正文。字节的description/requirement本来就是纯文本，保留内部空白及字面 `List<T>`/实体，不复用HTML剥离。`jdComplete` 表示可靠取得完整非占位正文，不限于单独详情API，不承诺招聘方描述详尽；未证实的来源仍为 false。
+- 只承认明确事实，未知性质/人才计划保持 null。实习不因所在列表就一律算校招；属性未知在页面保守纳入，不误标官网事实。地点对象仅提供国家名时保留该国家名，不虚构城市；非法字段类型仍拒绝整来源。
+- 阶跃星辰及v0.25 Moka来源的 `publishedAt` 已分别由第一方「发布日期」渲染器/正常DOM证明，对应 `dateKind:published`；本批813条有值、DeepSeek37列表缺值仍null，不回退 createdAt/openedAt/updatedAt。v0.26北森三固定profile的原生PostDate/Int已证明published并严格同日日历验证，共1,146已知日期，0001/0未知不回填；其他来源未核验日期语义时 `dateKind:null`，不排序为已知发布时间。抓取时间不是岗位日期。
+- `sourceStatus` 为已核验列表/详情接口原状态码或 null；非 open 仅安全展示，不计分、不筛选、不当下架、不自动禁用官网链接。已观测的 pause 岗位仍在官网列表，实际可投未通过提交验证。
+- 保留来源已明确的官网职能类别名 `category` 仅展示。当前接规范 `category`、Moka `zhineng`、飞书具名 `job_category`/已核验 `job_function`（只缺前者时回退）及已规范的 `jobFunction`；支持文字、具名对象及同层名称数组，去重后用 `/` 连接，不猜标题/部门。北森 `Category` 是渠道不映为职能；v0.26三固定profile已分别证明讯飞`ClassificationOne`职能（ClassTwo部门）、vivo`ClassificationTwo`职能（ClassOne项目），仅这三源按原生字段投影，其余未核验的同名字段不继承资格；缺失/只有内部编号时为空。兼容旧公开记录缺 category，不回补历史类别，不改变来源发布资格或启用未复验适配器。旧分数、档位、经验惩罚或个人方向参数仍不输出，整理不按职业/经验等删岗。
+- 浏览器按当前匹配文字（标题、职责或正文回退、要求）逐词显示实际出现次数，字面、大小写不敏感、非重叠计数；类别不参与词频。次数不是计分倍率，也不是新增同分排序键，得分仍每词每字段一次。
+- 仅用真实字段或已登记官方链接模板；非法协议禁用。不能把旧输出缺 JD、缺链接或缺日期改造成模拟内容。
+
+当前公开文件 **29,395条**：字节校7,492＋限定社11,093＋阶跃星辰359＋v0.24四公司八源1,098＋v0.25七Moka源850＋v0.26北森三源1,146＋其余7,357历史记录。v0.26仅三源历史370退出、其他28,249及19旧成功20,892不动；v0.25仅七源历史237退出、其他27,769不动；v0.24当时仅八源历史316退出、其他26,908不动；字节社旧3,849已于v0.23按授权淘汰。字节校已知实习5,160、“正式”2,332；社原性质11,090正式＋3劳务/顾问，未核验全职/实习语义不硬映射。校/社渠道按真实父类别，date/dateKind及人才计划事实仍未知，原字段存rawPost。不回补未知或按标题删除，不把历史首次迁移少见的记录叫已核验下架。仅当前这些注册入口通过，不代表全公司全球所有来源。
+
+## 增加或复验来源
+
+以 `sites.json` 为唯一注册表；同公司可有多个渠道来源，职能限制与官方渠道／性质／人才计划不是一回事，不能盲删 `Category` 或批次参数。
+
+先针对公开官方 API 写离线响应/分页/失败检查，确认完整范围和详情正文，再加入安全入口的 adapter dispatch 与发布资格。custom 模板见 `lib/custom/_template.js`，默认会报未实现，不会返回伪造空结果。不要把未知适配器的 raw 数量或退出码当作完整性证明。
+
+```sh
+node tests/pipeline.test.cjs
+node tests/feishu.test.cjs
+node tests/feishu-classified.test.cjs
+node tests/feishu-portals.test.cjs
+node tests/app.test.cjs
+node tests/moka-details.test.cjs
+node tests/moka-list-jd.test.cjs
+node tests/beisen.test.cjs
+node tests/beisen-portals.test.cjs
+node tests/beisen-evidence.test.cjs
+node tests/jd-text.test.cjs
 ```
 
-## 增量缓存（省钱的精髓）
-
-- `recall.js` 给每条候选打 `hash = md5(title + '|' + desc前600字)`。
-- `split_batches.js` 默认**跳过「缓存里 hash 未变」的岗位**，只切需要重判的（`--full` 强制全量重切）。它会顺带清掉旧的 batches 和 partial。
-- `write_cache.js` 把本次判定写入 `out/judge_cache/<key>.json`（`{ "<id>": {hash, fit, type, reason} }`）。
-- `aggregate.js` 读 **缓存 + 本次判定批次**（批次覆盖缓存）→ 只留 `fit=true` → 重建 CSV + HTML。缓存是判定唯一真相源，partial 是瞬态的。
-
-于是每天只有「新增 / 内容变化」的岗位需要重新 flash 判定，其余复用缓存。
-
-### 口径变更（放宽）时怎么重判
-
-口径只会**放宽**（例如把「游戏 AI / 智能 NPC」也收进来），不会变严。flash 有随机性，全量重判会让无关岗位也跟着抖动（误砍已收录的岗）。所以放宽口径的正确姿势是「只增不减」：
-
-```powershell
-# ① 全量重切（强制）
-node split_batches.js <key> 20 --full    # 31 家都跑一遍
-
-# ② agent 用【新口径】跑判定工作流，覆盖 out/judge/partial/
-
-# ③ 合并：旧缓存 fit=true 一律保留，新判定只用来追加 fit=true
-node merge_judge.js
-
-# ④ 清空 partial（已并入缓存，避免 aggregate 用旧批次覆盖）+ 重建
-Remove-Item out\judge\partial\*.json -Force
-node aggregate.js
-```
-
-> 注意：flash 子代理偶尔会把结果写成 `xxx_pretty.json` / `_xxx_pretty.json` 之类错名文件（而不是 prompt 指定的精确路径）。收尾时清掉这些 `*pretty*` 副本即可；正确文件都在，只是多了份冗余。
-
-## 每日流程（完整）
-
-```powershell
-# ① 计划任务 LLMJobsDailyRefresh 每天 08:00 自动跑（抓取+召回+切批）：
-#    crawl.js ×27 → recall.js ×27 → split_batches.js ×27，日志 log/daily_*.log
-# ② agent（harness）跑上节「判定工作流」，判定 out/batches/ 下所有批次
-# ③ 收尾脚本：
-node write_cache.js     # 判定并入缓存
-node aggregate.js       # 重建 CSV + HTML
-```
-
-计划任务管理：
-
-```powershell
-Get-ScheduledTask LLMJobsDailyRefresh
-Start-ScheduledTask LLMJobsDailyRefresh   # 手动触发一次
-Set-ScheduledTask -TaskName LLMJobsDailyRefresh -Trigger (New-ScheduledTaskTrigger -Daily -At 09:00)
-Unregister-ScheduledTask LLMJobsDailyRefresh
-```
-
-## 给一家【新公司】加爬虫
-
-### 第 0 步：判断它用哪个 ATS
-打开校招页 F12 → Network，看职位列表请求的域名：
-- `app.mokahr.com/.../jobs/v2` → **Moka**（见 ①）
-- `*.jobs.feishu.cn` / `jobs.bytedance.com` / `hr-jobs.sensetime.com` → **飞书/字节**（见 ②）
-- `*.zhiye.com` → **北森**（见 ③）
-- 其它自建 → **custom**（见 ④）
-
-### ① Moka 站
-1. 从页面找 `orgId` / `siteId` / `site`(campus|social)；解密 IV 从页面 init-data 的 `aesIv` 取（多数是全局 `de7c21ed8d6f50fe`）。
-2. `sites.json` 加一条 `{"ats":"moka","orgId":...,"siteId":...,"site":"campus","aesIv":...}`。
-3. `node crawl.js <key>`。加密响应会自动 AES-128-CBC 解密并翻页拉全量。
-
-### ② 飞书/字节站
-1. `lib/cdp_capture.js <岗位列表页URL> cap_xxx`，从输出找 `/api/v1/search/job/posts` 的 `portal_type`、`subject_id_list`，以及 acrawler 的 `aid`（页面里搜 `byted_acrawler.init({aid:...})`）。
-2. `sites.json` 加 `{"ats":"feishu","url":...,"aid":...,"websitePath":"campus","subjectIdList":[...]}`。
-3. `node crawl.js <key>`。脚本在无头 Chrome 里注入 acrawler、签名后翻页（普通 Node fetch 会被 405，必须走页面内签名）。
-
-### ③ 北森站
-1. `cdp_capture.js` 找 `GetJobAdPageList` 接口，确认 `Category`（校园招聘通常是 `["2"]`）。
-2. `sites.json` 加 `{"ats":"beisen","api":"https://xxx.zhiye.com/api/Jobad/GetJobAdPageList","category":["2"]}`。
-3. `node crawl.js <key>`（纯 JSON，直接翻页）。
-
-### ④ 自建站（custom）
-统一契约见 `lib/custom/_template.js`：
-
-```js
-// lib/custom/<key>.js
-async function fetchAll() {            // 翻页拉全量 + 归一化
-  return [{ title, dept, city, date, url, desc, commitment, id }];
-}
-module.exports = { fetchAll };
-// 作为 CLI 运行时：写入 out/<key>_raw.json 并打印 raw=N
-```
-
-新增自建站步骤：
-1. `node lib/cdp_capture.js <职位列表页URL> cap_xxx` 抓出列表接口的 URL/请求体/请求头。
-2. 复制 `_template.js` 写成 `lib/custom/<key>.js`，实现 `fetchAll()`。
-3. `sites.json` 加 `{"ats":"custom", ...}`，`node crawl.js <key>` 验证。
-4. 把 key 加进 `run_daily.ps1` 的 `$siteKeys`。
-
-接口归一化字段约定：`date` 用 `YYYY-MM-DD`；`desc` 务必带岗位描述原文（flash 判定靠标题+描述读岗，漏了会漏判）；`commitment` 用 `全职/实习/社招`。
-
-## 召回/硬排除口径（lib/filter.js，阶段①）
-
-- **宽召回 `RECALL_KW`**（recall.js 内）：尽量不放过「疑似 AI/算法/大模型/技术」的岗，判定交给 flash。
-- **硬排除**（recall.js 内，确定性规则不用 flash）：实习（`isIntern`）、社招（`isSocial`）、精英计划（`isElite` + 每站 `sites.json.exclude`）、职能/营销岗（`isNoise`）。
-- **排序**：标题核心词(100) > 标题迹象(40) > 描述核心词(10) > 时间新；每公司截前 200。
-
-## 已知特殊站点
-- **字节跳动**：全量分页过大且逐页签名过慢，改用「关键词搜索 + CDP 抓页面自身签名响应」(`lib/custom/bytedance.js`)。部分岗位 desc 为空（见上「失败重跑」）。
-- **MiniMax**：`plain` 模式（页面无 acrawler），签名校验偶发收紧时抓取失败→`crawl.js` exit 1→无 raw→recall 为 0→保留基线旧数据。
-- **鹰角网络**：Moka ATS 但用自定义域名 `jobs.hypergryph.com`，单独走 `lib/custom/hypergryph.js`。
-- **华为**：JD 是占位符（"详见岗位意向"），flash 只能按标题判（如「AI Infra工程师」）。
-- **莉莉丝/叠纸/米哈游/网易/鹰角**：游戏公司，收「游戏 AI / 智能 NPC / 游戏 Agent」为应用类；纯美术/客户端/服务器开发仍不收。
-- **DeepSeek**：无校招、只有社招（`batch` 标「社招(无校招批次)」），按特例保留，不剔除。
-
-## HTML 筛选页 + GitHub Pages 部署
-
-`node build_html.js`（或 `aggregate.js` 会自动调用）生成 `../2026秋招_LLM_Agent岗位筛选.html`——单文件、自包含（数据内嵌）、无外部依赖：
-
-- 全局搜索 + 公司/类别/批次下拉筛选 + 「只看应用类」开关 + 重置；
-- 点表头排序（默认应用类优先、发布时间新→旧）；
-- 实习/社招带红黄角标提醒，投递链接新标签打开。
-
-部署到 GitHub Pages：把该 HTML 放进仓库，`Settings → Pages → Deploy from a branch` 即可；放根目录并改名 `index.html` 则直接以站点首页访问。每次 `aggregate.js` 后 HTML 同步更新，`git push` 即可发布。
-
-## 环境依赖
-- Node.js ≥ 18（自带 fetch + WebSocket）。
-- 无头 Chrome（默认 `C:\Program Files\Google\Chrome\Application\chrome.exe`，可用环境变量 `CHROME_PATH` 覆盖）。
-- 无需 npm 依赖。Windows 下 curl 别用（schannel 证书问题），统一用 Node fetch / Chrome。
-
-## 产出
-
-- `../2026秋招_LLM_Agent岗位总表.csv` —— 汇总表（公司/类型/岗位/部门/城市/批次/发布时间/投递链接）。
-- `../2026秋招_LLM_Agent岗位筛选.html` —— 可筛选/排序网页版（GitHub Pages 用）。
-- 每公司判定明细（含 flash 的 `reason`）在 `out/judge_cache/<key>.json`。
+检查使用临时目录、注入子进程/响应，不访问官网。阶跃星辰、字节校园、v0.24四公司八源及v0.25七Moka来源及v0.26北森三源分别做真实采集/官网/同版本页面核对；字节社招只证明限定范围、全源仍未知，其余尚未核验来源可用性、鉴权过期、完整 JD 和真实全量性能仍需逐源实测，不用这些离线检查冒充在线验收。

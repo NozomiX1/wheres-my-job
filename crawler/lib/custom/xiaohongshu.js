@@ -2,7 +2,7 @@
 // 接口：POST https://job.xiaohongshu.com/websiterecruit/position/pageQueryPosition（JSON，无需 cookie）
 //   {"recruitType":"campus","positionName":"","pageNum":N,"pageSize":100}
 // 站点是自研 ATS（job.xiaohongshu.com，React SPA），列表走上面这个 XHR。
-// recruitType=campus 的列表里混有实习岗（如"HR实习生"），由 build_score_html.js 按标题 isIntern 硬排除。
+// recruitType=campus 可能包含实习，不应预先删岗；该旧适配器的完整性尚待逐一核验。
 const fs = require('fs');
 const path = require('path');
 
