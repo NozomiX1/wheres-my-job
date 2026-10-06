@@ -1,0 +1,745 @@
+{
+  "note": "Independent first-party research samples, not production evidence. Posting samples and intact native endpoint response/request pairs contain no session cookie/token. Endpoint total=0 means out-of-range, NOT a genuinely empty source. Tests build separately synthetic complete/zero envelopes; none of these partial research samples can be promoted.",
+  "alibaba_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-core-run/alibaba-node-once.json", "finalURL": "https://talent-holding.alibaba.com/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-core-run/alibaba-node-list-response.json",
+    "sha256": "14216bfbd4d96f60a806c7ef9c3c7ab6b7b049841b7ea0a85f13eb81bcb5e525",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217659261EGwyFLzCTf4770",
+        "positionUrl": "/off-campus/position-detail?positionId=100022920010&track_id=SSP1791217659261EGwyFLzCTf4770",
+        "bucket": "DEFAULT",
+        "id": 100022920010,
+        "name": "集团安全部-AI红队-Agent攻防工程师/专家-杭州",
+        "status": null,
+        "categories": [
+          "技术类-安全"
+        ],
+        "publishTime": 1790760706000,
+        "graduationTime": null,
+        "modifyTime": 1790760707000,
+        "workLocations": [
+          "杭州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "● 本科及以上学历，计算机、信息安全等相关专业优先；2年以上安全攻防领域经验；\n● AI安全认知：对AI安全有热情，理解LLM推理机制与Agent运行范式，能识别Token流转全链路（训练→推理→应用）的系统性风险，定位攻击面。\n方向一：攻防渗透\n     ● Agent漏洞挖掘（核心）：在AI智能体应用上发现过多个高危安全漏洞，能独立完成攻击面建模→漏洞挖掘→利用链构造→报告输出的完整渗透链路。\n     ● 多端逆向：能借助AI工具完成多端应用（Web/Mobile/Desktop）从拆解到Hook、动态调试的逆向全链路（JADX、IDA Pro、Frida、Objection等）。\n方向二：自动化渗透开发\n     ● 自动化渗透开发：具备成功的安全工具/平台开发经验，能借助AI编程工具将攻击手法快速落地为自动化渗透脚本或Agent工具链。\n加分项：\n     ● 自动化渗透：在知名安全自动化/攻防比赛中获前10名次。\n     ● 攻防渗透：头部SRC排名前10以内。\n     ● Agent渗透实战：有多个AI智能体应用渗透成功案例。\n     ● 开源贡献：有知名开源安全工具或平台项目。\n     ● 具备Agent安全原生想象力，自视为Agent时代的全能型攻防选手。",
+        "description": "● 负责AI智能体应用的安全渗透测试，以攻击者视角挖掘越权、工具劫持、提示词注入、记忆投毒等Agent原生风险，输出标准化安全水位报告。\n● 对多端AI应用（Web/Mobile/Desktop/Hardware）开展逆向分析与攻击面测绘，覆盖权限管控绕过、本地记忆窃取、模型推理劫持等关键场景。\n● 构建自动化渗透Agent，将手工攻击链路抽象为可编排、可复用的攻击脚本与工具链，将单次渗透从人天级压缩至审核级。\n● 跟踪Agent生态前沿攻击面，持续扩充红队攻击矩阵。",
+        "experience": {
+          "from": 2,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100022920010",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-core-run/alibaba-two-wide-scans-corrected-eval.json",
+      "sha256": "9d6bead9bce5ac04dc745f1d979b504367e35459190bd80f920c240cf424aeb4",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 60,
+        "pageSize": 10,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 10,
+          "currentPage": 60
+        }
+      }
+    }
+  },
+  "aidc_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-core-run/aidc-node-once.json", "finalURL": "https://aidc-jobs.alibaba.com/zh/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-core-run/aidc-node-list-response.json",
+    "sha256": "31d56bd9327e377d79bbb97e0a53763c191816325ac37902c1dd030d5041be81",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217659992JRofAuJzsh2708",
+        "positionUrl": "/off-campus/position-detail?positionId=100046800001&track_id=SSP1791217659992JRofAuJzsh2708",
+        "bucket": "DEFAULT",
+        "id": 100046800001,
+        "name": "阿里国际站-高级客户经理-深莞惠大区-深东中区-深东新签特区",
+        "status": null,
+        "categories": [
+          "销售类-直销"
+        ],
+        "publishTime": 1791022280000,
+        "graduationTime": null,
+        "modifyTime": 1791022281000,
+        "workLocations": [
+          "深圳"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1.本科及以上学历，具备2年以上互联网平台、软件服务、企业服务、外贸或其他B端销售相关经验者优先；能力和业绩特别优秀者可综合评估。\n2.具备企业客户独立开发能力，熟悉电话销售与面对面拜访，能够完整推进需求挖掘、方案呈现、异议处理、商务谈判和成交关单。\n3.过往工作中有清晰、可验证的结果案例，目标感强，能够主动拆解目标、管理过程并对最终结果负责。\n4.具备较强的学习能力、复盘意识和适应能力，能够快速理解跨境业务、平台产品及客户经营逻辑，并将知识转化为销售行动。",
+        "description": "1.负责深圳市场潜在企业客户的开发，通过电话触达、上门拜访、行业活动、会销及新媒体等多种方式建立有效商机，持续扩充并经营销售漏斗。\n2.深入理解客户在跨境经营、数字化获客、品牌推广及物流等方面的业务需求，结合平台会员、数字营销及相关产品与服务，为客户提供有针对性的解决方案。\n3.独立推进从首次接触、客户画像、需求深聊、方案呈现、异议处理、商务谈判到签约回款的全流程，对新签结果及过程质量负责。\n4.做好客户分层与机会管理，及时记录和复盘电话、拜访、会销、方案及转化数据，识别销售卡点并持续优化开发策略。\n5.与主管及运营、产品、服务等协同团队高效配合，沉淀行业案例、客户洞察和有效销售打法，提升个人独立作战能力与团队复制效率。\n6.以新签客户数、新签营收和过程转化为主要结果指标，在高目标、快节奏的市场环境中保持稳定行动，兼顾成交质量与合规经营。",
+        "experience": {
+          "from": 2,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100046800001",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-core-run/aidc-two-wide-scans-eval.json",
+      "sha256": "1a328fb696a2b61e9b330e6a91a77affbec19d9499ef22877183d9ec75f215aa",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 26,
+        "pageSize": 10,
+        "regions": "",
+        "subCategories": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 10,
+          "currentPage": 26
+        }
+      }
+    }
+  },
+  "tongyi_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-core-run/tongyi-node-once.json", "finalURL": "https://careers-tongyi.alibaba.com/off-campus/position-list?&search=", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-core-run/tongyi-node-list-response.json",
+    "sha256": "6a1cde3a385118fd3a1db08eccdc7d55962df354d6a1ceea20fe04ea106927d6",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217846646RZrjlhkgpC9023",
+        "positionUrl": "/off-campus/position-detail?positionId=100009980051&track_id=SSP1791217846646RZrjlhkgpC9023",
+        "bucket": "DEFAULT",
+        "id": 100009980051,
+        "name": "Token Foundry-多模态交互算法专家-Qwen Audio",
+        "status": null,
+        "categories": [
+          "技术类-算法"
+        ],
+        "publishTime": 1790756138000,
+        "graduationTime": null,
+        "modifyTime": 1790756138000,
+        "workLocations": [
+          "北京",
+          "杭州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1. 计算机或通信专业硕士及以上学历。\n2. 具有2年以上多模态交互或语言理解算法研发经验，以下领域至少精通一项：\n（1）多模态联合建模（语音+视觉/文本等）。\n（2）对话系统设计及开发。\n（3）口语语言理解。\n（4）多智能体交互决策。\n3. 精通基于深度神经网络的机器学习算法，熟悉Transformer、GPT、LLM等算法原理，掌握 AI 产品开发的开源工具和框架，具备优秀的编程能力。\n4. 具备以下经验者加分：\n（1）在顶级会议或期刊上发表过相关领域的论文。\n（2）有业界前沿的语音多模态交互或数字人交互系统的算法经验。",
+        "description": "1. 负责Token Foundry多模态口语交互的算法研发，通过深入理解全链路多模态交互技术，推进大模型增强的语言交互技术能力建设。\n2. 多模态交互：\n（1）端到端多模态联合建模 - 语音/视觉/文本等模态融合并应用于人机交互场景。\n（2）多模态交互应用算法 - 意图动态规划、多智能体协作、多任务推理、主动交互。\n（3）多模态对话系统设计 - 多轮交互状态管理、情境感知、情感理解及生成控制。\n3. 音视频内容理解：\n（1）转写内容后处理 - 书面化、标点、分段分章节。\n（2）音视频分析 - 分角色、语种判别、视频场景划分。\n（3）口语内容长篇章理解及生成。\n4. 探索多模态口语交互技术落地于实际应用场景，包括但不限于：\n（1）消费电子-智能穿戴实时交互、手机多模态助手、具身机器人环境感知。\n（2）内容消费-音视频媒资、会议场景、电销通话多模态理解等。\n5. 持续关注行业前沿动态，通过专利申请、论文和技术报告等形式提升团队的技术影响力。\n",
+        "experience": {
+          "from": 2,
+          "to": null
+        },
+        "degree": "master",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100009980051",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-core-run/tongyi-two-wide-scans-eval.json",
+      "sha256": "27cc1c41c04a2a618739fe4f0c16ffb98f725a29be966f674e7d4095cc52a81d",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 8,
+        "pageSize": 10,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 10,
+          "currentPage": 8
+        }
+      }
+    }
+  },
+  "taotian_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-brands-taotian-native-network.json", "initialURL": "https://talent.taotian.com/off-campus/position-list?lang=zh", "initialStatus": 302, "finalURL": "https://talent.taotian.com/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-brands-taotian-real-list-response-49.txt",
+    "sha256": "203c6ea5a5ae05da561ad2d9fe348e977afa9d6f210245dab67d9dab71d9a48f",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217182710WgWWkNmoPR4877",
+        "positionUrl": "/off-campus/position-detail?positionId=100046480002&track_id=SSP1791217182710WgWWkNmoPR4877",
+        "bucket": "DEFAULT",
+        "id": 100046480002,
+        "name": "天猫事业部-天猫国际-保健品平台运营",
+        "status": null,
+        "categories": null,
+        "publishTime": 1790751670000,
+        "graduationTime": null,
+        "modifyTime": 1790751671000,
+        "workLocations": [
+          "杭州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1、学历为本科以上；\n2、熟悉电商行业，对客户生意链路有清晰洞察，具备清晰的数据化运营思路和体系化思维框架，能够将想法快速落地，有突出的拿结果能力；\n3、对保健品行业有一定的行业认知，了解国内外保健品市场格局、政策法规及消费趋势；\n4、熟悉淘系平台规则及运营逻辑，熟悉流量运营方法 ；\n5、具备较强的数据驱动意识，能够基于数据洞察推动业务增长数据分析能力；具备结构化思维，能够沉淀出运营机制和方法论；\n6、良好的商家沟通能力，和商家能维持良好的商务关系，能够通过分层运营策略提升头部商家活跃度，同时扶持中小商家成长；\n7、较强的商业敏感度、拥有出色的跨部门协同和沟通能力；跨团队沟通能力和资源整合能力；\n8、乐观皮实，有好奇心，有抗压能力；",
+        "description": "1、行业规划与策略制定：全面分析市场和业务情况，对用户需求和产业机会等进行洞察及分析，定义行业趋势；基于市场趋势和用户洞察，制定年度/季度GMV目标、营销节奏及货品策略，并拆解执行；\n2、商家管理和生态建设：拥有优秀的商家运营能力，能够通过分层运营策略提升头部商家的平台市场份额，同时扶持中小商家成长；拓展优质新锐品牌入驻，优化供给结构，争取首发、专供款、定制款等核心资源；\n3、渠道运营：根据行业特征，商品特征，匹配相应渠道，完成品类健康增长；\n4、项目管理：能够协同团队进行业务推动，达成目标；\n5、用户运营与数据洞察：了解对应赛道的用户画像，定期输出竞品分析与市场用户洞察报告，为业务决策提供数据支持；",
+        "experience": {
+          "from": 5,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100046480002",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-brands-taotian-native-response-14.txt",
+      "sha256": "6b6818351edc6b63bd558185afe717092b121fbea700e6f5111246ec4af43a50",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 6,
+        "pageSize": 100,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 100,
+          "currentPage": 6
+        }
+      }
+    },
+    "angle": {
+      "source": "/tmp/ande-ali-social-brands-taotian-native-round-1.json",
+      "sha256": "cb2c63faecc7df9673a510c7668aa332a6177218f767adc16c20535f9e6618e6",
+      "posting": {
+        "trackId": "SSP1791217370528hRzZmgjQxm3158",
+        "positionUrl": "/off-campus/position-detail?positionId=100046420001&track_id=SSP1791217370528hRzZmgjQxm3158",
+        "bucket": "DEFAULT",
+        "id": 100046420001,
+        "name": "M&T事业部-AI产品经理（经营分析方向）-杭州",
+        "status": null,
+        "categories": null,
+        "publishTime": 1790646797000,
+        "graduationTime": null,
+        "modifyTime": 1790646798000,
+        "workLocations": [
+          "杭州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": ">>>有经营分析/智能问数/诊断归因类 AI Agent 产品经验，或有大模型在 B 端业务场景落地案例者优先<<<\n1. 专业背景：2年以上互联网产品经理经验，有数据产品、策略分析经验者优先，了解数仓和数据结构\n2. AI能力：具备AI产品实践经验，理解大模型与Agent在B端业务场景的应用边界，有AI能力产品化落地案例\n3. 数据能力：熟悉电商运营思路，数据分析能力强，能基于GMV、损益、投资效率等指标进行拆解分析\n4. 综合素养：跨团队协同能力强，乐观皮实，拥抱变化，有要性和创业精神，充满激情，富有正能量）",
+        "description": "1. 负责内部工作台的目标跟踪、数据诊断归因、策略跟进与催办等产品能力的设计与建设，覆各角色多视角的分析和跟进场景，为策略统一、执行落地、效率提升负责\n2. 推动数据跟踪、诊断归因、任务串联、协同催办等能力的AI化落地，将业务分析与运营经验转化为可规模化的智能产品，提升需求交付与经营决策效率\n3. 与业务、经管、BI、财务协同，统一指标口径，推动产品落地与持续迭代",
+        "experience": {
+          "from": 2,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100046420001",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    }
+  },
+  "ele_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-brands-ele-native-network.json", "initialURL": "https://talent.ele.me/off-campus/position-list?lang=zh", "initialStatus": 302, "finalURL": "https://talent.ele.me/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-brands-ele-real-list-response-51.txt",
+    "sha256": "ea45672739636f2ee5ae8ae3249e1840cc7d520b01672d5ab56b73c670651c24",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217190032THpeZRLAsf8799",
+        "positionUrl": "/off-campus/position-detail?positionId=5000036601&track_id=SSP1791217190032THpeZRLAsf8799",
+        "bucket": "DEFAULT",
+        "id": 5000036601,
+        "name": "淘宝闪购-业务专员-深圳",
+        "status": null,
+        "categories": [
+          "市场拓展-BD"
+        ],
+        "publishTime": 1790755454000,
+        "graduationTime": null,
+        "modifyTime": 1790755454000,
+        "workLocations": [
+          "深圳"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1、行业不限，有餐饮、面对面销售、O2O行业经验者优先考虑；\n2、学历大专及以上，优秀应届生可以择优录用；\n3、市场拓展能力强，具有较强的陌生拜访及挖掘客户能力；\n4、优秀的语言表达能力、良好的人际沟通能力，乐于从事挑战性的工作；\n5、抗压能力强，能够独立负责一个区域的销售和推广工作。",
+        "description": "1、维护区域现有加盟餐饮商户，并通过各种途径开发新餐饮商户；\n2、了解并根据商户需求，制定个性化营销方案，与商户谈判并达成合作；\n3、通过现场销售，提升餐厅的信息化、数据化管理水平；\n4、优秀的谈判能力，配合Marketing团队完成营销项目跟进，并能够独自完成营销项目；\n5、及时处理来自商户的投诉，反馈、建议等，以提高商户的满意度。",
+        "experience": {
+          "from": 1,
+          "to": null
+        },
+        "degree": "college",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP5000036601",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-brands-ele-native-response-10.txt",
+      "sha256": "39880240e6e745876e1322655c789e788d3da3287ca9dad9189780ca87c23f4a",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 4,
+        "pageSize": 100,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 100,
+          "currentPage": 4
+        }
+      }
+    }
+  },
+  "dingtalk_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-brands-dingtalk-native-network.json", "initialURL": "https://talent.dingtalk.com/off-campus/position-list?lang=zh", "initialStatus": 302, "finalURL": "https://talent.dingtalk.com/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-brands-dingtalk-real-list-response-52.txt",
+    "sha256": "a1f39105a5cc66647bc771acc423f9dc289f3db7db8f8929781355f2df71efb1",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217197400iIXSWQsMAu3578",
+        "positionUrl": "/off-campus/position-detail?positionId=100039680005&track_id=SSP1791217197400iIXSWQsMAu3578",
+        "bucket": "DEFAULT",
+        "id": 100039680005,
+        "name": "千问办公-品牌策略营销专家-杭州",
+        "status": null,
+        "categories": [
+          "市场拓展-市场"
+        ],
+        "publishTime": 1790598280000,
+        "graduationTime": null,
+        "modifyTime": 1790598280000,
+        "workLocations": [
+          "杭州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1、有品牌战略、产品品牌或品牌管理经验，完整主导过高复杂度品牌焕新、新品牌建设或新品上市项目。\n2、能独立完成市场及用户洞察、品牌定位、价值主张、信息架构和年度传播规划，并以事实证明策略带来的认知变化。\n3、擅长复杂科技产品价值转译，能把AI、Agent、知识库、协同办公或智能硬件能力转化为目标用户能够理解和复述的价值。\n4、具备品牌架构与资产治理能力，能处理母子品牌关系、产品命名、视觉语言、案例标准和跨渠道一致性。\n5、具备跨团队影响力，能推动产品、产研、PR、媒介、内容、增长和销售使用同一品牌方案，并守住关键原则。\n6、能在长期品牌建设和短期业务节点之间做取舍，不把品牌工作等同于曝光、投放或单次内容爆款。",
+        "description": "1、主导钉钉与QWENNOTE的品牌定位、目标人群、价值主张、年度叙事及品牌策略，明确两者在千问办公品牌家族中的角色。\n2、参与千问办公、钉钉、QWENNOTE与QWENWORK品牌架构治理，处理母品牌、产品品牌、AI助手名和功能名的关系，建立表达边界。\n3、负责品牌焕新、产品上新和关键经营节点的传播命题及核心信息，指导整合营销、内容、视觉、媒介和PR统一落地。\n4、建设并治理品牌主张、命名、视觉体系、品牌片、核心内容和标杆案例等资产，建立跨产品、跨渠道的使用规范。\n5、通过用户研究、舆情、竞品观察和业务数据识别认知障碍，推动钉钉品牌年轻化、QWENNOTE新品类教育和品牌口碑重塑。\n6、建立品牌效果评估体系，持续追踪品牌搜索、核心信息渗透、自然讨论、口碑和资产采用率，并与产品增长及销售结果形成协同评价。",
+        "experience": {
+          "from": 3,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100039680005",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-brands-dingtalk-native-response-6.txt",
+      "sha256": "98b24cc6d052b14ce5aa5e457450605cd29efe111e16cabeddfe5ebc3f5fced2",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 2,
+        "pageSize": 100,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 100,
+          "currentPage": 2
+        }
+      }
+    }
+  },
+  "quark_social": {
+    "bootstrapWitness": { "source": "/tmp/ande-ali-social-brands-quark-native-network.json", "initialURL": "https://talent.quark.cn/off-campus/position-list?lang=zh", "initialStatus": 302, "finalURL": "https://talent.quark.cn/off-campus/position-list", "httpStatus": 200 },
+    "source": "/tmp/ande-ali-social-brands-quark-real-list-response-43.txt",
+    "sha256": "312a1476af6f87dd0ab019e0ad75e9a37c01504863eb3335412283d0018f203b",
+    "listRequest": {
+      "channel": "group_official_site",
+      "language": "zh",
+      "batchId": "",
+      "categories": "",
+      "deptCodes": [],
+      "key": "",
+      "pageIndex": 1,
+      "pageSize": 10,
+      "regions": "",
+      "subCategories": "",
+      "shareType": "",
+      "shareId": "",
+      "myReferralShareCode": ""
+    },
+    "postings": [
+      {
+        "trackId": "SSP1791217204538jpKdlDuEpP3616",
+        "positionUrl": "/off-campus/position-detail?positionId=100021600005&track_id=SSP1791217204538jpKdlDuEpP3616",
+        "bucket": "DEFAULT",
+        "id": 100021600005,
+        "name": "千问事业部-大模型压缩&推理加速技术专家/高级专家-杭州/北京/广州",
+        "status": null,
+        "categories": null,
+        "publishTime": 1790650351000,
+        "graduationTime": null,
+        "modifyTime": 1790650352000,
+        "workLocations": [
+          "北京",
+          "杭州",
+          "广州"
+        ],
+        "interviewLocations": null,
+        "regionEnNameMap": {},
+        "technologyNameIdMap": {},
+        "tags": null,
+        "requirement": "1. 在量化、稀疏、蒸馏、投机解码、KV Cache压缩、Token压缩等至少一个方向有深入研究或大规模工程落地经验；\n2. 具备扎实的Python/PyTorch开发能力和严谨的实验分析能力，能够设计评测集、消融实验和回归机制，平衡模型效果、推理延迟、吞吐和成本收益；\n3. 在NeurIPS、ICML、ICLR、ACL、EMNLP、MLSys等会议发表相关论文或有高质量开源贡献者优先。",
+        "description": "1. 研发并落地低比特量化技术，包括FP8、FP4、INT8、INT4、KV Cache量化、MoE量化、混合精度量化、QAT/PTQ等方向，解决大规模模型低比特部署下的精度、稳定性和性能问题；\n2. 参与投机解码、稀疏化、剪枝、蒸馏、Token剪枝、Prompt压缩、CoT压缩、KV Cache压缩等推理加速技术探索与落地，持续提升Decode效率并降低显存与计算开销；\n3. 建立和完善模型压缩效果评估与回归机制，协同模型、算子、框架和业务团队完成算法方案到线上部署的闭环，对模型效果、推理成本和吞吐收益负责。",
+        "experience": {
+          "from": 3,
+          "to": null
+        },
+        "degree": "bachelor",
+        "department": null,
+        "project": null,
+        "positionType": null,
+        "code": "GP100021600005",
+        "categoryName": null,
+        "categoryType": null,
+        "batchName": null,
+        "batchId": null,
+        "batchWillingCount": null,
+        "channels": null,
+        "operations": [],
+        "isTongyi": false,
+        "circle": null,
+        "circleNames": null,
+        "circleCodeList": null,
+        "niuKeProjectName": null,
+        "useInternal": null,
+        "isLingYang": null,
+        "tongyi": false
+      }
+    ],
+    "endpoint": {
+      "source": "/tmp/ande-ali-social-brands-quark-native-response-10.txt",
+      "sha256": "39880240e6e745876e1322655c789e788d3da3287ca9dad9189780ca87c23f4a",
+      "request": {
+        "channel": "group_official_site",
+        "language": "zh",
+        "batchId": "",
+        "categories": "",
+        "deptCodes": [],
+        "key": "",
+        "pageIndex": 4,
+        "pageSize": 100,
+        "regions": "",
+        "subCategories": "",
+        "shareType": "",
+        "shareId": "",
+        "myReferralShareCode": ""
+      },
+      "httpStatus": 200,
+      "response": {
+        "success": true,
+        "errorMsg": null,
+        "errorCode": null,
+        "content": {
+          "datas": [],
+          "totalCount": 0,
+          "pageSize": 100,
+          "currentPage": 4
+        }
+      }
+    }
+  }
+}

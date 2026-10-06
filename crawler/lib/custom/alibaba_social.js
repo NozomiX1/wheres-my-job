@@ -15,6 +15,6 @@ if (require.main === module) {
   fetchAll().then(jobs => {
     const raw = path.join(__dirname, '..', '..', 'out', KEY + '_raw.json');
     fs.writeFileSync(raw, JSON.stringify(jobs, null, 2), 'utf8');
-    console.log('raw=' + jobs.length);
+    console.log('raw=' + jobs.total);
   }).catch(e => { console.error('ERR ' + e.message); process.exit(1); });
 }

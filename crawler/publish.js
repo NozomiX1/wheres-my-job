@@ -7,6 +7,7 @@ const { normalizeJD } = require('./lib/jd-text');
 const feishu = require('./lib/feishu');
 const moka = require('./lib/moka');
 const beisen = require('./lib/beisen');
+const ali = require('./lib/custom/ali_social_common');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'jobs.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -115,6 +116,9 @@ function buildUrl(site, id) {
 function normalizeJobs(rawJobs, site) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   if (!Array.isArray(rawJobs)) throw new Error('Jobs must be an array');
+  const newAliPortal = ali.requiresVerification(site);
+  if (newAliPortal && !ali.verifiedSource(site)) throw new Error('Ali social portal identity/scope/mode has not been verified');
+  if (newAliPortal) ali.validateJobs(rawJobs, site);
   const newMokaPortal = moka.requiresVerification(site);
   if (newMokaPortal && !moka.verifiedSource(site)) throw new Error('Moka portal identity/scope/mode has not been verified');
   const newBeisenPortal = beisen.requiresVerification(site);
@@ -134,6 +138,7 @@ function normalizeJobs(rawJobs, site) {
   return rawJobs.map((job, index) => {
     try {
       if (!job || typeof job !== 'object' || Array.isArray(job)) throw new Error('Invalid job object');
+      if (newAliPortal) job = ali.normalizeRecord(job, site);
       if (newBeisenPortal) job = beisen.normalizeRecord(job, site);
       if (newMokaPortal) {
         moka.validateListJob(job, site.orgId, site.siteId);
@@ -248,19 +253,36 @@ function readPublished(file) {
 
 function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
-  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
+  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
   if (!status || status.version !== 1 || status.key !== site.key || status.status !== 'ready' || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
   if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== true || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (ali.requiresVerification(site)) ali.validateEvidence(snapshot.verification, snapshot.jobs, site);
   return normalizeJobs(snapshot.jobs, site);
 }
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), keys = sites.map(s => s.key), failedKeys = [] } = {}) {
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, keys = discardLegacy ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
   const baseline = readPublished(dataFile);
+  if (typeof discardLegacy !== 'boolean' || discardLegacy && (keys.length || failedKeys.length)) throw new Error('Legacy retirement must be explicit and separate from source publication');
+  // Only IDs minted by the initial HTML migration, never official sourceKey:ID records.
+  const retired = new Set();
+  if (discardLegacy) for (const job of baseline.jobs) {
+    if (!job.id.startsWith('legacy-')) continue;
+    const prefix = 'legacy-' + job.sourceKey + '-';
+    if (!job.id.startsWith(prefix) || !/^\d+$/.test(job.id.slice(prefix.length)) || baseline.sources.find(s => s.key === job.sourceKey)?.lastSuccess !== null) throw new Error('Initial HTML legacy identity/provenance mismatch');
+    retired.add(job.id);
+  }
   const selected = new Set(keys);
   const failed = new Set(failedKeys);
   if (keys.some(key => !sites.some(s => s.key === key))) throw new Error('Unknown source key');
   const sources = new Map(baseline.sources.map(source => [source.key, { ...source }]));
+  const initialSources = discardLegacy ? baseline.sources.filter(s => s.lastSuccess === null && (s.status === 'legacy' || s.coverage === '历史个人筛选范围，待全量化')) : [];
+  for (const { key } of initialSources) {
+    const source = sources.get(key);
+    source.status = 'unavailable';
+    source.coverage = null;
+    source.message = '初版HTML遗留岗位已按用户授权退出；尚未取得已验证的新快照，不表示官网无岗位或已下架';
+  }
   const replacements = new Map();
   const errors = [];
   for (const site of sites) {
@@ -280,7 +302,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
       if (previous?.lastSuccess && Date.parse(previous.lastSuccess) >= Date.parse(snapshot.completedAt)) continue;
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : ''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : ''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -294,15 +316,17 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       });
     }
   }
-  // No verified NEW snapshot means no filesystem write, even for status-only changes.
-  if (!replacements.size) return { code: 1, written: false, updated: [], errors };
-  const jobs = baseline.jobs.filter(job => !replacements.has(job.sourceKey)).map(job => Object.fromEntries(JOB_FIELDS.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]])));
+  // The sole explicit exception is retirement of the initial HTML migration, not a zero snapshot.
+  const retirementChanged = discardLegacy && (retired.size || baseline.legacy || initialSources.length);
+  if (!replacements.size && !retirementChanged) return { code: discardLegacy ? 0 : 1, written: false, updated: [], discardedLegacy: 0, errors };
+  const retained = baseline.jobs.filter(job => !replacements.has(job.sourceKey) && !retired.has(job.id));
+  const jobs = discardLegacy ? retained : retained.map(job => Object.fromEntries(JOB_FIELDS.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]])));
   for (const replacement of replacements.values()) jobs.push(...replacement);
   const companies = baseline.companies.map(company => ({ name: company.name, initial: company.initial, aliases: company.aliases }));
   for (const source of sources.values()) if (!companies.some(company => company.name === source.company)) {
     companies.push({ name: source.company, initial: /^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#', aliases: [] });
   }
-  const legacy = baseline.legacy && [...sources.values()].some(source => source.lastSuccess == null);
+  const legacy = !discardLegacy && baseline.legacy && [...sources.values()].some(source => source.lastSuccess == null);
   const notices = ['数据范围以各注册来源的渠道、批次及接口参数为准；注册来源不等于公司全量，跨来源机会暂不合并。'];
   if ([...sources.values()].some(source => source.key === 'bytedance_social' && source.coverage?.includes('"adapter":"bytedance-classified-v1"'))) notices.push(feishu.CLASSIFIED_NOTICE);
   for (const key of ['lilith', 'lilith_social']) {
@@ -311,21 +335,27 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   }
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"moka-portal-v1"'))) notices.push(moka.PORTAL_NOTICE);
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"beisen-portal-v1"'))) notices.push(beisen.PORTAL_NOTICE);
+  if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"ali-social-portal-v1"'))) {
+    notices.push(ali.PORTAL_NOTICE);
+    for (const site of sites) if (sources.get(site.key)?.lastSuccess && sources.get(site.key)?.coverage?.includes('"adapter":"ali-social-portal-v1"') && ali.portalNotice(site)) notices.push(ali.portalNotice(site));
+  }
   if (legacy) notices.push('仍含历史个人筛选基线，不是全量来源快照；历史采集时刻及当前在招状态未经核验。');
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');
   if (jobs.some(job => job.sourceStatus && job.sourceStatus !== 'open')) notices.push('部分岗位的官网接口状态非 open，条目中已标明；实际招聘及投递可用性请以官网为准。');
-  if ([...sources.values()].some(source => source.status !== 'ready')) notices.push('部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。');
+  if (!legacy) notices.push('初版HTML遗留岗位不再保留；仅应用经过完整性核验的新采集版本，首次退出不代表官网下架。');
+  if ([...sources.values()].some(source => source.status !== 'ready')) notices.push(legacy ? '部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。' : '部分来源尚未取得新数据；更新失败时只保留上次已验证快照，没有该版本则暂不可用，不表示官网无岗位；详情见来源状态。');
   const data = { version: 1, legacy, notices, companies, sources: [...sources.values()], jobs };
   atomicWrite(dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n');
-  return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], errors, data };
+  return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], discardedLegacy: retired.size, errors, data };
 }
 
 module.exports = { loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, validateSnapshot, publish };
 if (require.main === module) {
   try {
     const keys = process.argv.slice(2);
-    const result = publish(keys.length ? { keys } : {});
-    console.log(result.written ? 'Published sources: ' + result.updated.join(', ') : 'No verified updates; published data unchanged');
+    const discardLegacy = keys.length === 1 && keys[0] === '--discard-legacy';
+    const result = publish(discardLegacy ? { discardLegacy: true } : keys.length ? { keys } : {});
+    console.log(discardLegacy ? `Discarded initial HTML legacy jobs: ${result.discardedLegacy}; ${result.written ? 'published' : 'already retired, data unchanged'}` : result.written ? 'Published sources: ' + result.updated.join(', ') : 'No verified updates; published data unchanged');
     for (const error of result.errors) console.error(error);
     process.exitCode = result.code;
   } catch (error) {

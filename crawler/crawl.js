@@ -1,5 +1,5 @@
 // node crawl.js <siteKey>: run one adapter, validate, then promote a complete snapshot.
-// Feishu qualifies only within individually reviewed registered scopes; other custom sources are not run.
+// Only individually reviewed registered scopes qualify; unknown custom sources are not run.
 'use strict';
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -8,12 +8,15 @@ const { loadSites, coverageFor, atomicWrite, normalizeJobs, validTimestamp } = r
 const { verifiedSource, classifiedScope, portalNotice, CLASSIFIED_NOTICE } = require('./lib/feishu');
 const moka = require('./lib/moka');
 const beisen = require('./lib/beisen');
+const ali = require('./lib/custom/ali_social_common');
 
 function adapterCommand(site, rawFile) {
+  if (ali.requiresVerification(site) && !ali.verifiedSource(site)) return null;
   if (moka.requiresVerification(site) && !moka.verifiedSource(site)) return null;
   if (beisen.requiresVerification(site) && !beisen.verifiedSource(site)) return null;
   if (site.ats === 'moka') return { script: path.join(__dirname, 'lib', 'moka.js'), args: [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile, ...(site.fetchDetails ? ['--details'] : site.listJD ? ['--list-jd'] : []), ...(site.apiOrigin ? ['--origin=' + site.apiOrigin] : [])], timeout: site.fetchDetails || site.listJD ? 900000 : 180000 };
   if (site.ats === 'beisen') return { script: path.join(__dirname, 'lib', 'beisen.js'), args: beisen.verifiedSource(site) ? [JSON.stringify(site), rawFile] : [site.api, (site.category || ['2']).join(','), rawFile], timeout: beisen.verifiedSource(site) ? 900000 : 180000 };
+  if (ali.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ali_social_common.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
   if (verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'feishu.js'), args: [JSON.stringify(site), rawFile], timeout: classifiedScope(site) ? 1200000 : 900000 };
   return null;
 }
@@ -75,14 +78,15 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     const raw = JSON.parse(fs.readFileSync(rawFile, 'utf8'));
     const jobs = validateEnvelope(raw);
     if (beisen.verifiedSource(site)) beisen.validateEvidence(raw.verification, jobs, site);
+    if (ali.verifiedSource(site)) ali.validateEvidence(raw.verification, jobs, site);
     normalizeJobs(jobs, site); // Reject the WHOLE source before replacing either baseline.
     const completedAt = now();
     if (!validTimestamp(completedAt) || Date.parse(completedAt) < Date.parse(lastAttempt)) throw new Error('Invalid completion timestamp');
-    const snapshot = { version: 1, key: site.key, complete: true, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) ? { verification: raw.verification } : {}) };
+    const snapshot = { version: 1, key: site.key, complete: true, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) ? { verification: raw.verification } : {}) };
     atomicWrite(snapshotFile, JSON.stringify(snapshot, null, 2) + '\n');
     promoted = true;
     // Ready metadata identifies this same completed attempt, not the invocation start time.
-    const status = { version: 1, key: site.key, status: 'ready', lastAttempt, lastSuccess: completedAt, message: '已验证完整来源快照：' + jobs.length + ' 个岗位（仅此来源范围）' + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : ''), coverage };
+    const status = { version: 1, key: site.key, status: 'ready', lastAttempt, lastSuccess: completedAt, message: '已验证完整来源快照：' + jobs.length + ' 个岗位（仅此来源范围）' + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) ? '；' + ali.portalNotice(site) : ''), coverage };
     atomicWrite(statusFile, JSON.stringify(status, null, 2) + '\n');
     return { code: 0, ...status, total: jobs.length };
   } catch (error) {
