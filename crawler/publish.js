@@ -8,6 +8,12 @@ const feishu = require('./lib/feishu');
 const moka = require('./lib/moka');
 const beisen = require('./lib/beisen');
 const ali = require('./lib/custom/ali_social_common');
+const meituan = require('./lib/custom/meituan_portal');
+const meituanCampus = require('./lib/custom/meituan_campus_portal');
+const ctrip = require('./lib/custom/ctrip_portal');
+const mihoyo = require('./lib/custom/mihoyo_portal');
+const shlab = require('./lib/custom/shlab_portal');
+const xiaomi = require('./lib/custom/xiaomi_portal');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'jobs.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -18,7 +24,7 @@ function loadSites() {
 
 function coverageFor(site) {
   // Include original scope parameters/descriptions, not a claim of whole-company coverage.
-  const keys = ['key', 'ats', 'orgId', 'siteId', 'site', 'api', 'apiOrigin', 'url', 'category', 'track', 'batch', 'body', 'aid', 'websitePath', 'subjectIdList', 'plain', 'matchKeyword', 'note', 'fetchDetails', 'listJD', 'adapter', 'portalType', 'portalPaths', 'categoryRootIds', 'categoryGroups', 'categoryTreeHash'];
+  const keys = ['key', 'ats', 'orgId', 'siteId', 'site', 'api', 'apiOrigin', 'url', 'category', 'track', 'batch', 'body', 'origin', 'detailApi', 'headers', 'aid', 'websitePath', 'subjectIdList', 'plain', 'matchKeyword', 'note', 'fetchDetails', 'listJD', 'adapter', 'portalType', 'portalPaths', 'categoryRootIds', 'categoryGroups', 'categoryTreeHash'];
   if (site.ats === 'moka') keys.push('linkTemplate');
   const scope = {};
   for (const key of keys.sort()) if (site[key] !== undefined) scope[key] = site[key];
@@ -116,6 +122,25 @@ function buildUrl(site, id) {
 function normalizeJobs(rawJobs, site) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   if (!Array.isArray(rawJobs)) throw new Error('Jobs must be an array');
+  const newCtripPortal = ctrip.requiresVerification(site);
+  if (newCtripPortal && !ctrip.verifiedSource(site)) throw new Error('Ctrip portal identity/scope/mode has not been verified');
+  if (newCtripPortal) ctrip.validateJobs(rawJobs, site);
+  const newMihoyoPortal = mihoyo.requiresVerification(site);
+  if (newMihoyoPortal && !mihoyo.verifiedSource(site)) throw new Error('Mihoyo portal identity/scope/mode has not been verified');
+  if (newMihoyoPortal) mihoyo.validateJobs(rawJobs, site);
+  const newShlabPortal = shlab.requiresVerification(site);
+  if (newShlabPortal && !shlab.verifiedSource(site)) throw new Error('SHLAB portal identity/scope/mode has not been verified');
+  if (newShlabPortal) shlab.validateJobs(rawJobs, site);
+  const newXiaomiPortal = xiaomi.requiresVerification(site);
+  if (newXiaomiPortal && !xiaomi.verifiedSource(site)) throw new Error('Xiaomi portal identity/scope/mode has not been verified');
+  if (newXiaomiPortal) xiaomi.validateJobs(rawJobs, site);
+  const newDirectJD = newCtripPortal || newMihoyoPortal || newShlabPortal || newXiaomiPortal || meituan.requiresVerification(site);
+  const newMeituanCampus = meituanCampus.requiresVerification(site);
+  if (newMeituanCampus && !meituanCampus.verifiedSource(site)) throw new Error('Meituan campus identity/scope/mode has not been verified');
+  if (newMeituanCampus) meituanCampus.validateJobs(rawJobs, site);
+  const newMeituanPortal = meituan.requiresVerification(site) && !newMeituanCampus;
+  if (newMeituanPortal && !meituan.verifiedSource(site)) throw new Error('Meituan portal identity/scope/mode has not been verified');
+  if (newMeituanPortal) meituan.validateJobs(rawJobs, site);
   const newAliPortal = ali.requiresVerification(site);
   if (newAliPortal && !ali.verifiedSource(site)) throw new Error('Ali social portal identity/scope/mode has not been verified');
   if (newAliPortal) ali.validateJobs(rawJobs, site);
@@ -138,6 +163,12 @@ function normalizeJobs(rawJobs, site) {
   return rawJobs.map((job, index) => {
     try {
       if (!job || typeof job !== 'object' || Array.isArray(job)) throw new Error('Invalid job object');
+      if (newCtripPortal) job = ctrip.normalizeRecord(job, site);
+      if (newMihoyoPortal) job = mihoyo.normalizeRecord(job, site);
+      if (newShlabPortal) job = shlab.normalizeRecord(job, site);
+      if (newXiaomiPortal) job = xiaomi.normalizeRecord(job, site);
+      if (newMeituanPortal) job = meituan.normalizeRecord(job, site);
+      if (newMeituanCampus) job = meituanCampus.normalizeRecord(job, site);
       if (newAliPortal) job = ali.normalizeRecord(job, site);
       if (newBeisenPortal) job = beisen.normalizeRecord(job, site);
       if (newMokaPortal) {
@@ -160,8 +191,9 @@ function normalizeJobs(rawJobs, site) {
       if (seen.has(id)) throw new Error('Duplicate official id');
       seen.add(id);
       for (const field of titleFields) text(job[field], field);
-      const title = text(first(job, titleFields), 'title').trim();
-      if (!title) throw new Error('Missing title');
+      const nativeTitle = text(first(job, titleFields), 'title');
+      const title = newXiaomiPortal ? nativeTitle : nativeTitle.trim();
+      if (!title.trim()) throw new Error('Missing title');
       for (const field of cityFields) cityText(job[field]);
       for (const field of dateFields) normalizeDate(job[field]);
       if (fullMoka && job.publishedAt != null && typeof job.publishedAt !== 'string') throw new Error('Invalid publishedAt field');
@@ -208,7 +240,7 @@ function normalizeJobs(rawJobs, site) {
         channels: [...new Set(channels)], employment, talentPlan: job.talentPlan ?? null,
         date, dateKind: date ? (fullMoka ? 'published' : job.dateKind ?? null) : null,
         url: safeUrl(first(job, urlFields)) || buildUrl(site, officialId),
-        duty: jd ? jd.duty : joinText(job, dutyFields), requirements: jd ? jd.requirements : joinText(job, requireFields), description: jd ? jd.description : joinText(job, descriptionFields),
+        duty: jd ? jd.duty : newDirectJD ? text(job.duty, 'duty') : joinText(job, dutyFields), requirements: jd ? jd.requirements : newDirectJD ? text(job.requirements, 'requirements') : joinText(job, requireFields), description: jd ? jd.description : newDirectJD ? text(job.description, 'description') : joinText(job, descriptionFields),
         jdComplete: jd ? jd.hasContent : job.jdComplete === true, sourceStatus
       };
     } catch (error) {
@@ -253,11 +285,17 @@ function readPublished(file) {
 
 function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
-  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
+  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
   if (!status || status.version !== 1 || status.key !== site.key || status.status !== 'ready' || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
   if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== true || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (ali.requiresVerification(site)) ali.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (meituan.requiresVerification(site) && !meituanCampus.verifiedSource(site)) meituan.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (meituanCampus.requiresVerification(site)) meituanCampus.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (ctrip.requiresVerification(site)) ctrip.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (mihoyo.requiresVerification(site)) mihoyo.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (shlab.requiresVerification(site)) shlab.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (xiaomi.requiresVerification(site)) xiaomi.validateEvidence(snapshot.verification, snapshot.jobs, site);
   return normalizeJobs(snapshot.jobs, site);
 }
 
@@ -302,7 +340,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
       if (previous?.lastSuccess && Date.parse(previous.lastSuccess) >= Date.parse(snapshot.completedAt)) continue;
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : ''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : ''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -338,6 +376,16 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"ali-social-portal-v1"'))) {
     notices.push(ali.PORTAL_NOTICE);
     for (const site of sites) if (sources.get(site.key)?.lastSuccess && sources.get(site.key)?.coverage?.includes('"adapter":"ali-social-portal-v1"') && ali.portalNotice(site)) notices.push(ali.portalNotice(site));
+  }
+  for (const site of sites) if (sources.get(site.key)?.lastSuccess && sources.get(site.key)?.coverage?.includes('"adapter":"meituan-portal-v1"') && meituan.portalNotice(site)) notices.push(meituan.portalNotice(site));
+  for (const site of sites) if (sources.get(site.key)?.lastSuccess && sources.get(site.key)?.coverage===coverageFor(site) && meituanCampus.portalNotice(site)) notices.push(meituanCampus.portalNotice(site));
+  for (const site of sites) {
+    const coverage = sources.get(site.key)?.coverage || '';
+    if (!sources.get(site.key)?.lastSuccess) continue;
+    if (coverage.includes('"adapter":"ctrip-portal-v1"') && ctrip.portalNotice(site)) notices.push(ctrip.portalNotice(site));
+    if (coverage.includes('"adapter":"mihoyo-portal-v1"') && mihoyo.portalNotice(site)) notices.push(mihoyo.portalNotice(site));
+    if (coverage.includes('"adapter":"shlab-portal-v1"') && shlab.portalNotice(site)) notices.push(shlab.portalNotice(site));
+    if (coverage.includes('"adapter":"xiaomi-hr-v1"') && xiaomi.portalNotice(site)) notices.push(xiaomi.portalNotice(site));
   }
   if (legacy) notices.push('仍含历史个人筛选基线，不是全量来源快照；历史采集时刻及当前在招状态未经核验。');
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');

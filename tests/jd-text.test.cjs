@@ -127,6 +127,29 @@ test('HTML whitespace, attributes, nested lists and br remain readable without g
   assert.equal(htmlText('n<10 && m>5'), 'n<10 && m>5');
 });
 
+test('attribute-name quotes never leak markup, while quoted values retain their real boundary', () => {
+  // Real Ctrip social 30439707 serialized font-family as quoted attribute-name fragments.
+  const tag = '<p style="font-family: -apple-system, " segoe="" ui",="" "helvetica="" neue",="" emoji""="">';
+  for (const start of ['<p bad"="">', '<p bad\'=\'\'>', tag]) {
+    assert.equal(htmlText(start + 'Work</p>'), 'Work');
+    fallback(start + '</p>', '', false);
+    fallback(start + '。/-</p>', '。/-', false);
+  }
+  assert.equal(htmlText('<p title="one > two" bad"="">Work</p>'), 'Work');
+  assert.equal(htmlText('<p title=\'one > two\' bad"="">Work</p>'), 'Work');
+  assert.equal(htmlText('<p style="color:red"next="value > right">Work</p>'), 'Work');
+  assert.equal(htmlText('<script bad"="">Fake requirements</script><p>Work</p>'), 'Work');
+  assert.equal(htmlText('<p>&lt;p bad&quot;=&quot;&quot;&gt;Literal&lt;/p&gt;</p>'), '<p bad"="">Literal</p>');
+});
+
+test('unterminated attribute scanning is bounded, not exponential backtracking', () => {
+  const { spawnSync } = require('node:child_process');
+  const modulePath = require.resolve('../crawler/lib/jd-text');
+  const text = '<p ' + 'x'.repeat(4096);
+  const result = spawnSync(process.execPath, ['-e', `const a=require('node:assert/strict');a.equal(require(${JSON.stringify(modulePath)}).htmlText(${JSON.stringify(text)}),${JSON.stringify(text)})`], { encoding: 'utf8', timeout: 3000 });
+  assert.equal(result.error, undefined); assert.equal(result.status, 0, result.stderr);
+});
+
 test('entities decode once after stripping, retaining escaped malicious tags as literal text', () => {
   const html = '<p>&lt;img src=x onerror="throw 1"&gt; &lt;script&gt;alert(1)&lt;/script&gt;</p>' +
     '<p>A &amp; B &quot;q&quot; &apos;a&apos; &#60;b&#62; &#x3c;/b&#x3E; &#20013;&#x6587; &#x1f680;</p>' +

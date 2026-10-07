@@ -15,7 +15,7 @@ const C1 = {
   150: 8211, 151: 8212, 152: 732, 153: 8482, 154: 353, 155: 8250,
   156: 339, 158: 382, 159: 376
 };
-const TOKENS = /<!--[\s\S]*?(?:-->|$)|<(script|style)\b(?:[^>"']|"[^"]*"|'[^']*')*>[\s\S]*?(?:<\/\1\s*>|$)|<\/?([a-z][\w:-]*)\b(?:[^>"']|"[^"]*"|'[^']*')*>|<[!?][^>]*>/gi;
+const TOKENS = /<!--[\s\S]*?(?:-->|$)|<\/?([a-z][\w:-]*)\b|<[!?][^>]*>/gi;
 const BLOCK = /^(?:p|br|div|ul|ol|li|h[1-6]|section|article|header|footer|blockquote|pre|hr|table|tr|dl|dt|dd)$/i;
 
 function decodeEntities(text) {
@@ -29,6 +29,40 @@ function decodeEntities(text) {
   });
 }
 
+// Linear HTML attribute scan: a quote opens a value only after '='; quotes in names/unquoted values are literal.
+function tagEnd(source, start) {
+  let state = 'before', quote = '';
+  for (let i = start; i < source.length; i++) {
+    const c = source[i];
+    if (quote) { if (c === quote) { quote = ''; state = 'before'; } continue; }
+    if (c === '>') return i + 1;
+    const space = /[\t\n\f\r ]/.test(c);
+    if (state === 'value') {
+      if (space) continue;
+      if (c === '"' || c === "'") quote = c;
+      else state = 'unquoted';
+    } else if (state === 'unquoted') {
+      if (space) state = 'before';
+    } else if (c === '=' && (state === 'name' || state === 'after')) state = 'value';
+    else if (space) { if (state === 'name') state = 'after'; }
+    else if (c !== '/' || state !== 'before') state = 'name';
+  }
+  return -1;
+}
+function stripTags(source) {
+  const parts = []; let cursor = 0; TOKENS.lastIndex = 0;
+  for (let token; (token = TOKENS.exec(source));) {
+    const tag = token[1], end = tag ? tagEnd(source, TOKENS.lastIndex) : TOKENS.lastIndex;
+    if (end < 0) break;
+    let after = end, replacement = '';
+    if (tag && /^(?:script|style)$/i.test(tag) && token[0][1] !== '/') {
+      const close = new RegExp('</' + tag + '\\s*>', 'gi'); close.lastIndex = end;
+      const match = close.exec(source); after = match ? close.lastIndex : source.length;
+    } else if (tag) replacement = /^(?:td|th)$/i.test(tag) ? ' ' : BLOCK.test(tag) ? '\n' : '';
+    parts.push(source.slice(cursor, token.index), replacement); cursor = after; TOKENS.lastIndex = after;
+  }
+  parts.push(source.slice(cursor)); return parts.join('');
+}
 function htmlText(html) {
   if (html == null) return '';
   if (typeof html !== 'string') throw new TypeError('JD must be a string');
@@ -37,11 +71,7 @@ function htmlText(html) {
   if (/<\/?[a-z][\w:-]*(?:\s|\/?>)|<!--|<!doctype\b/i.test(source)) {
     source = source.replace(/[ \t\n\f]+/g, ' ');
   }
-  const stripped = source.replace(TOKENS, (_token, hidden, tag) => {
-    if (hidden || !tag) return '';
-    if (/^(?:td|th)$/i.test(tag)) return ' ';
-    return BLOCK.test(tag) ? '\n' : '';
-  });
+  const stripped = stripTags(source);
   // Decode only after removing real markup: escaped tags stay literal text.
   return decodeEntities(stripped)
     .replace(/[^\S\n]+/g, ' ')

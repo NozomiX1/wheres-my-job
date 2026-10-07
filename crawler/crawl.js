@@ -9,14 +9,32 @@ const { verifiedSource, classifiedScope, portalNotice, CLASSIFIED_NOTICE } = req
 const moka = require('./lib/moka');
 const beisen = require('./lib/beisen');
 const ali = require('./lib/custom/ali_social_common');
+const meituan = require('./lib/custom/meituan_portal');
+const meituanCampus = require('./lib/custom/meituan_campus_portal');
+const ctrip = require('./lib/custom/ctrip_portal');
+const mihoyo = require('./lib/custom/mihoyo_portal');
+const shlab = require('./lib/custom/shlab_portal');
+const xiaomi = require('./lib/custom/xiaomi_portal');
 
 function adapterCommand(site, rawFile) {
   if (ali.requiresVerification(site) && !ali.verifiedSource(site)) return null;
+  if (meituan.requiresVerification(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site)) return null;
+  if (meituanCampus.requiresVerification(site) && !meituanCampus.verifiedSource(site)) return null;
+  if (ctrip.requiresVerification(site) && !ctrip.verifiedSource(site)) return null;
+  if (mihoyo.requiresVerification(site) && !mihoyo.verifiedSource(site)) return null;
+  if (shlab.requiresVerification(site) && !shlab.verifiedSource(site)) return null;
+  if (xiaomi.requiresVerification(site) && !xiaomi.verifiedSource(site)) return null;
   if (moka.requiresVerification(site) && !moka.verifiedSource(site)) return null;
   if (beisen.requiresVerification(site) && !beisen.verifiedSource(site)) return null;
   if (site.ats === 'moka') return { script: path.join(__dirname, 'lib', 'moka.js'), args: [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile, ...(site.fetchDetails ? ['--details'] : site.listJD ? ['--list-jd'] : []), ...(site.apiOrigin ? ['--origin=' + site.apiOrigin] : [])], timeout: site.fetchDetails || site.listJD ? 900000 : 180000 };
   if (site.ats === 'beisen') return { script: path.join(__dirname, 'lib', 'beisen.js'), args: beisen.verifiedSource(site) ? [JSON.stringify(site), rawFile] : [site.api, (site.category || ['2']).join(','), rawFile], timeout: beisen.verifiedSource(site) ? 900000 : 180000 };
   if (ali.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ali_social_common.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (meituanCampus.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'meituan_campus_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (meituan.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'meituan_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 2400000 };
+  if (ctrip.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ctrip_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (mihoyo.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'mihoyo_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 2400000 };
+  if (shlab.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'shlab_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (xiaomi.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'xiaomi_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 2400000 };
   if (verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'feishu.js'), args: [JSON.stringify(site), rawFile], timeout: classifiedScope(site) ? 1200000 : 900000 };
   return null;
 }
@@ -79,14 +97,20 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     const jobs = validateEnvelope(raw);
     if (beisen.verifiedSource(site)) beisen.validateEvidence(raw.verification, jobs, site);
     if (ali.verifiedSource(site)) ali.validateEvidence(raw.verification, jobs, site);
+    if (meituan.verifiedSource(site)) meituan.validateEvidence(raw.verification, jobs, site);
+    if (meituanCampus.verifiedSource(site)) meituanCampus.validateEvidence(raw.verification, jobs, site);
+    if (ctrip.verifiedSource(site)) ctrip.validateEvidence(raw.verification, jobs, site);
+    if (mihoyo.verifiedSource(site)) mihoyo.validateEvidence(raw.verification, jobs, site);
+    if (shlab.verifiedSource(site)) shlab.validateEvidence(raw.verification, jobs, site);
+    if (xiaomi.verifiedSource(site)) xiaomi.validateEvidence(raw.verification, jobs, site);
     normalizeJobs(jobs, site); // Reject the WHOLE source before replacing either baseline.
     const completedAt = now();
     if (!validTimestamp(completedAt) || Date.parse(completedAt) < Date.parse(lastAttempt)) throw new Error('Invalid completion timestamp');
-    const snapshot = { version: 1, key: site.key, complete: true, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) ? { verification: raw.verification } : {}) };
+    const snapshot = { version: 1, key: site.key, complete: true, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) || meituan.verifiedSource(site) || meituanCampus.verifiedSource(site) || ctrip.verifiedSource(site) || mihoyo.verifiedSource(site) || shlab.verifiedSource(site) || xiaomi.verifiedSource(site) ? { verification: raw.verification } : {}) };
     atomicWrite(snapshotFile, JSON.stringify(snapshot, null, 2) + '\n');
     promoted = true;
     // Ready metadata identifies this same completed attempt, not the invocation start time.
-    const status = { version: 1, key: site.key, status: 'ready', lastAttempt, lastSuccess: completedAt, message: '已验证完整来源快照：' + jobs.length + ' 个岗位（仅此来源范围）' + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) ? '；' + ali.portalNotice(site) : ''), coverage };
+    const status = { version: 1, key: site.key, status: 'ready', lastAttempt, lastSuccess: completedAt, message: '已验证完整来源快照：' + jobs.length + ' 个岗位（仅此来源范围）' + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) ? '；' + xiaomi.portalNotice(site) : ''), coverage };
     atomicWrite(statusFile, JSON.stringify(status, null, 2) + '\n');
     return { code: 0, ...status, total: jobs.length };
   } catch (error) {
