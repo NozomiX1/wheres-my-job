@@ -369,3 +369,24 @@ publication `id`与内部`job_id`都是**不同的十进制字符串**，不能�
 - 华为新固定CR/SR profile与正常匿名Referer transport接唯一链；按totalPages停止列表，复用本轮列表续取524详情＋524岗位意向响应。广告ID与jobId绑定、全部方向标题/HTML正文/两栏按原顺序保留；source与JD完整性仍未知，未从项目/年限推性质/计划/日期。官方SR total424中的37178标题null未收录，缺口明确；空详情/空意向不能抹列表已取得文字。
 - 小红书校园只2027regular/campus_autumn_27，社招默认无筛选，页长10、原生成功/页码/实际request绑定。重复页继续到EOF，校园171槽→170唯一、社会847槽→841唯一，不冒全集。两栏Vue TEXT保原空白/实体/同文，3个社会岗只符号占位仍保留；详情未核验，不声称已确定少文字。jobType社会具名类别有官方“职位类别”筛选/卡片renderer证据，不与详情positionType混用；recruitStatus仅原接口码，不证明实际可投。
 - 335离线测试及diff通过；基本全量程序检查、非目标31,300岗/61源/116旧out保护、98分片逐字段保真通过；本地HTTP抽6个JD/查询/官网链接通过，资源清理。没有逐岗模型阅读/旧全量oracle/新增来源线上或全量性能验收。材料 `/tmp/ande-ctrip-huawei-xhs-HeZYzU/`；源级资格仅这五key，不扩百度或下一批。
+
+## 16. 百度有限诊断：正常Referer恢复列表（2026-10-07）
+
+用户要求查原因，并指出初版似乎可采。本轮只诊断，不重签§2的失败、不做全量采集或赋予发布资格。代码/历史证明初版API适配器设置官网Origin/Referer，同时硬编码Chrome UA；旧HTML的128校园/609社会是筛选后遗留展示数，不是成功raw/当前全集证据。未找到对应原成功响应，最初SSR方案也仅首页；初版输出不能证明每次重建均重采成功。
+
+本次以10月6日相同endpoint、form参数与pageSize10，使用**原生Node UA，仅Content-Type和真实Referer**，无Origin、Cookie、登录、SDK或签名。社招首页在15:30:00.349Z返回HTTP200/`status:ok`/10条/原生total字符串`"1653"`；校园首页15:30:00.402Z同样成功/10条/total`"159"`，校园本次projectType为空而非初版1。两条真实Referer分别为`https://talent.baidu.com/jobs/social-list`、`https://talent.baidu.com/jobs/list?search=&recruitType=GRADUATE`。这些total是接口声明数量，不是本次已取得完整唯一数；JD、postId/jobId关系、日期与全量范围仍未核。
+
+最后只删除刚成功社招请求的Referer，其它URL/form/headers/原生UA不变，于15:31:20.550Z得到HTTP200＋`{"status":"no-auth","message":"illegal-visit"}`，当即停止全部后续官网请求。**已确认当前社招拒绝的触发条件是缺少Referer；两源均可通过正常匿名协议取得首页，不需要伪UA或登录。** 10月6日helper只保存了响应头，未找到完整请求头/调用参数，不能追认其精确遗漏；历史失败不改为成功，也不冒整站封禁或认证必需。
+
+离线重放通过初版真实`fetchPage`解析边界：真实拒绝响应报原错误，两个本次成功首页均解析10条与原total。仅3次官网POST，request starts最小317ms、无正文读取重叠、无重试；无浏览器/服务启动。材料`/tmp/ande-baidu-diagnosis-VM7Jkj/`的`referer-probe.json`、两`*-referer-response.json`、`no-referer-control.json`、`replay-page-parser.cjs`、`final-check.json`仅本机，不入库或冒生产snapshot。公开33,324/43、canonical/catalog SHA及纳秒mtime、131个既有out文件均不变；第一批仍14/16正式来源。本轮只追加结果文档，未改适配器、采集链、数据、来源成功钟，未提交/push。
+
+## 17. 百度两源可用交付，第一批收尾（2026-10-07，仅本地）
+
+用户在§16有限诊断后授权继续推进。按D07，新固定`baidu-portal-v1`两个profile经唯一update/crawl/snapshot/publisher可用链交付；历史§2失败不改签，初版737遗留不恢复。正常Node仅真实Referer/表单Content-Type，无Origin/Cookie/登录/伪UA/注入SDK。校园GRADUATE＋INTERN、社会SOCIAL均页长10、空词/项目，按native pages末页停止，拒绝即停全来源/不自动retry，安全上限只保partial/披露缺口。
+
+- 校园16页应届159＋48页实习473＝632唯一，社招166页1,653唯一；三类型唯一数各等本轮原生total，无身份重复或列表覆盖差额。全部2,285原标题/两栏/城市非空；这证明本轮列表范围，不证明公司全球全集/额外正文/实际可投。校园没有按2027/项目编号排AIDU、管培或其它方向；仅INTERN证实习、渠道留未知，不从项目推人才计划。真实性时钟分别15:48:05.874Z/15:48:53.086Z，不取driver/发布/检查时间。
+- 官网一手JS：`list-fetch-js.txt`按postId生成`/jobs/detail/<recruitType>/<postId>`；`detail-js.txt`的`postInfo.workContent/serviceCondition`在“工作职责/职责要求”两个React TEXT div原样展示。材料沿§2一手CDN代码复用，未冒本轮新浏览器取证。postId/jobId独立UUID，旧脚本城市前缀改写/jobId链接不继承。保原始两栏的实体字面、空白、换行及同文，不HTML剥离、不模型逐岗判读，全部`jdComplete:false`，准确表述“列表JD已收，详情正文完整性待核验”；可靠日期/原状态未知。
+- 346离线测试覆盖真实Referer/原生form、分页/type顺序、身份/正文保真、native/jobs绑定、scope变异/假完整拒绝、失败停止/增量保旧和坏输入不清旧。230正式请求全HTTP200/ok，时序最小253ms/无正文重叠；一次INTERN probe只验证可用协议，未继承生产成功钟。基本全量检查＋snapshot验证、102片hash/全字段保真通过；原33,324岗、64非目标来源/39目录及131既有out SHA/纳秒mtime不变。
+- 本地实际HTTP应届/实习/社招三个代表JD与百度全单位2,285查询/原全文/官网href、安全rel/未核正文提示通过，首屏无JD预取；自有资源清理、页面外网/runtime错误0。未改页面，不重复file；没有新增来源线上、逐岗完整性或全站下载性能验收。
+
+本地新增2,285到**35,609/45（37 ready＋8 available）**；第一批**16/16来源、8公司、11,630岗**可用交付完成，完整性持续完善。线上仍c23f59d的33,324/43，本批未commit/push/部署。记录与材料见[PROCESS §20](../PROCESS.md#20-百度校社可用交付第一批16源收尾2026-10-07仅本地)及`/tmp/ande-baidu-delivery-Dqt7wQ/`，raw/日志仅本机不入库。

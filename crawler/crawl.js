@@ -15,12 +15,12 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
-const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal')];
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal')];
 
 function adapterCommand(site, rawFile) {
   for (const portal of availablePortals) if (portal.requiresVerification(site) && !portal.verifiedSource(site)) return null;
   const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
-  if (availablePortal) return { script: path.join(__dirname, 'lib', 'custom', site.adapter === 'huawei-portal-v1' ? 'huawei_portal.js' : 'xiaohongshu_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (availablePortal) return { script: path.join(__dirname, 'lib', 'custom', site.adapter.replace('-portal-v1', '_portal.js')), args: [JSON.stringify(site), rawFile], timeout: 900000 };
   if (ali.requiresVerification(site) && !ali.verifiedSource(site)) return null;
   if (meituan.requiresVerification(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site)) return null;
   if (meituanCampus.requiresVerification(site) && !meituanCampus.verifiedSource(site)) return null;

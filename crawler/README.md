@@ -40,7 +40,7 @@ node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建�
 | `<key>_status.json` | 最近尝试、采集时间、available／ready／失败状态及已知问题 |
 
 - 子进程退出0不单独证明数据可用。计数须与实际唯一jobs一致，身份/安全链接/已取得字段通过程序基本检查；官方total另保在原生证据。`complete:true`为完整路径；`complete:false,verification.policy:'available'`为可用路径，允许单轮/重复页/total变化/缺详情，记录问题后发布，不冒全集或伪空。
-- 可用路径当前接入美团社招、小米社招、华为校/社招及小红书校/社招，不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD（独立职责/要求/全文分别保护），不能清旧或判下架。
+- 可用路径当前接入美团社招、小米社招、华为校/社招、小红书校/社招及百度校/社招，不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD（独立职责/要求/全文分别保护），不能清旧或判下架。
 - 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1先收列表两栏、`jdComplete:false`并提示“已收录列表JD，详情正文完整性待核验”，保原城市顺序，不用换序当发布阻塞。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
 - 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
 - 同一注册范围内可发布快照才可应用。完整路径替换，可用路径增量合并；完全失败、未接入适配器及元数据不匹配不能晋升。
@@ -83,6 +83,8 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 `custom/huawei_portal.js`接入固定CR/SR默认广列表及详情/岗位意向；复用`huawei_http.js`的正常匿名transport（真实Referer、公开bootstrap CSRF仅内存可为空、原生UA、串行200ms/15s、拒绝后锁存停止）。按官网声明的末页停止，不为可用发布强求越界EOF。全部意向按原顺序保留真实标题/HTML正文及独立两栏；未取得者不造JD，额外正文完整性与日期/性质/人才计划仍未知。仅可用资格，不冒完整成功。显式`huawei_portal.js <siteJSON> <rawFile> --resume-details=<snapshot>`可复用同源已核列表续取正文，经正常crawl/publisher复验，记录未重采列表，默认更新不自动复用旧列表。
 
 `custom/xiaohongshu_portal.js`接入官网页长10的默认社招与校园regular `campus_autumn_27`项目；校园不冒全校园/REDstar/Ace/独立实习范围。单轮继续重复页至空页或安全上限，按positionId去重并记录官方total/实际唯一数；正常Node无token/伪UA。原生duty/qualification按TEXT保全部空白/实体字面/同文，列表JD先可用，未核详情不能称确定缺段落；日期/性质/人才计划未知，公开接口状态不证明可投。原始成功页及停止请求留在verification，不因重复或覆盖缺口清旧。
+
+`custom/baidu_portal.js`接入官网默认GRADUATE＋INTERN校园列表及SOCIAL社招列表，空关键词/项目、页长10，不沿用旧projectType1/排AIDU或职业筛选。正常Node原生UA，仅真实Referer及表单Content-Type，无Cookie/登录/签名；单轮串行200ms/15s、每类型200页/进程15分钟保护，按原生pages末页停，拒绝即停整个来源且不重试。保完整原生列表/请求证据，按postId去重并绑定取得类型；postId与jobId独立，官网详情链接用postId，原标题（城市前缀/岗位编号）及React TEXT两栏不改写。INTERN只证实习、渠道不推校园；其它性质/计划/日期/状态未知，列表JD先可用、详情正文完整性待核验，不冒全集/ready。失败或无可用记录不能清旧，旧百度脚本不再进入生产链。
 
 美团详情已证 `otherInfo:"暂无"`与精确空字符串 `""`仅作为原生占位/空值保存，不添JD；其它非空值（含空格字符串）仍拒，列表仍须null，双轮完整raw稳定要求不变。
 
