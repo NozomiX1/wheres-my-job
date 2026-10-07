@@ -1,0 +1,19 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const script=fs.readFileSync(require.resolve('../assets/app.js'),'utf8').replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'');
+function fixture(){
+ const elements=new Map(),requests=[],data={version:1,companies:[{name:'甲',initial:'A',aliases:[]}],sources:[],notices:[],jobs:[],parts:[{company:'甲',sourceKey:'a',count:1}]};
+ const element=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,style:{},setAttribute(){},focus(){},select(){}});return elements.get(id);};
+ const ctx=vm.createContext({URL,ANDE_DATA:data,ANDE_EXAMPLES:{keywords:[],downrank:[]},document:{addEventListener(){},querySelectorAll(){return []},querySelector:element,getElementById:element},window:{scrollTo(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}},ANDE_LOAD_PARTS:(parts,progress)=>new Promise((resolve,reject)=>requests.push({parts,progress,resolve,reject}))});
+ vm.runInContext(script+'\nglobalThis.api={state,search,clearSettings,render,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
+}
+const job={id:'a:1',sourceKey:'a',company:'甲',title:'财务',city:'',channels:['social'],employment:null,talentPlan:null,date:null,dateKind:null,duty:'财务职责',requirements:'',description:'',jdComplete:true,url:'https://example.test/job'};
+test('Pending/failed lazy query keeps prior results and JD snapshot; only complete success commits captured conditions',async()=>{
+ const f=fixture(),old={words:['旧词'],lowered:[],selected:[],recruitment:'all'},results=[{job,value:0,matched:[],downranked:[]}];f.api.state.active=old;f.api.state.results=results;f.api.state.selected.add('甲');f.api.state.keywords=['财务'];
+ const pending=f.api.search(false);assert.strictEqual(f.api.state.active,old);assert.strictEqual(f.api.state.results,results);f.requests[0].progress(0,1);assert.ok(f.api.message.includes('0/1'));f.requests[0].reject(new Error('网络断开'));await pending;assert.strictEqual(f.api.state.active,old);assert.strictEqual(f.api.state.results,results);assert.ok(f.api.message.includes('网络断开'));
+ const retry=f.api.search(false);f.api.state.keywords=['尚未提交的编辑'];f.api.state.selected.clear();f.api.state.recruitment='campus';f.data.jobs.push(job);f.api.state.focused=job.id;f.element('detailDialog').open=true;f.element('detailDialog').scrollTop=84;f.requests[1].resolve();await retry;assert.deepEqual(Array.from(f.api.state.active.words),['财务']);assert.deepEqual(Array.from(f.api.state.active.selected),['甲']);assert.equal(f.api.state.active.recruitment,'all');assert.equal(f.api.state.results.length,1);assert.equal(f.api.state.results[0].value,4);assert.equal(f.api.message,'');assert.ok(f.element('modalDetail').innerHTML.includes('<mark>财务</mark>'));assert.ok(f.element('modalDetail').innerHTML.includes('data-match-score>4.00'));assert.equal(f.element('detailDialog').scrollTop,84);
+});
+test('Reset and newer submissions invalidate older pending queries without clearing cached jobs',async()=>{
+ const f=fixture();f.api.state.keywords=['财务'];const first=f.api.search(false);f.api.clearSettings();f.data.jobs.push(job);f.requests[0].progress(1,1);f.requests[0].resolve();await first;assert.equal(f.api.state.active,null);assert.equal(f.api.state.searched,false);assert.equal(f.api.message,'');assert.equal(f.data.jobs.length,1);
+ f.api.state.keywords=['旧查询'];const older=f.api.search(false);f.api.state.keywords=['财务'];const newer=f.api.search(false);f.requests[2].resolve();await newer;const active=f.api.state.active;f.requests[1].resolve();await older;assert.strictEqual(f.api.state.active,active);assert.deepEqual(Array.from(active.words),['财务']);
+});

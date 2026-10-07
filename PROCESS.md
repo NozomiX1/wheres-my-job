@@ -228,3 +228,13 @@
 **实际部署**：`8248f9be9ae523e93504a7c71c97713f9cade45e`已commit/push main，Pages build精确built/error null；https://feng7.cn/wheres-my-job/ 线上app逐字节等本地，数据头两源均available且计数2459/1909。此次只下载数据头，不声称整文件SHA一致。GitHub提示数据67.76MB超过推荐50MB但push成功。
 
 **线上浏览器抽样未通过，待修不冒绿**：自有Chrome等待查询UI约120秒超时，没有JD样本完成；后续8秒观察显示首页/CSS/词表200，data/app脚本尚未收到响应，ANDE_DATA未定义，未见运行期异常。Node对相同未加参数URL首字节200（app约1415ms、data约153ms），因此尚不能把根因定成文件大小/脚本计算或官网拒绝。两次自有Chrome/profile均清理，资料为`online-check.json`、`page-smoke-online.json`、`online-load-diagnose.json`。本地3岗实际页面通过与线上build/数据资源交付分别记录；线上查询/JD完整加载仍待确认，优先作为后续性能/传输问题处理。
+
+## 15. 白屏根因修复与本地验证（2026-10-07，仅本地）
+
+用户也复现打不开，明确禁止每次修复就push。确认首页空容器被第一个defer全量JD脚本阻塞：整库约68MB/gzip19MB，HTTP200首块不证明完成；只替换该依赖为89字节合成数据、其余线上资源不变时0.908秒出现界面。不是采集失败或岗位丢失；底层网络慢的具体节点仍未定位，不冒修好了网络。
+
+同一publisher新增派生传输：保完整`data/jobs.js`，约77KiB的catalog先显示39单位/66来源与真实数量，91个约1MiB的hash正文分片仅在显式查询时按单位完整加载。全部所需分片成功后才提交冻结条件/更新结果；故障保旧、手动再查重试，等待期间的草稿不污染提交条件，重置/新查询使旧响应失效。仍保全部17字段/3-1-0.35评分；全站查询仍要全部正文，不承诺线上秒开或减少全范围字节。辅助示例缺失不挡首页，超时迟到回调不污染缓存，等待中打开的旧JD在查询成功时同步评分并保滚动位置。
+
+本地真实HTTP故意封锁canonical且扣住最后正文分片：首屏132ms、没有任何正文请求，目录可操作；分片未齐不出部分查询，注入503保持旧结果/分数/JD，显式重试通过；抽美团双语全文/小米列表两栏及官网链接，全范围31,300唯一岗查询完成。file相邻目录做一次基本查询/JD烟测通过。318/318离线测试通过；所有31,300原字段逐字程序对比相同，canonical SHA/size/nsmtime、source/公司/notice及119个既有out的size/nsmtime保持。自有Chrome/profile/server已清，非线上性能验证。
+
+本机材料 `/tmp/ande-local-loading-fix/`（before/data-check、browser-smoke报告、tests-final）；诊断原稿 `/tmp/ande-white-screen-diagnosis.json`。只修改本地代码/派生文件与必要文档，HEAD仍d79de09，**未commit/push/部署，线上仍是旧加载方式**；可直接打开本地index.html测试，目录时ANDE_DATA.jobs为空是按需加载而非岗位丢失。

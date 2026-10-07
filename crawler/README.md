@@ -9,8 +9,9 @@ sites.json（唯一来源登记）
   → update.js 按注册表串行调用 crawl.js
   → 可发布快照（可用性与完整性分开）
   → publish.js 整理真实字段，完整替换／不完整增量合并
-  → ../data/jobs.js
-  → ../index.html + ../assets/app.js 用户查询时匹配排序
+  → ../data/jobs.js 完整事实基线
+  → 同publisher派生 ../data/catalog.js + ../data/parts/*.js
+  → ../index.html + ../assets/data-loader.js + ../assets/app.js 按查询加载/匹配排序
 ```
 
 ```sh
@@ -18,6 +19,7 @@ node crawler/update.js stepfun stepfun_social # 仅明确授权的keys；部分�
 node crawler/crawl.js stepfun      # 仅采集，不发布
 node crawler/publish.js stepfun    # 仅发布该来源已验证的新快照
 node crawler/publish.js --discard-legacy # 独立维护：按用户授权退出初版HTML遗留，不读/发布候选
+node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建浏览器分片，不采集、不改基线/采集钟
 ```
 
 无参数的 `update.js` 遍历全部来源，`publish.js` 检查全部来源；日常操作明确keys，不以无参数全站执行代替检查。`run_daily.ps1` 是主入口的薄兼容包装，不另维护名单。没有 HTML 生成器、CSV 聚合、召回切批或个人评分入口。
@@ -87,7 +89,11 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 ## 发布数据契约
 
-`../data/jobs.js` 为静态脚本：`globalThis.ANDE_DATA = <JSON>;`，文件及 Pages 直接可用，不做动态招聘请求。
+`../data/jobs.js`仍为完整canonical静态脚本：`globalThis.ANDE_DATA = <JSON>;`，用于程序读取/更新保旧，不再是首页阻塞脚本。浏览器同HTTP/file可用，不动态请求招聘官网。
+
+同一publisher按真实company/sourceKey和约1MiB切分完整岗位为hash命名的`data/parts/*.js`，单个超长JD不截断；分片不代表查询或岗位上限。`catalog.js`复用全部来源/公司/notice元数据，jobs为空、parts含id/file/sourceKey/company/count/bytes，首屏目录数量从parts统计，不把尚未下载当零岗位。先写所有分片再替换catalog，旧hash文件保留供缓存/已打开页面，不自动清旧。
+
+查询时按所选显示单位加载完整所需分片，未选单位仍需全部；顺序加载、缓存/inflight去重、30秒单分片超时，无自动retry。全部完成才提交冻结条件/更新结果；失败保旧，用户再次查询才重试，重置/后发查询使旧请求结果失效。所有原17字段/JD保真，未知已选单位不静默变全部。全站查询仍有全量下载成本，不承诺线上秒开。正常publisher有新可用数据时一并派生；仅改传输实现用显式rebuild维护，缺/坏canonical拒绝且不能拿catalog作更新基线。
 
 - 顶层：`version,legacy,notices,companies,sources,jobs`；目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
 - 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`available`代表可用但完整性待补，`ready`代表原完整核验版本；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。

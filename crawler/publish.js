@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
+const { createHash } = require('node:crypto');
 const { normalizeJD } = require('./lib/jd-text');
 const feishu = require('./lib/feishu');
 const moka = require('./lib/moka');
@@ -260,6 +261,7 @@ function readPublished(file) {
   const match = content.match(/^\s*globalThis\.ANDE_DATA\s*=\s*([\s\S]*?);?\s*$/);
   if (!match) throw new Error('Baseline must be globalThis.ANDE_DATA = <JSON>;');
   const data = JSON.parse(match[1]);
+  if (Object.hasOwn(data, 'parts')) throw new Error('Browser catalog is not a canonical jobs baseline');
   if (data.version !== 1 || typeof data.legacy !== 'boolean' || !Array.isArray(data.notices) || data.notices.some(n => typeof n !== 'string') || !Array.isArray(data.companies) || !Array.isArray(data.sources) || !Array.isArray(data.jobs)) throw new Error('Invalid baseline schema');
   const names = new Set(), keys = new Set(), ids = new Set();
   for (const company of data.companies) {
@@ -282,6 +284,38 @@ function readPublished(file) {
     ids.add(job.id);
   }
   return data;
+}
+
+// Same publisher, derived transport only: never change the canonical facts or clocks.
+function writeBrowserData(data, dataFile, { maxBytes = 1024 * 1024 } = {}) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) throw new Error('Invalid browser part size');
+  const directory = path.dirname(dataFile), groups = new Map(), parts = [];
+  for (const job of data.jobs) {
+    const key = JSON.stringify([job.sourceKey, job.company]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(job);
+  }
+  for (const jobs of groups.values()) {
+    let texts = [], bytes = 2;
+    const flush = () => {
+      if (!texts.length) return;
+      const payload = '[' + texts.join(',') + ']', id = createHash('sha256').update(payload).digest('hex');
+      const file = 'parts/' + id + '.js', target = path.join(directory, file);
+      const content = 'globalThis.ANDE_CHUNKS[' + JSON.stringify(id) + '] = ' + payload + ';\n';
+      if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== content) atomicWrite(target, content);
+      parts.push({ id, file, sourceKey: jobs[0].sourceKey, company: jobs[0].company, count: texts.length, bytes: Buffer.byteLength(content) });
+      texts = []; bytes = 2;
+    };
+    for (const job of jobs) {
+      const text = JSON.stringify(job).replace(/</g, '\\u003c'), size = Buffer.byteLength(text) + 1;
+      if (texts.length && bytes + size > maxBytes) flush();
+      texts.push(text); bytes += size; // One unusually long JD stays intact, never truncated.
+    }
+    flush();
+  }
+  const catalog = { ...data, jobs: [], parts };
+  atomicWrite(path.join(directory, 'catalog.js'), 'globalThis.ANDE_DATA = ' + JSON.stringify(catalog).replace(/</g, '\\u003c') + ';\n');
+  return catalog; // Old hash-named parts stay valid for already-open/cached catalogs.
 }
 
 function validateSnapshot(snapshot, status, site) {
@@ -409,13 +443,20 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   if ([...sources.values()].some(source => source.status !== 'ready')) notices.push(legacy ? '部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。' : '部分来源尚未取得数据；更新失败时保留已有可用版本，没有则暂不可用，不表示官网无岗位；详情见来源状态。');
   const data = { version: 1, legacy, notices, companies, sources: [...sources.values()], jobs };
   atomicWrite(dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n');
+  writeBrowserData(data, dataFile);
   return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], discardedLegacy: retired.size, errors, data };
 }
 
-module.exports = { loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, validateSnapshot, publish };
+module.exports = { loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, writeBrowserData, validateSnapshot, publish };
 if (require.main === module) {
   try {
     const keys = process.argv.slice(2);
+    if (keys.length === 1 && keys[0] === '--rebuild-browser-data') {
+      if (!fs.existsSync(DATA_FILE)) throw new Error('Missing canonical data; cannot rebuild browser artifacts');
+      const catalog = writeBrowserData(readPublished(DATA_FILE), DATA_FILE);
+      console.log('Rebuilt browser catalog and ' + catalog.parts.length + ' parts; canonical data unchanged');
+      process.exit(0);
+    }
     const discardLegacy = keys.length === 1 && keys[0] === '--discard-legacy';
     const result = publish(discardLegacy ? { discardLegacy: true } : keys.length ? { keys } : {});
     console.log(discardLegacy ? `Discarded initial HTML legacy jobs: ${result.discardedLegacy}; ${result.written ? 'published' : 'already retired, data unchanged'}` : result.written ? 'Published sources: ' + result.updated.join(', ') : 'No verified updates; published data unchanged');

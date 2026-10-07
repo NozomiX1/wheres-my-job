@@ -1,0 +1,13 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),vm=require('node:vm');
+const publisher=require('../crawler/publish');
+const job=(id,sourceKey='a',company='甲')=>({id,sourceKey,company,title:'同标题',city:'',category:'',channels:[],employment:null,talentPlan:null,date:null,dateKind:null,url:'https://example.test/'+id,duty:'职责\r\nList<T> &amp;',requirements:'同文要求',description:'部门介绍\n原文尾部',jdComplete:false,sourceStatus:null});
+test('Browser artifacts are lossless bounded chunks plus a body-free startup catalog; canonical baseline is untouched',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ande-browser-data-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const data={version:1,legacy:false,notices:['覆盖待补'],companies:[{name:'甲',initial:'A',aliases:[]},{name:'乙',initial:'B',aliases:[]}],sources:[{key:'a',company:'甲'},{key:'b',company:'乙'}],jobs:[job('a:1'),job('a:2'),job('b:1','b','乙')]};
+ const file=path.join(dir,'jobs.js');fs.writeFileSync(file,'original baseline');
+ assert.equal(typeof publisher.writeBrowserData,'function');const catalog=publisher.writeBrowserData(data,file,{maxBytes:600});assert.equal(fs.readFileSync(file,'utf8'),'original baseline');assert.deepEqual(catalog.jobs,[]);assert.deepEqual(catalog.sources,data.sources);assert.deepEqual(catalog.companies,data.companies);assert.equal(catalog.parts.reduce((n,p)=>n+p.count,0),3);
+ const records=[];for(const part of catalog.parts){assert.match(part.file,/^parts\/[a-f0-9]{64}\.js$/);const ctx=vm.createContext({ANDE_CHUNKS:{}});vm.runInContext(fs.readFileSync(path.join(dir,part.file),'utf8'),ctx);const jobs=JSON.parse(JSON.stringify(ctx.ANDE_CHUNKS[part.id]));assert.equal(jobs.length,part.count);assert.ok(jobs.every(j=>j.sourceKey===part.sourceKey&&j.company===part.company));records.push(...jobs);}
+ assert.deepEqual(records,data.jobs);assert.throws(()=>publisher.readPublished(path.join(dir,'catalog.js')),/catalog/);assert.ok(!fs.readFileSync(path.join(dir,'catalog.js'),'utf8').includes('List'));const before=fs.statSync(path.join(dir,catalog.parts[0].file)).mtimeMs;publisher.writeBrowserData(data,file,{maxBytes:600});assert.equal(fs.statSync(path.join(dir,catalog.parts[0].file)).mtimeMs,before);
+});
+test('HTML startup never requests the full JD baseline and has a visible startup fallback',()=>{const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');assert.ok(!/<script[^>]+src="data\/jobs\.js"/.test(html));assert.ok(html.includes('data/catalog.js'));assert.ok(html.includes('assets/data-loader.js'));assert.ok(html.includes('startupNotice'));});

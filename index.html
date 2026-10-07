@@ -6,12 +6,14 @@
 <meta name="description" content="安得：免费浏览公司官网岗位，按自己的关键词排序，查看 JD 并前往官网投递。">
 <title>安得 · 公司官网岗位</title>
 <link rel="stylesheet" href="assets/style.css">
-<script defer src="data/jobs.js"></script>
+<script defer src="data/catalog.js"></script>
+<script defer src="assets/data-loader.js"></script>
 <script defer src="assets/example-words.js"></script>
 <script defer src="assets/app.js"></script>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><p id="startupNotice" role="status" style="margin:40px;text-align:center">界面加载中，请稍候。</p></div>
+<script>setTimeout(()=>{const notice=document.getElementById('startupNotice');if(notice)notice.textContent='界面加载超时，请检查网络后刷新。';},10000);</script>
 <noscript>请启用 JavaScript，以浏览岗位和使用关键词排序。</noscript>
 <dialog id="detailDialog" aria-labelledby="detailDialogTitle">
   <div class="dialog-head"><span class="eyebrow" id="detailDialogTitle">岗位详情</span><button class="icon-button" data-action="close-detail" aria-label="关闭岗位详情">✕</button></div>
