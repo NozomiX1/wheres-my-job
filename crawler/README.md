@@ -7,8 +7,8 @@
 ```text
 sites.json（唯一来源登记）
   → update.js 按注册表串行调用 crawl.js
-  → 已验证完整成功快照
-  → publish.js 整理真实字段、按来源替换数据
+  → 可发布快照（可用性与完整性分开）
+  → publish.js 整理真实字段，完整替换／不完整增量合并
   → ../data/jobs.js
   → ../index.html + ../assets/app.js 用户查询时匹配排序
 ```
@@ -22,7 +22,7 @@ node crawler/publish.js --discard-legacy # 独立维护：按用户授权退出�
 
 无参数的 `update.js` 遍历全部来源，`publish.js` 检查全部来源；日常操作明确keys，不以无参数全站执行代替检查。`run_daily.ps1` 是主入口的薄兼容包装，不另维护名单。没有 HTML 生成器、CSV 聚合、召回切批或个人评分入口。
 
-`--discard-legacy`仅是已授权的初版维护操作，不能与source keys/failedKeys混用，不读候选；只退出精确初版身份及元数据，不按日期/JD空/未知属性删除已核官网岗位，不制造零快照或成功时刻，重复执行为无写入no-op。常规更新仍须同source/scope完整成功，失败只保上次已验证新版本，没有则暂无数据，不回退初版。
+`--discard-legacy`仅是已授权的初版维护操作，不能与source keys/failedKeys混用，不读候选；只退出精确初版身份及元数据，不按日期/JD空/未知属性删除已核官网岗位，不制造零快照或成功时刻，重复执行为无写入no-op。常规更新按现行SPEC先发布可用数据、披露缺口；完全失败或缺证零保已有可用版本，不回退初版。
 
 批次结果、实际统计、初版退出及验收范围集中在 [PROCESS.md](../PROCESS.md)。下文只说明操作与技术契约；旧来源报告的保初版/未提交是历史，不覆盖现行规格。
 
@@ -32,15 +32,17 @@ node crawler/publish.js --discard-legacy # 独立维护：按用户授权退出�
 
 | 文件 | 职责 |
 |---|---|
-| `<key>_raw.json` | 当前候选；失败或未证实完整时恢复旧文件，首次失败删除候选 |
-| `<key>_snapshot.json` | 完整成功后才晋升的 raw 快照，含完成时刻和来源覆盖标识 |
-| `<key>_status.json` | 最近尝试、上次成功、失败／未验证／ready 状态及原因 |
+| `<key>_raw.json` | 当前候选；无可用结果时恢复旧文件，首次完全失败删除候选 |
+| `<key>_snapshot.json` | 可发布快照，含采集时刻、来源覆盖、原证据及complete标志 |
+| `<key>_status.json` | 最近尝试、采集时间、available／ready／失败状态及已知问题 |
 
-- 子进程退出 0 **不等于成功**。必须写出新的 `{complete:true,total:N,jobs:[...]}`，计数一致，每条身份和字段合法；不复用旧 raw 来“证明”新成功。
+- 子进程退出0不单独证明数据可用。计数须与实际唯一jobs一致，身份/安全链接/已取得字段通过程序基本检查；官方total另保在原生证据。`complete:true`为完整路径；`complete:false,verification.policy:'available'`为可用路径，允许单轮/重复页/total变化/缺详情，记录问题后发布，不冒全集或伪空。
+- 可用路径当前落到美团社招与小米社招，不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD，不能清旧或判下架。
+- 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1先收列表两栏、`jdComplete:false`并提示额外正文待补，保原城市顺序，不用换序当发布阻塞。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
 - 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
-- 同一注册范围内的新成功快照才可替换旧来源。未发布的旧成功、最新失败、未验证适配器及元数据不匹配不能晋升。
+- 同一注册范围内可发布快照才可应用。完整路径替换，可用路径增量合并；完全失败、未接入适配器及元数据不匹配不能晋升。
 - 已验证发布后如果接口／渠道／批次等范围改变，拒绝自动替换；需另行明确迁移策略，不能据此判原范围岗位下架。初版HTML未复验遗留已按授权退出，首次新快照正常应用，不把初版退出说成已核验下架。
-- 部分成功时只替换成功来源，其他来源仅保留上次已验证的新版本和真实成功时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式独立 `--discard-legacy` 仅为初版维护例外，不是伪空快照资格，原 `index.html` 不受采集影响。
+- 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式独立 `--discard-legacy` 仅为初版维护例外，不是伪空快照资格，原 `index.html` 不受采集影响。
 - 文件按临时文件＋rename 写入；同一来源不应同时执行多个更新。失败状态可随其他成功来源发布；如果全部没有有效更新，公开文件不变，失败详情暂看状态文件和命令输出。
 
 `out/` 只是本机可复用快照，不是临时 Actions runner 的持久存储。以后接定时采集时还需落实成功快照持久化和 Pages 发布，不能把 Pages 自动部署当作采集定时器。
@@ -71,7 +73,7 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 原生业务精确`success/errorCode/errorMsg/content`四keys和content精确`datas/totalCount/pageSize/currentPage`四keys，未知封套追加/缺字段/业务失败/早空/页长或metadata不匹配整源拒。完整两scan每页原request/httpStatus/response随raw与snapshot.verification穿透，在crawl/publisher独立复验（含真零及缺证零保护）。取足后越界空终点total0不用于早空归零；全native raw逐ID稳定且jobs绑定首扫，动态例外仅已证trackId和URL的具体track_id，先逐条核官方origin/path/ID/唯一query，其余URL/所有事实仍比较。列表已有全文不机械逐岗详情；职责/要求普通React TEXT独立，只CRLF规范和外trim，不解实体/HTML/压内部空白/消重或增description副本，合法空/null/符号诚实保留，缺字段/非法类型不享空值例外。原categories/workLocations数组全以`/`展示；社会入口只证social，性质/计划/原状态未知。modifyTime仅已证浏览器local更新，未证source唯一日界，raw时间保真/public date-dateKind null，不猜UTC8或publishTime、无新增schema。品牌连续性/跨产品范围与首次历史迁移公开提示，不改目录/标题筛窄/通义合源，不称集团全球全集或退出历史为下架。
 
-**custom（44 来源登记）**：除上述阿里共享社招，第一批既有来源已接入五个独立官网协议模块：`meituan_portal`（社招；`meituan_campus_portal`共享其原生解析、按官网1＋2分类型枚举校园）、`ctrip_portal`、`mihoyo_portal`、`shlab_portal`（这三者各自校/社两key）、`xiaomi_portal`（仅校招）。固定profile只授已核协议/scope的执行入口，不授完整成功：fresh HTTP/原生业务、全部身份/字段/JD、双完整扫描及全raw绑定须通过crawl与publisher两边复验；失败不落partial候选，未证有效零先拒。未接入口及阿里云仍不继承同公司/同系统资格。旧custom请求/解密/个人方向备注不作当前证据，不能盲加complete或继续旧筛选链。
+**custom（44 来源登记）**：除上述阿里共享社招，第一批既有来源已接入五个独立官网协议模块：`meituan_portal`（社招；`meituan_campus_portal`共享其原生解析、按官网1＋2分类型枚举校园）、`ctrip_portal`、`mihoyo_portal`、`shlab_portal`（这三者各自校/社两key）、`xiaomi_portal`（校招完整路径＋社招可用路径）。固定profile只授已核协议/scope的执行入口，不授完整成功：fresh HTTP/原生业务、全部身份/字段/JD、双完整扫描及全raw绑定须通过crawl与publisher两边复验；失败不落partial候选，未证有效零先拒。未接入口及阿里云仍不继承同公司/同系统资格。旧custom请求/解密/个人方向备注不作当前证据，不能盲加complete或继续旧筛选链。
 
 本批四协议正常匿名Node、串行至少200ms/15s超时，触顶拒整源；美团/米哈游必要详情采用40分钟有界子进程，携程/上海15分钟（非SLA）。美团六片、米哈游六片为实际TEXT renderer，完整正文一次显示，独立职责/要求原字段计分；其它真实正文不另造评分字段。携程原生requirements是完整HTML职位描述，复用已核HTML转换/明确标题分栏，fromId构官网详情链接，不机械重复列表已有全文。上海使用原生has_more和推进游标双穷尽，无官方total；`countKind:cursor-exhaustion`标明derived唯一记录数，保公开分页cursor原值以重演request链（非会话凭证），两条已证requirement省略与非法null/未知JD严格区分；当前SSR只证普通TEXT/LF→BR，未证markup/字符引用正文形状整源拒绝，不盲剥HTML（普通amp/数值比较仍保真）。scope的origin/detailApi/headers亦绑定coverage；源级语义/原始字段证据见 [第一批核验记录](../docs/custom-first-batch-verification.md)，成功/失败及实际数量以数据/Git和PROCESS为准。旧字节custom仅是共享实现的兼容入口，不另发布。
 
@@ -79,7 +81,7 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 美团校园新profile为官网默认1＋2、空subCode/其它筛选，不再旧2027/排LongCat/北斗。正常原生API已证pageSize=1000可返回571完整唯一岗位及原total/pageTotal；仅改变分页粒度，不改变范围。仍严格分页直至typed-null EOF，不把1000当总数上限；未来超过1000或跨页再漂移仍拒，不自动调大或重扫求绿。官网并列多选机制下，两轮分别完整枚举1应届、2实习，原生jobType逐条绑定分区、跨区身份唯一；每区total/满页/typed-null EOF/全部必要详情，两轮全部raw稳定。默认1＋2前后总数须等完整唯一union，默认首屏原生每岗亦绑定union；不据7页样本或简单194＋377求资格，任一不等/漂移/早短/必要详情失败拒整源。校园详情已证列表空项目/部门须补原生项目ID/名称及全部部门，保持完整raw；4697281262的列表与详情cityList同null、官网隐藏城市栏为合法未知，不生成工作城市标题或猜城市；不推断计划/日期/职能。官网按jobSpecialCode的已证两栏＋工作城市或六片renderer保原标题/同文/顺序，city不充jdComplete；原类型2实习，类型1性质未知。校园资格独立于社会，仍经唯一crawl→snapshot→publisher→data链。
 
-`custom/xiaomi_portal.js`仅接入已核HR `type=2`校招无筛选全集（含campus/futurestar/toptalent/newretailing链接），不沿用旧“2027届/排顶尖”过滤；社会/type=3/4不继承资格。正常匿名Node原生UA、200ms/15s、200页保护/40分钟有界子进程，双完整列表逐页原生total/页长、三独立身份、越界空EOF及全部13字段稳定；每轮全部必要详情以正常匿名GET、官网真实公开website-path/中文语言/Referer取得（无注入签名/SDK；缺website-path会静默丢课题字段，不能只看code0），身份/两栏与列表绑定、完整raw双稳，证据穿透crawl/publisher复验，未证有效零拒绝。官网React TEXT的description/requirement保全部空白/实体字面/同文重复；详情已证额外“课题名称及内容”按真实标题/顺序补入完整description，不添第四评分字段，未知额外JD拒整源。列表没有该额外字段，不能当完整JD；初版列表-only候选撤销，非旧成功保留。聚合接口未提供的职能/性质/计划/状态及日期保持未知，校园城市原数组顺序仍严格比较。首次完整通过且本地页面验收后才发布。
+`custom/xiaomi_portal.js`的原完整路径保持已核HR `type=2`校招无筛选全集（含campus/futurestar/toptalent/newretailing链接），不沿用旧“2027届/排顶尖”过滤；社会/type=3/4不继承资格。正常匿名Node原生UA、200ms/15s、200页保护/40分钟有界子进程，双完整列表逐页原生total/页长、三独立身份、越界空EOF及全部13字段稳定；每轮全部必要详情以正常匿名GET、官网真实公开website-path/中文语言/Referer取得（无注入签名/SDK；缺website-path会静默丢课题字段，不能只看code0），身份/两栏与列表绑定、完整raw双稳，证据穿透crawl/publisher复验，未证有效零拒绝。官网React TEXT的description/requirement保全部空白/实体字面/同文重复；详情已证额外“课题名称及内容”按真实标题/顺序补入完整description，不添第四评分字段，未知额外JD拒整源。列表没有该额外字段，不能当完整JD；初版列表-only候选撤销，非旧成功保留。聚合接口未提供的职能/性质/计划/状态及日期保持未知，校园城市原数组顺序仍严格比较。首次完整通过且本地页面验收后才发布。
 
 部分 custom 需要 Chrome/CDP，历史路径偏 Windows、`CHROME_PATH` 支持也尚不统一。不要假定这轮整理已经解决各来源运行环境。
 
@@ -88,9 +90,9 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 `../data/jobs.js` 为静态脚本：`globalThis.ANDE_DATA = <JSON>;`，文件及 Pages 直接可用，不做动态招聘请求。
 
 - 顶层：`version,legacy,notices,companies,sources,jobs`；目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
-- 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。成功时间是实际完成时刻，未知用 null，不拿旧页面展示日期补齐。
+- 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`available`代表可用但完整性待补，`ready`代表原完整核验版本；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。
 - 岗位：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。旧 schema-1 记录可缺 category/sourceStatus，保留来源时不为它们补写字段。
-- 新 ID 为“来源 key＋官方 ID”；同标题不合并，无 ID 或重复官方 ID 拒绝整个来源，不静默跳过。跨来源去重仍待验证，不以名字相同自动合并。
+- 新ID为“来源key＋官方ID”，同标题不合并。可用路径按官方ID处理重复，无法安全确定身份的记录不发布并记录；旧完整路径仍要求唯一身份。跨来源去重仍待验证，不以名字相同自动合并。
 - 正文保留完整可得文字、职责及要求，不截 600 字。已证官网完整正文 `description` 可与独立 `duty/requirements` 并存：页面优先一次显示完整正文，否则显示独立两栏；计分/词频仍只匹配标题、职责（缺失回退完整正文）、要求，不另计第四字段，不用全文伪填独立栏。已核验的 Moka 列表HTML或必要详情经 `lib/jd-text.js` 去真实标签、解码实体、保留段落，仅按明确标题分职责/要求；不能判断则全文留 description，分段时 description 为空，不重复计正文。字节的description/requirement本来就是纯文本，保留内部空白及字面 `List<T>`/实体，不复用HTML剥离。`jdComplete` 表示可靠取得完整非占位正文，不限于单独详情API，不承诺招聘方描述详尽；未证实的来源仍为 false。
 - 只承认明确事实，未知性质/人才计划保持 null。实习不因所在列表就一律算校招；属性未知在页面保守纳入，不误标官网事实。地点对象仅提供国家名时保留该国家名，不虚构城市；非法字段类型仍拒绝整来源。
 - 阶跃星辰及v0.25 Moka来源的 `publishedAt` 已分别由第一方「发布日期」渲染器/正常DOM证明，对应 `dateKind:published`；本批813条有值、DeepSeek37列表缺值仍null，不回退 createdAt/openedAt/updatedAt。v0.26北森三固定profile的原生PostDate/Int已证明published并严格同日日历验证，共1,146已知日期，0001/0未知不回填；其他来源未核验日期语义时 `dateKind:null`，不排序为已知发布时间。抓取时间不是岗位日期。

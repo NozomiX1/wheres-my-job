@@ -91,21 +91,30 @@ function record(job, mode='detail', track='social') {
   labels(job.cityList,'city',mode,track); labels(job.department,'department',mode,track);
   return job;
 }
-function validateJobs(jobs, site) {
+function availableRecord(job) {
+  check(job && typeof job==='object' && !Array.isArray(job),'native job object');
+  check(typeof job.jobUnionId==='string' && /^[1-9]\d*$/.test(job.jobUnionId),'native jobUnionId string');
+  check(typeof job.name==='string' && job.name.trim() && job.jobType==='3','social identity/title/type');
+  check(job.jobStatus==null || typeof job.jobStatus==='string' && job.jobStatus.trim(),'native status type');
+  check(Array.isArray(job.cityList) && job.cityList.every(c=>c && typeof c.name==='string'),'native cities');
+  for(const [key] of SECTIONS) check(job[key]==null || typeof job[key]==='string','native JD text '+key);
+  return job;
+}
+function validateJobs(jobs, site, {available=false}={}) {
   source(site); array(jobs,'jobs');
   check(jobs.length>0,'effective zero has not been verified');
   const seen = new Set();
-  for (const job of jobs) { record(job); check(!seen.has(job.jobUnionId),'Duplicate native identity '+job.jobUnionId); seen.add(job.jobUnionId); }
+  for (const job of jobs) { available ? availableRecord(job) : record(job); check(!seen.has(job.jobUnionId),'Duplicate native identity '+job.jobUnionId); seen.add(job.jobUnionId); }
   return true;
 }
-function normalizeRecord(job, site) {
-  source(site); record(job);
+function normalizeRecord(job, site, {available=false,detailIds=new Set()}={}) {
+  source(site); available ? availableRecord(job) : record(job);
   return {
     id:job.jobUnionId,title:job.name,city:job.cityList.map(v=>v.name),category:'',
-    description:SECTIONS.filter(([k])=>job[k]!==null && job[k]!=='').map(([k,title])=>title+'\n'+job[k]).join('\n\n'),
+    description:SECTIONS.filter(([k])=>typeof job[k]==='string' && job[k]!=='').map(([k,title])=>title+'\n'+job[k]).join('\n\n'),
     duty:job.jobDuty ?? '',requirements:job.jobRequirement ?? '',
     date:null,dateKind:null,employment:null,talentPlan:null,channels:['social'],sourceStatus:job.jobStatus,
-    jdComplete:SECTIONS.some(([k])=>/[\p{L}\p{N}]/u.test(job[k] ?? '')),
+    jdComplete:(!available || detailIds.has(job.jobUnionId) && Object.keys(job).every(k=>FIELDS.includes(k))) && SECTIONS.every(([k])=>Object.hasOwn(job,k)) && [null,undefined,'','暂无'].includes(job.otherInfo) && SECTIONS.some(([k])=>/[\p{L}\p{N}]/u.test(job[k] ?? '')),
     url:ORIGIN+'/web/position/detail?jobUnionId='+encodeURIComponent(job.jobUnionId)+'&jobShareType=1'
   };
 }
@@ -166,7 +175,41 @@ function consumeDetail(raw, listed, track='social') {
 }
 function newState() { return {total:null,totalPage:null,rows:[],byId:new Map()}; }
 function facts(rows) { return new Map(rows.map(row=>[row.jobUnionId,row])); }
+function availableResult(evidence, site) {
+  source(site);
+  shape(evidence,['version','key','api','detailApi','policy','pages','details','issues'],'available verification');
+  check(evidence.version===2 && evidence.policy==='available' && evidence.key===site.key && evidence.api===LIST_API && evidence.detailApi===DETAIL_API,'available source binding');
+  array(evidence.pages,'pages'); array(evidence.details,'details'); array(evidence.issues,'issues');
+  check(evidence.issues.every(v=>typeof v==='string') && evidence.pages.length>0 && evidence.pages.length<MAX_PAGES,'available evidence limits');
+  const rows=new Map(), detailIds=new Set(), totals=new Set(), issues=new Set(evidence.issues); let duplicates=0;
+  for(const [i,raw]of evidence.pages.entries()) {
+    const data=response(raw,listRequest(i+1));
+    check(data && data.page?.pageNo===i+1 && data.page.pageSize===PAGE_SIZE && (data.list===null || Array.isArray(data.list)),'available list/page binding');
+    if(Number.isSafeInteger(data.page.totalCount)) totals.add(data.page.totalCount);
+    for(const row of data.list || []) {
+      try { availableRecord(row); if(rows.has(row.jobUnionId)) duplicates++; rows.set(row.jobUnionId,row); }
+      catch(error) { issues.add('列表记录未应用：'+error.message); }
+    }
+  }
+  for(const raw of evidence.details) {
+    const id=raw.request?.body?.jobUnionId;
+    // HTTP/business failures stop collection, but already obtained list records stay usable.
+    try { const row=availableRecord(response(raw,detailRequest(id))); check(rows.has(id) && row.jobUnionId===id,'detail identity binding'); rows.set(id,row); detailIds.add(id); }
+    catch(error) { issues.add('详情未应用 '+String(id)+'：'+error.message); }
+  }
+  check(rows.size>0,'no usable records; zero cannot clear existing data');
+  if(duplicates) issues.add('列表重复身份 '+duplicates+' 次，按官网ID保留本次最后取得记录');
+  if(totals.size!==1 || !totals.has(rows.size)) issues.add('官方total '+[...totals].join('→')+'；实际唯一岗位 '+rows.size);
+  if(detailIds.size<rows.size) issues.add('未取得详情 '+(rows.size-detailIds.size)+' 岗；列表正文先展示，完整性待补');
+  if([...rows.values()].some(j=>j.otherInfo!=null && !['','暂无'].includes(j.otherInfo))) issues.add('额外otherInfo内容未映射，正文完整性待补');
+  return {complete:false,total:rows.size,jobs:[...rows.values()],verification:evidence,issues:[...issues],detailIds};
+}
+function collectAvailable(pages, details=[], issues=[]) {
+  const verification={version:2,key:PROFILE.key,api:LIST_API,detailApi:DETAIL_API,policy:'available',pages,details,issues};
+  const {detailIds,...result}=availableResult(verification,PROFILE); return result;
+}
 function validateEvidence(evidence, jobs, site) {
+  if(evidence?.policy==='available') { const result=availableResult(evidence,site); check(equal(jobs,result.jobs),'available jobs/native binding'); return result; }
   validateJobs(jobs,site);
   shape(evidence,['version','key','api','detailApi','scans'],'verification');
   check(evidence.version===1 && evidence.key===PROFILE.key && evidence.api===LIST_API && evidence.detailApi===DETAIL_API,'verification source binding');
@@ -228,10 +271,38 @@ async function fetchAll(site, options={}) {
   validateEvidence(verification,jobs,site);
   return {complete:true,total:jobs.length,jobs,verification};
 }
+async function fetchAvailable(site, options={}) {
+  source(site);
+  const {fetchImpl=globalThis.fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),maxPages=MAX_PAGES}=options;
+  check(typeof fetchImpl==='function' && typeof sleep==='function' && Number.isSafeInteger(maxPages) && maxPages>1 && maxPages<=MAX_PAGES,'invalid request limits');
+  const pages=[],details=[],issues=[];
+  async function get(req) {
+    await sleep(200);
+    const r=await fetchImpl(req.url,{method:req.method,headers:req.headers,body:JSON.stringify(req.body),redirect:'manual',signal:AbortSignal.timeout(15000)});
+    check(r?.status===200,'HTTP status');
+    const raw={request:req,httpStatus:r.status,response:await r.json()}; response(raw,req); return raw;
+  }
+  let stopped=false;
+  for(let n=1;n<maxPages;n++) {
+    try {
+      const raw=await get(listRequest(n)),data=raw.response.data;
+      check(data?.page?.pageNo===n && data.page.pageSize===PAGE_SIZE && (data.list===null || Array.isArray(data.list)),'available list/page binding');
+      pages.push(raw);
+      if(data.list===null || data.list.length===0) break;
+      if(n===maxPages-1) issues.push('达到分页安全上限，覆盖待补');
+    } catch(error) { if(!pages.length) throw error; issues.push('请求停止：'+error.message); stopped=true; break; }
+  }
+  const listed=collectAvailable(pages,[],issues).jobs;
+  if(!stopped) for(const job of listed) {
+    try { details.push(await get(detailRequest(job.jobUnionId))); }
+    catch(error) { issues.push('请求停止，剩余详情待补：'+error.message); break; }
+  }
+  return collectAvailable(pages,details,issues);
+}
 async function run(args, options={}) {
   check(Array.isArray(args) && args.length===2 && typeof args[0]==='string' && typeof args[1]==='string' && args[1].length>0,'Usage: meituan_portal.js <siteJSON> <outputFile>');
   const site=JSON.parse(args[0]); source(site);
-  const result=await fetchAll(site,options);
+  const result=await fetchAvailable(site,options);
   const envelope={key:site.key,api:site.api,mode:'custom',...result};
   const file=args[1],temporary=file+'.tmp-'+randomUUID(); let created=false;
   try {
@@ -243,5 +314,5 @@ async function run(args, options={}) {
   return envelope;
 }
 // Shared native parsers; scope/qualification remains in each fixed-profile collector.
-module.exports={PROFILE,PORTAL_NOTICE,portalNotice,requiresVerification,verifiedSource,validateJobs,normalizeRecord,validateEvidence,fetchAll,run,protocol:{shape,array,check,record,request,response,consumeDetail,detailRequest,labels,SECTIONS}};
+module.exports={PROFILE,PORTAL_NOTICE,portalNotice,requiresVerification,verifiedSource,validateJobs,normalizeRecord,validateEvidence,fetchAll,fetchAvailable,collectAvailable,run,protocol:{shape,array,check,record,request,response,consumeDetail,detailRequest,labels,SECTIONS}};
 if (require.main===module) run(process.argv.slice(2)).catch(error=>{console.error(error.message);process.exitCode=1;});

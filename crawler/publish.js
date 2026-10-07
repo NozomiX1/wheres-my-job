@@ -1,8 +1,9 @@
-// Sole production writer: complete verified source snapshots -> ../data/jobs.js.
+// Sole production writer: usable/complete source snapshots -> ../data/jobs.js.
 // Never evaluates the baseline JavaScript, writes HTML, filters jobs or guesses coverage.
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const { isDeepStrictEqual } = require('node:util');
 const { normalizeJD } = require('./lib/jd-text');
 const feishu = require('./lib/feishu');
 const moka = require('./lib/moka');
@@ -119,7 +120,7 @@ function buildUrl(site, id) {
   return '';
 }
 
-function normalizeJobs(rawJobs, site) {
+function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   if (!Array.isArray(rawJobs)) throw new Error('Jobs must be an array');
   const newCtripPortal = ctrip.requiresVerification(site);
@@ -140,7 +141,7 @@ function normalizeJobs(rawJobs, site) {
   if (newMeituanCampus) meituanCampus.validateJobs(rawJobs, site);
   const newMeituanPortal = meituan.requiresVerification(site) && !newMeituanCampus;
   if (newMeituanPortal && !meituan.verifiedSource(site)) throw new Error('Meituan portal identity/scope/mode has not been verified');
-  if (newMeituanPortal) meituan.validateJobs(rawJobs, site);
+  if (newMeituanPortal) meituan.validateJobs(rawJobs, site, { available });
   const newAliPortal = ali.requiresVerification(site);
   if (newAliPortal && !ali.verifiedSource(site)) throw new Error('Ali social portal identity/scope/mode has not been verified');
   if (newAliPortal) ali.validateJobs(rawJobs, site);
@@ -167,7 +168,7 @@ function normalizeJobs(rawJobs, site) {
       if (newMihoyoPortal) job = mihoyo.normalizeRecord(job, site);
       if (newShlabPortal) job = shlab.normalizeRecord(job, site);
       if (newXiaomiPortal) job = xiaomi.normalizeRecord(job, site);
-      if (newMeituanPortal) job = meituan.normalizeRecord(job, site);
+      if (newMeituanPortal) job = meituan.normalizeRecord(job, site, { available, detailIds });
       if (newMeituanCampus) job = meituanCampus.normalizeRecord(job, site);
       if (newAliPortal) job = ali.normalizeRecord(job, site);
       if (newBeisenPortal) job = beisen.normalizeRecord(job, site);
@@ -285,18 +286,22 @@ function readPublished(file) {
 
 function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
+  const available = snapshot?.complete === false && snapshot.verification?.policy === 'available';
+  if (snapshot?.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
+  if (available && !meituan.verifiedSource(site) && !isDeepStrictEqual(site, xiaomi.SOCIAL_PROFILE)) throw new Error('Available publication is not supported by this source');
   if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
-  if (!status || status.version !== 1 || status.key !== site.key || status.status !== 'ready' || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
-  if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== true || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
+  if (!status || status.version !== 1 || status.key !== site.key || status.status !== (available ? 'available' : 'ready') || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
+  if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== (available ? false : true) || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (ali.requiresVerification(site)) ali.validateEvidence(snapshot.verification, snapshot.jobs, site);
-  if (meituan.requiresVerification(site) && !meituanCampus.verifiedSource(site)) meituan.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  let validation;
+  if (meituan.requiresVerification(site) && !meituanCampus.verifiedSource(site)) validation = meituan.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (meituanCampus.requiresVerification(site)) meituanCampus.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (ctrip.requiresVerification(site)) ctrip.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (mihoyo.requiresVerification(site)) mihoyo.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (shlab.requiresVerification(site)) shlab.validateEvidence(snapshot.verification, snapshot.jobs, site);
-  if (xiaomi.requiresVerification(site)) xiaomi.validateEvidence(snapshot.verification, snapshot.jobs, site);
-  return normalizeJobs(snapshot.jobs, site);
+  if (xiaomi.requiresVerification(site)) validation = xiaomi.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  return normalizeJobs(snapshot.jobs, site, { available, detailIds: validation?.detailIds });
 }
 
 function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, keys = discardLegacy ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
@@ -333,14 +338,23 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       status = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
       if (failed.has(site.key)) throw new Error('本轮 crawl 子进程失败或未验证，保留已发布基线');
       const snapshot = JSON.parse(fs.readFileSync(path.join(outDir, site.key + '_snapshot.json'), 'utf8'));
-      const jobs = validateSnapshot(snapshot, status, site);
+      let jobs = validateSnapshot(snapshot, status, site);
+      if (snapshot.complete === false) {
+        const merged = new Map(baseline.jobs.filter(j => j.sourceKey === site.key).map(j => [j.id, j]));
+        for (const job of jobs) {
+          const old = merged.get(job.id);
+          // A failed/missing detail must not erase a previously usable JD.
+          merged.set(job.id, old && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : job);
+        }
+        jobs = [...merged.values()];
+      }
       if (previous?.company && previous.company !== site.company) throw new Error('Source company changed; explicit migration required');
       // Legacy data has no verified scope; the first verified snapshot is a one-time migration.
       // Once a scope is known, changing registry parameters cannot prove old jobs disappeared.
       if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
       if (previous?.lastSuccess && Date.parse(previous.lastSuccess) >= Date.parse(snapshot.completedAt)) continue;
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : ''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : ''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -390,8 +404,9 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   if (legacy) notices.push('仍含历史个人筛选基线，不是全量来源快照；历史采集时刻及当前在招状态未经核验。');
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');
   if (jobs.some(job => job.sourceStatus && job.sourceStatus !== 'open')) notices.push('部分岗位的官网接口状态非 open，条目中已标明；实际招聘及投递可用性请以官网为准。');
-  if (!legacy) notices.push('初版HTML遗留岗位不再保留；仅应用经过完整性核验的新采集版本，首次退出不代表官网下架。');
-  if ([...sources.values()].some(source => source.status !== 'ready')) notices.push(legacy ? '部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。' : '部分来源尚未取得新数据；更新失败时只保留上次已验证快照，没有该版本则暂不可用，不表示官网无岗位；详情见来源状态。');
+  if (!legacy) notices.push('初版HTML遗留岗位不再保留；仅展示重新取得的官网岗位，可用性与完整性分别标注，首次退出不代表官网下架。');
+  if ([...sources.values()].some(source => source.status === 'available')) notices.push('部分来源先发布可用岗位，尚未验证完整覆盖；缺项和采集期间变化见来源状态，不完整更新保留已有可用岗位，数量不代表官网当前在招全集。');
+  if ([...sources.values()].some(source => source.status !== 'ready')) notices.push(legacy ? '部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。' : '部分来源尚未取得数据；更新失败时保留已有可用版本，没有则暂不可用，不表示官网无岗位；详情见来源状态。');
   const data = { version: 1, legacy, notices, companies, sources: [...sources.values()], jobs };
   atomicWrite(dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n');
   return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], discardedLegacy: retired.size, errors, data };

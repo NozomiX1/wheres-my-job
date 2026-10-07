@@ -17,6 +17,9 @@ function load(saved,inputJobs=jobs){
  return {...ctx.api,storage,element,writes:()=>writes};
 }
 const p=load(),close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`),query={words:['财务'],lowered:[],recruitment:'all'};
+// Missing detail is not evidence that the employer supplied a blank JD.
+assert.equal(p.jdNotice({...base,sourceKey:'meituan_social',jdComplete:false,duty:'列表中已取得的职责'}),'正文完整性尚未核验');
+assert.equal(p.jdNotice({...base,sourceKey:'meituan_social',jdComplete:false}),'本站尚未同步完整 JD');
 new vm.Script(script);
 for(const [field,points]of [['title',3],['duty',1],['requirements',.35]]){
  const j={...base,[field]:'财务 财务 财务'};

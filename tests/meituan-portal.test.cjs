@@ -225,7 +225,7 @@ test('15s-or-tighter native abort signal and thrown transport errors stop withou
   const json=[];await assert.rejects(m.fetchAll(m.PROFILE,options([{url:LIST,jsonError:new SyntaxError('BODY SECRET must not enter error logs')}],json)),error=>error.message==='Meituan: invalid native JSON response');assert.equal(json.length,1);
 });
 
-test('run writes only a fully validated atomic envelope to explicit temp path; failure never creates partial candidate', async t => {
+test('production run writes usable atomic envelope; first-request failure never creates a candidate', async t => {
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ande-meituan-offline-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'raw.json');
   const bad=()=>options([{url:LIST,httpStatus:403,response:page([listRow()])}]);
   await assert.rejects(m.run([JSON.stringify(m.PROFILE),file],bad()),/HTTP/);assert.equal(fs.existsSync(file),false);assert.deepEqual(fs.readdirSync(dir),[]);
@@ -237,7 +237,7 @@ test('run writes only a fully validated atomic envelope to explicit temp path; f
   try { await assert.rejects(m.run([JSON.stringify(m.PROFILE),file],options(sequence())),/disk full/); }
   finally { fs.writeFileSync=write; }
   assert.equal(fs.readFileSync(file,'utf8'),'OLD\n');assert.deepEqual(fs.readdirSync(dir),['raw.json']);
-  const r=await m.run([JSON.stringify(m.PROFILE),file],options(sequence()));assert.deepEqual(JSON.parse(fs.readFileSync(file,'utf8')),r);assert.equal(m.validateEvidence(r.verification,r.jobs,m.PROFILE),true);assert.deepEqual(fs.readdirSync(dir),['raw.json']);
+  const r=await m.run([JSON.stringify(m.PROFILE),file],options(sequence()));assert.deepEqual(JSON.parse(fs.readFileSync(file,'utf8')),r);assert.equal(r.complete,false);assert.equal(m.validateEvidence(r.verification,r.jobs,m.PROFILE).total,1);assert.deepEqual(fs.readdirSync(dir),['raw.json']);
   await assert.rejects(m.run([JSON.stringify(m.PROFILE)],bad()),/Usage|output|用法/);
 });
 
