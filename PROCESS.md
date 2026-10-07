@@ -224,3 +224,7 @@
 基础全量程序检查：重复ID/非法链接均0，原26,932岗位及非目标source metadata/目录相同，113个非目标out的SHA与mtime原样。308项离线回归通过；实际本地HTTP仅抽3岗（双语介绍、列表两栏、6070字长正文），查询/row/modal全文/官网安全链接/完整性提示通过，非全量/非file/非新线上全量验收，自有Chrome/profile/server已清理。已修“缺详情但有正文被误称官网空白”的提示。
 
 本机材料 `/tmp/ande-social-available-1XuAin/`：原基线、原失败out备份、新可用envelope、publication-result、delivery-check、page-smoke；这些不是跨runner持久化。社招额外正文补齐、加载性能、持久快照/定时仍是后续修复，不阻本次上线。
+
+**实际部署**：`8248f9be9ae523e93504a7c71c97713f9cade45e`已commit/push main，Pages build精确built/error null；https://feng7.cn/wheres-my-job/ 线上app逐字节等本地，数据头两源均available且计数2459/1909。此次只下载数据头，不声称整文件SHA一致。GitHub提示数据67.76MB超过推荐50MB但push成功。
+
+**线上浏览器抽样未通过，待修不冒绿**：自有Chrome等待查询UI约120秒超时，没有JD样本完成；后续8秒观察显示首页/CSS/词表200，data/app脚本尚未收到响应，ANDE_DATA未定义，未见运行期异常。Node对相同未加参数URL首字节200（app约1415ms、data约153ms），因此尚不能把根因定成文件大小/脚本计算或官网拒绝。两次自有Chrome/profile均清理，资料为`online-check.json`、`page-smoke-online.json`、`online-load-diagnose.json`。本地3岗实际页面通过与线上build/数据资源交付分别记录；线上查询/JD完整加载仍待确认，优先作为后续性能/传输问题处理。
