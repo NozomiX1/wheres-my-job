@@ -15,8 +15,12 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal')];
 
 function adapterCommand(site, rawFile) {
+  for (const portal of availablePortals) if (portal.requiresVerification(site) && !portal.verifiedSource(site)) return null;
+  const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
+  if (availablePortal) return { script: path.join(__dirname, 'lib', 'custom', site.adapter === 'huawei-portal-v1' ? 'huawei_portal.js' : 'xiaohongshu_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
   if (ali.requiresVerification(site) && !ali.verifiedSource(site)) return null;
   if (meituan.requiresVerification(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site)) return null;
   if (meituanCampus.requiresVerification(site) && !meituanCampus.verifiedSource(site)) return null;
@@ -97,8 +101,11 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     const jobs = validateEnvelope(raw);
     const available = raw.complete === false;
     if (raw.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
-    if (available && !meituan.verifiedSource(site) && site.key !== xiaomi.SOCIAL_PROFILE.key) throw new Error('Available publication is not supported by this source');
+    const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
+    if (availablePortal && !available) throw new Error('This source only qualifies available data, not verified completeness');
+    if (available && !availablePortal && !meituan.verifiedSource(site) && site.key !== xiaomi.SOCIAL_PROFILE.key) throw new Error('Available publication is not supported by this source');
     let validation;
+    if (availablePortal) validation = availablePortal.validateEvidence(raw.verification, jobs, site);
     if (beisen.verifiedSource(site)) beisen.validateEvidence(raw.verification, jobs, site);
     if (ali.verifiedSource(site)) ali.validateEvidence(raw.verification, jobs, site);
     if (meituan.verifiedSource(site)) validation = meituan.validateEvidence(raw.verification, jobs, site);
@@ -110,11 +117,11 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     normalizeJobs(jobs, site, { available, detailIds: validation?.detailIds });
     const completedAt = now();
     if (!validTimestamp(completedAt) || Date.parse(completedAt) < Date.parse(lastAttempt)) throw new Error('Invalid completion timestamp');
-    const snapshot = { version: 1, key: site.key, complete: raw.complete, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) || meituan.verifiedSource(site) || meituanCampus.verifiedSource(site) || ctrip.verifiedSource(site) || mihoyo.verifiedSource(site) || shlab.verifiedSource(site) || xiaomi.verifiedSource(site) ? { verification: raw.verification } : {}) };
+    const snapshot = { version: 1, key: site.key, complete: raw.complete, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) || meituan.verifiedSource(site) || meituanCampus.verifiedSource(site) || ctrip.verifiedSource(site) || mihoyo.verifiedSource(site) || shlab.verifiedSource(site) || xiaomi.verifiedSource(site) || availablePortal ? { verification: raw.verification } : {}) };
     atomicWrite(snapshotFile, JSON.stringify(snapshot, null, 2) + '\n');
     promoted = true;
     // Ready metadata identifies this same completed attempt, not the invocation start time.
-    const status = { version: 1, key: site.key, status: available ? 'available' : 'ready', lastAttempt, lastSuccess: completedAt, message: (available ? '可用岗位已更新，来源完整性未验证：' : '已验证完整来源快照：') + jobs.length + ' 个岗位（仅此来源范围）' + (available && validation?.issues.length ? '；' + validation.issues.join('；') : '') + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) ? '；' + xiaomi.portalNotice(site) : ''), coverage };
+    const status = { version: 1, key: site.key, status: available ? 'available' : 'ready', lastAttempt, lastSuccess: completedAt, message: (available ? '可用岗位已更新，来源完整性未验证：' : '已验证完整来源快照：') + jobs.length + ' 个岗位（仅此来源范围）' + (available && validation?.issues.length ? '；' + validation.issues.join('；') : '') + (classifiedScope(site) ? '；' + CLASSIFIED_NOTICE : '') + (portalNotice(site) ? '；' + portalNotice(site) : '') + (beisen.portalNotice(site) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) ? '；' + xiaomi.portalNotice(site) : '') + (availablePortal ? '；' + availablePortal.portalNotice(site) : ''), coverage };
     atomicWrite(statusFile, JSON.stringify(status, null, 2) + '\n');
     return { code: 0, ...status, total: jobs.length };
   } catch (error) {

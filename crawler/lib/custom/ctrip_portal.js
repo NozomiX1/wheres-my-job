@@ -125,7 +125,9 @@ function normalizeRecord(job, site) {
   const p = profile(site); record(job, p);
   const jd = normalizeJD(job.requirements), full = htmlText(job.requirements);
   // The shared splitter does not prove dotted boundaries in multi-direction JDs. Never attach later work to requirements.
-  const unclear = full.split('\n').some(line => /^[.．·•-]\s*(?:职位描述|岗位描述|工作职责|岗位职责|任职资格|任职要求)\s*[:：]?$/.test(line));
+  const unclear = p.track === 'social' || full.split('\n').some(line => /^[.．·•-]\s*(?:职位描述|岗位描述|工作职责|岗位职责|任职资格|任职要求)\s*[:：]?$/.test(line));
+  // Social native requirements is one full HTML body, not two independent fields.
+  // Its bilingual/combined headings are not qualified as scoring boundaries; use full-text fallback.
   // Native requirements is the entire HTML 职位描述, not a semantic requirements slot.
   // Keep its original order/headings for display, but split scoring slots only at explicit proved boundaries.
   return { id: job.id, title: job.jobTitle, city: job.cityName ?? '', category: '', channels: [p.track], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
@@ -134,7 +136,7 @@ function normalizeRecord(job, site) {
 }
 function portalNotice(site) {
   if (!verifiedSource(site)) return '';
-  return '携程仅覆盖登记官网category=' + profile(site).body.condition.category + '的默认广' + site.batch + '入口，不代表集团全球全部渠道；不按职能、城市或Eagle Program删岗。沿已成功正常Node请求保留官网原语言，英/中文元数据不互译或豁免漂移；日期语义、性质和人才计划未知，混合职位类型暂不映为职能。';
+  return '携程仅覆盖登记官网category=' + profile(site).body.condition.category + '的默认广' + site.batch + '入口，不代表集团全球全部渠道；不按职能、城市或Eagle Program删岗。沿已成功正常Node请求保留官网原语言，英/中文元数据不互译或豁免漂移；日期语义、性质和人才计划未知，混合职位类型暂不映为职能。' + (site.track === 'social' ? '社招保留完整职位描述；职责/要求分栏未核验，排序使用全文回退。' : '');
 }
 async function fetchAll(site, options = {}) {
   const p = profile(site);

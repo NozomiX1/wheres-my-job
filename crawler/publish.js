@@ -16,6 +16,7 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal')];
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'jobs.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -124,6 +125,9 @@ function buildUrl(site, id) {
 function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   if (!Array.isArray(rawJobs)) throw new Error('Jobs must be an array');
+  const newAvailablePortal = availablePortals.find(portal => portal.requiresVerification(site));
+  if (newAvailablePortal && !newAvailablePortal.verifiedSource(site)) throw new Error('Portal identity/scope has not been verified');
+  if (newAvailablePortal) newAvailablePortal.validateJobs(rawJobs, site);
   const newCtripPortal = ctrip.requiresVerification(site);
   if (newCtripPortal && !ctrip.verifiedSource(site)) throw new Error('Ctrip portal identity/scope/mode has not been verified');
   if (newCtripPortal) ctrip.validateJobs(rawJobs, site);
@@ -136,7 +140,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   const newXiaomiPortal = xiaomi.requiresVerification(site);
   if (newXiaomiPortal && !xiaomi.verifiedSource(site)) throw new Error('Xiaomi portal identity/scope/mode has not been verified');
   if (newXiaomiPortal) xiaomi.validateJobs(rawJobs, site);
-  const newDirectJD = newCtripPortal || newMihoyoPortal || newShlabPortal || newXiaomiPortal || meituan.requiresVerification(site);
+  const newDirectJD = newAvailablePortal || newCtripPortal || newMihoyoPortal || newShlabPortal || newXiaomiPortal || meituan.requiresVerification(site);
   const newMeituanCampus = meituanCampus.requiresVerification(site);
   if (newMeituanCampus && !meituanCampus.verifiedSource(site)) throw new Error('Meituan campus identity/scope/mode has not been verified');
   if (newMeituanCampus) meituanCampus.validateJobs(rawJobs, site);
@@ -165,6 +169,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   return rawJobs.map((job, index) => {
     try {
       if (!job || typeof job !== 'object' || Array.isArray(job)) throw new Error('Invalid job object');
+      if (newAvailablePortal) job = newAvailablePortal.normalizeRecord(job, site);
       if (newCtripPortal) job = ctrip.normalizeRecord(job, site);
       if (newMihoyoPortal) job = mihoyo.normalizeRecord(job, site);
       if (newShlabPortal) job = shlab.normalizeRecord(job, site);
@@ -194,7 +199,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
       seen.add(id);
       for (const field of titleFields) text(job[field], field);
       const nativeTitle = text(first(job, titleFields), 'title');
-      const title = newXiaomiPortal ? nativeTitle : nativeTitle.trim();
+      const title = newXiaomiPortal || newAvailablePortal ? nativeTitle : nativeTitle.trim();
       if (!title.trim()) throw new Error('Missing title');
       for (const field of cityFields) cityText(job[field]);
       for (const field of dateFields) normalizeDate(job[field]);
@@ -321,14 +326,17 @@ function writeBrowserData(data, dataFile, { maxBytes = 1024 * 1024 } = {}) {
 function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
   const available = snapshot?.complete === false && snapshot.verification?.policy === 'available';
+  const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
+  if (availablePortal && !available) throw new Error('This source only qualifies available data, not verified completeness');
   if (snapshot?.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
-  if (available && !meituan.verifiedSource(site) && !isDeepStrictEqual(site, xiaomi.SOCIAL_PROFILE)) throw new Error('Available publication is not supported by this source');
-  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site)) throw new Error('Adapter has not been verified for completeness');
+  if (available && !availablePortal && !meituan.verifiedSource(site) && !isDeepStrictEqual(site, xiaomi.SOCIAL_PROFILE)) throw new Error('Available publication is not supported by this source');
+  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site) && !availablePortal) throw new Error('Adapter has not been verified for completeness');
   if (!status || status.version !== 1 || status.key !== site.key || status.status !== (available ? 'available' : 'ready') || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
   if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== (available ? false : true) || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (ali.requiresVerification(site)) ali.validateEvidence(snapshot.verification, snapshot.jobs, site);
   let validation;
+  if (availablePortal) validation = availablePortal.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (meituan.requiresVerification(site) && !meituanCampus.verifiedSource(site)) validation = meituan.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (meituanCampus.requiresVerification(site)) meituanCampus.validateEvidence(snapshot.verification, snapshot.jobs, site);
   if (ctrip.requiresVerification(site)) ctrip.validateEvidence(snapshot.verification, snapshot.jobs, site);
@@ -338,8 +346,9 @@ function validateSnapshot(snapshot, status, site) {
   return normalizeJobs(snapshot.jobs, site, { available, detailIds: validation?.detailIds });
 }
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, keys = discardLegacy ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, reproject = false, keys = discardLegacy || reproject ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
   const baseline = readPublished(dataFile);
+  if (typeof reproject !== 'boolean' || reproject && (!keys.length || discardLegacy)) throw new Error('Reprojection requires explicit source keys and cannot retire legacy data');
   if (typeof discardLegacy !== 'boolean' || discardLegacy && (keys.length || failedKeys.length)) throw new Error('Legacy retirement must be explicit and separate from source publication');
   // Only IDs minted by the initial HTML migration, never official sourceKey:ID records.
   const retired = new Set();
@@ -364,6 +373,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   const errors = [];
   for (const site of sites) {
     if (!selected.has(site.key)) continue;
+    const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
     const previous = sources.get(site.key);
     let status;
     try {
@@ -378,7 +388,9 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         for (const job of jobs) {
           const old = merged.get(job.id);
           // A failed/missing detail must not erase a previously usable JD.
-          merged.set(job.id, old && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : job);
+          merged.set(job.id, old && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : {
+            ...job, ...Object.fromEntries(['duty', 'requirements', 'description'].filter(field => old && old[field].trim() && !job[field].trim()).map(field => [field, old[field]]))
+          });
         }
         jobs = [...merged.values()];
       }
@@ -386,9 +398,9 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       // Legacy data has no verified scope; the first verified snapshot is a one-time migration.
       // Once a scope is known, changing registry parameters cannot prove old jobs disappeared.
       if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
-      if (previous?.lastSuccess && Date.parse(previous.lastSuccess) >= Date.parse(snapshot.completedAt)) continue;
+      if (previous?.lastSuccess && (Date.parse(previous.lastSuccess) > Date.parse(snapshot.completedAt) || Date.parse(previous.lastSuccess) === Date.parse(snapshot.completedAt) && !reproject)) continue;
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : ''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : '') + (availablePortal && !status.message.includes(availablePortal.portalNotice(site)) ? '；' + availablePortal.portalNotice(site) : ''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -434,6 +446,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
     if (coverage.includes('"adapter":"mihoyo-portal-v1"') && mihoyo.portalNotice(site)) notices.push(mihoyo.portalNotice(site));
     if (coverage.includes('"adapter":"shlab-portal-v1"') && shlab.portalNotice(site)) notices.push(shlab.portalNotice(site));
     if (coverage.includes('"adapter":"xiaomi-hr-v1"') && xiaomi.portalNotice(site)) notices.push(xiaomi.portalNotice(site));
+    for (const portal of availablePortals) if (coverage === coverageFor(site) && portal.portalNotice(site)) notices.push(portal.portalNotice(site));
   }
   if (legacy) notices.push('仍含历史个人筛选基线，不是全量来源快照；历史采集时刻及当前在招状态未经核验。');
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');
@@ -458,7 +471,8 @@ if (require.main === module) {
       process.exit(0);
     }
     const discardLegacy = keys.length === 1 && keys[0] === '--discard-legacy';
-    const result = publish(discardLegacy ? { discardLegacy: true } : keys.length ? { keys } : {});
+    const reproject = keys[0] === '--reproject';
+    const result = publish(discardLegacy ? { discardLegacy: true } : reproject ? { keys: keys.slice(1), reproject: true } : keys.length ? { keys } : {});
     console.log(discardLegacy ? `Discarded initial HTML legacy jobs: ${result.discardedLegacy}; ${result.written ? 'published' : 'already retired, data unchanged'}` : result.written ? 'Published sources: ' + result.updated.join(', ') : 'No verified updates; published data unchanged');
     for (const error of result.errors) console.error(error);
     process.exitCode = result.code;

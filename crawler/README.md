@@ -18,6 +18,7 @@ sites.json（唯一来源登记）
 node crawler/update.js stepfun stepfun_social # 仅明确授权的keys；部分失败返回非零
 node crawler/crawl.js stepfun      # 仅采集，不发布
 node crawler/publish.js stepfun    # 仅发布该来源已验证的新快照
+node crawler/publish.js --reproject huawei # 明确来源的同钟投影修复；复验快照，不重采/伪造新成功时间
 node crawler/publish.js --discard-legacy # 独立维护：按用户授权退出初版HTML遗留，不读/发布候选
 node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建浏览器分片，不采集、不改基线/采集钟
 ```
@@ -39,12 +40,12 @@ node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建�
 | `<key>_status.json` | 最近尝试、采集时间、available／ready／失败状态及已知问题 |
 
 - 子进程退出0不单独证明数据可用。计数须与实际唯一jobs一致，身份/安全链接/已取得字段通过程序基本检查；官方total另保在原生证据。`complete:true`为完整路径；`complete:false,verification.policy:'available'`为可用路径，允许单轮/重复页/total变化/缺详情，记录问题后发布，不冒全集或伪空。
-- 可用路径当前落到美团社招与小米社招，不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD，不能清旧或判下架。
-- 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1先收列表两栏、`jdComplete:false`并提示额外正文待补，保原城市顺序，不用换序当发布阻塞。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
+- 可用路径当前接入美团社招、小米社招、华为校/社招及小红书校/社招，不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD（独立职责/要求/全文分别保护），不能清旧或判下架。
+- 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1先收列表两栏、`jdComplete:false`并提示“已收录列表JD，详情正文完整性待核验”，保原城市顺序，不用换序当发布阻塞。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
 - 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
 - 同一注册范围内可发布快照才可应用。完整路径替换，可用路径增量合并；完全失败、未接入适配器及元数据不匹配不能晋升。
 - 已验证发布后如果接口／渠道／批次等范围改变，拒绝自动替换；需另行明确迁移策略，不能据此判原范围岗位下架。初版HTML未复验遗留已按授权退出，首次新快照正常应用，不把初版退出说成已核验下架。
-- 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式独立 `--discard-legacy` 仅为初版维护例外，不是伪空快照资格，原 `index.html` 不受采集影响。
+- 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式同源`--reproject <keys>`允许在scope与真实采集钟相同的已核快照上修复投影/说明，不回退较旧快照，也不把本地重投影冒新采集；显式独立 `--discard-legacy` 仅为初版维护例外，不是伪空快照资格，原 `index.html` 不受采集影响。
 - 文件按临时文件＋rename 写入；同一来源不应同时执行多个更新。失败状态可随其他成功来源发布；如果全部没有有效更新，公开文件不变，失败详情暂看状态文件和命令输出。
 
 `out/` 只是本机可复用快照，不是临时 Actions runner 的持久存储。以后接定时采集时还需落实成功快照持久化和 Pages 发布，不能把 Pages 自动部署当作采集定时器。
@@ -77,9 +78,13 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 **custom（44 来源登记）**：除上述阿里共享社招，第一批既有来源已接入五个独立官网协议模块：`meituan_portal`（社招；`meituan_campus_portal`共享其原生解析、按官网1＋2分类型枚举校园）、`ctrip_portal`、`mihoyo_portal`、`shlab_portal`（这三者各自校/社两key）、`xiaomi_portal`（校招完整路径＋社招可用路径）。固定profile只授已核协议/scope的执行入口，不授完整成功：fresh HTTP/原生业务、全部身份/字段/JD、双完整扫描及全raw绑定须通过crawl与publisher两边复验；失败不落partial候选，未证有效零先拒。未接入口及阿里云仍不继承同公司/同系统资格。旧custom请求/解密/个人方向备注不作当前证据，不能盲加complete或继续旧筛选链。
 
-本批四协议正常匿名Node、串行至少200ms/15s超时，触顶拒整源；美团/米哈游必要详情采用40分钟有界子进程，携程/上海15分钟（非SLA）。美团六片、米哈游六片为实际TEXT renderer，完整正文一次显示，独立职责/要求原字段计分；其它真实正文不另造评分字段。携程原生requirements是完整HTML职位描述，复用已核HTML转换/明确标题分栏，fromId构官网详情链接，不机械重复列表已有全文。上海使用原生has_more和推进游标双穷尽，无官方total；`countKind:cursor-exhaustion`标明derived唯一记录数，保公开分页cursor原值以重演request链（非会话凭证），两条已证requirement省略与非法null/未知JD严格区分；当前SSR只证普通TEXT/LF→BR，未证markup/字符引用正文形状整源拒绝，不盲剥HTML（普通amp/数值比较仍保真）。scope的origin/detailApi/headers亦绑定coverage；源级语义/原始字段证据见 [第一批核验记录](../docs/custom-first-batch-verification.md)，成功/失败及实际数量以数据/Git和PROCESS为准。旧字节custom仅是共享实现的兼容入口，不另发布。
+本批四协议正常匿名Node、串行至少200ms/15s超时，触顶拒整源；美团/米哈游必要详情采用40分钟有界子进程，携程/上海15分钟（非SLA）。美团六片、米哈游六片为实际TEXT renderer，完整正文一次显示，独立职责/要求原字段计分；其它真实正文不另造评分字段。携程原生requirements是完整HTML职位描述，复用已核HTML转换，fromId构官网详情链接，不机械重复列表已有全文。社招双语/组合标题的分栏语义未核验，先保完整正文、独立职责/要求留空，匹配使用全文回退；不按岗位ID猜分栏。上海使用原生has_more和推进游标双穷尽，无官方total；`countKind:cursor-exhaustion`标明derived唯一记录数，保公开分页cursor原值以重演request链（非会话凭证），两条已证requirement省略与非法null/未知JD严格区分；当前SSR只证普通TEXT/LF→BR，未证markup/字符引用正文形状整源拒绝，不盲剥HTML（普通amp/数值比较仍保真）。scope的origin/detailApi/headers亦绑定coverage；源级语义/原始字段证据见 [第一批核验记录](../docs/custom-first-batch-verification.md)，成功/失败及实际数量以数据/Git和PROCESS为准。旧字节custom仅是共享实现的兼容入口，不另发布。
 
-`custom/huawei_http.js`目前仅提供已实测的正常匿名请求transport：真实HTTP Referer、公开bootstrap CSRF只内存（可为空）、原生UA、串行页调用、200ms/15s限频超时、拒绝后锁存停止。它不是完整adapter，不进入dispatch、不写complete/快照；华为全部分页、详情及校园岗位意向正文仍待接入。美团详情已证 `otherInfo:"暂无"`与精确空字符串 `""`仅作为原生占位/空值保存，不添JD；其它非空值（含空格字符串）仍拒，列表仍须null，双轮完整raw稳定要求不变。
+`custom/huawei_portal.js`接入固定CR/SR默认广列表及详情/岗位意向；复用`huawei_http.js`的正常匿名transport（真实Referer、公开bootstrap CSRF仅内存可为空、原生UA、串行200ms/15s、拒绝后锁存停止）。按官网声明的末页停止，不为可用发布强求越界EOF。全部意向按原顺序保留真实标题/HTML正文及独立两栏；未取得者不造JD，额外正文完整性与日期/性质/人才计划仍未知。仅可用资格，不冒完整成功。显式`huawei_portal.js <siteJSON> <rawFile> --resume-details=<snapshot>`可复用同源已核列表续取正文，经正常crawl/publisher复验，记录未重采列表，默认更新不自动复用旧列表。
+
+`custom/xiaohongshu_portal.js`接入官网页长10的默认社招与校园regular `campus_autumn_27`项目；校园不冒全校园/REDstar/Ace/独立实习范围。单轮继续重复页至空页或安全上限，按positionId去重并记录官方total/实际唯一数；正常Node无token/伪UA。原生duty/qualification按TEXT保全部空白/实体字面/同文，列表JD先可用，未核详情不能称确定缺段落；日期/性质/人才计划未知，公开接口状态不证明可投。原始成功页及停止请求留在verification，不因重复或覆盖缺口清旧。
+
+美团详情已证 `otherInfo:"暂无"`与精确空字符串 `""`仅作为原生占位/空值保存，不添JD；其它非空值（含空格字符串）仍拒，列表仍须null，双轮完整raw稳定要求不变。
 
 美团校园新profile为官网默认1＋2、空subCode/其它筛选，不再旧2027/排LongCat/北斗。正常原生API已证pageSize=1000可返回571完整唯一岗位及原total/pageTotal；仅改变分页粒度，不改变范围。仍严格分页直至typed-null EOF，不把1000当总数上限；未来超过1000或跨页再漂移仍拒，不自动调大或重扫求绿。官网并列多选机制下，两轮分别完整枚举1应届、2实习，原生jobType逐条绑定分区、跨区身份唯一；每区total/满页/typed-null EOF/全部必要详情，两轮全部raw稳定。默认1＋2前后总数须等完整唯一union，默认首屏原生每岗亦绑定union；不据7页样本或简单194＋377求资格，任一不等/漂移/早短/必要详情失败拒整源。校园详情已证列表空项目/部门须补原生项目ID/名称及全部部门，保持完整raw；4697281262的列表与详情cityList同null、官网隐藏城市栏为合法未知，不生成工作城市标题或猜城市；不推断计划/日期/职能。官网按jobSpecialCode的已证两栏＋工作城市或六片renderer保原标题/同文/顺序，city不充jdComplete；原类型2实习，类型1性质未知。校园资格独立于社会，仍经唯一crawl→snapshot→publisher→data链。
 

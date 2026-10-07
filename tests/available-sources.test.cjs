@@ -40,6 +40,14 @@ test('partial snapshots use sole crawl/publisher chain, merge omitted records, p
   const bytes=fs.readFileSync(file);const failed=runCrawl(m.PROFILE,{outDir:dir,now:()=> '2026-01-02T00:00:00Z',runner:(_,args)=>{fs.writeFileSync(args.at(-1),JSON.stringify({complete:false,total:0,jobs:[],verification:{policy:'available'}}));return {status:0};}});a.equal(failed.code,1);a.equal(publish({outDir:dir,dataFile:file,sites:[m.PROFILE],keys:[m.PROFILE.key]}).written,false);a.deepEqual(fs.readFileSync(file),bytes);
 });
 
+test('partial per-slot empty JD never erases an acquired requirement; reproject retains the real clock',t=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ande-slot-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'jobs.js');let sec=0;
+  const apply=job=>{const raw=m.collectAvailable([mtRaw(mtPage([job],1),1)]);const c=runCrawl(m.PROFILE,{outDir:dir,now:()=>`2026-01-01T00:00:${String(sec++).padStart(2,'0')}Z`,runner:(_,args)=>{fs.writeFileSync(args.at(-1),JSON.stringify(raw));return {status:0};}});a.equal(c.code,0);return publish({outDir:dir,dataFile:file,sites:[m.PROFILE],keys:[m.PROFILE.key]});};
+  apply(mt());const original=readPublished(file).jobs[0];apply({...mt(),jobDuty:'新取得职责',jobRequirement:null});const current=readPublished(file);a.equal(current.jobs[0].duty,'新取得职责');a.equal(current.jobs[0].requirements,original.requirements);
+  a.equal(publish({outDir:dir,dataFile:file,sites:[m.PROFILE],keys:[m.PROFILE.key]}).written,false);
+  const repaired=publish({outDir:dir,dataFile:file,sites:[m.PROFILE],keys:[m.PROFILE.key],reproject:true});a.equal(repaired.written,true);a.equal(repaired.data.sources[0].lastSuccess,current.sources[0].lastSuccess);a.deepEqual(repaired.data.jobs,current.jobs);
+});
+
 test('Xiaomi social runtime stops after first HTTP refusal and never retries; finite page ceiling yields labelled usable data',async()=>{
   let calls=0;a.equal(x.verifiedSource(x.SOCIAL_PROFILE),true);await a.rejects(x.fetchAvailable(x.SOCIAL_PROFILE,{sleep:async()=>{},fetchImpl:async()=>{calls++;return {status:403};}}),/HTTP/);a.equal(calls,1);
   const rows=Array.from({length:10},(_,i)=>xJob(i+1));const r=await x.fetchAvailable(x.SOCIAL_PROFILE,{maxPages:2,sleep:async()=>{},fetchImpl:async()=>({status:200,json:async()=>xPage(rows,1,100).response})});a.equal(r.complete,false);a.equal(r.total,10);a.ok(r.issues.some(s=>s.includes('安全上限')));

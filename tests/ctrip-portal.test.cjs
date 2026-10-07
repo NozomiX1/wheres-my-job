@@ -65,8 +65,8 @@ test('real malformed Ctrip font-family attributes cannot become JD/scoring text 
     const native = rows(site)[0];
     const complete = c.normalizeRecord({ ...native, requirements: '<p>岗位职责</p><p>Original Work</p>' + tag + '</p><p>任职资格</p><p>Original Need</p>' }, site);
     assert.equal(complete.description, '岗位职责\nOriginal Work\n任职资格\nOriginal Need');
-    assert.equal(complete.duty, '岗位职责\nOriginal Work');
-    assert.equal(complete.requirements, '任职资格\nOriginal Need');
+    assert.equal(complete.duty, site.track === 'social' ? '' : '岗位职责\nOriginal Work');
+    assert.equal(complete.requirements, site.track === 'social' ? '' : '任职资格\nOriginal Need');
     assert.equal(complete.jdComplete, true);
     const blank = c.normalizeRecord({ ...native, requirements: tag + '</p>' }, site);
     assert.equal(blank.description, ''); assert.equal(blank.duty, ''); assert.equal(blank.requirements, ''); assert.equal(blank.jdComplete, false);
@@ -82,6 +82,14 @@ test('unproved dotted multi-direction section boundaries keep the complete body 
     assert.equal(job.duty, ''); assert.equal(job.requirements, ''); assert.equal(job.jdComplete, true);
     assert.equal(job.description, '1、职位描述（自然语言搜索算法）\nFirst Work\n任职资格\nFirst Need\n2、AI搜推算法\n.职位描述\nSecond Work\n.任职资格\nSecond Need');
   }
+});
+
+test('social single HTML field stays complete without guessing bilingual/combined scoring sections', () => {
+  const native = { ...rows(social)[0], requirements: '<p>岗位职责及任职要求：</p><p>职责和要求同在一段 List&lt;T&gt;</p><p>Responsibilities / Qualifications:</p><p>Complete English ending</p>' };
+  const result = c.normalizeRecord(native, social);
+  assert.equal(result.duty, ''); assert.equal(result.requirements, '');
+  assert.equal(result.description, '岗位职责及任职要求：\n职责和要求同在一段 List<T>\nResponsibilities / Qualifications:\nComplete English ending');
+  assert.equal(result.jdComplete, true);
 });
 
 test('typed HTTP/business/status/envelope and exact requests remain bound through evidence', () => {

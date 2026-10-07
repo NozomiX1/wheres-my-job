@@ -1,6 +1,5 @@
 'use strict';
-// Normal anonymous transport only. This does NOT prove a complete source or qualify an adapter.
-// Full list/detail/intention verification still has to pass the sole crawl/publisher chain.
+// Normal anonymous transport only; source qualification lives in huawei_portal.js.
 const ORIGIN='https://career.huawei.com';
 const CONFIG=ORIGIN+'/-/media/plugin/8215bc3cf8d83f9ec3298d3aa077f167/common.min.js?t=1788258241541';
 const API='https://apigw-dgg-b0.huawei.com/api/apig/channelhw/recruitmentPosition/pub/getJobPage?X-HW-ID=app_000000035886';
@@ -21,19 +20,33 @@ async function open(key,{fetchImpl=globalThis.fetch,sleep=ms=>new Promise(r=>set
   const csrf=config.match(/jalorSecurityToken:\s*["']([^"']*)["']/)?.[1];
   const requestHeaders=headers(csrf); // Anonymous public bootstrap; kept in memory, never persisted.
   let stopped=false,inFlight=false;
-  return async function page(curPage) {
+  async function send(url,body) {
     if(stopped) throw new Error('Huawei: request scope stopped');
     if(inFlight) throw new Error('Huawei: page already in flight');
-    if(!Number.isSafeInteger(curPage) || curPage<1 || curPage>=1000) throw new Error('Huawei: invalid page');
     inFlight=true;
     try {
-      const body={curPage,pageSize:10,jobType:TYPES[key]};
-      const r=await get(API,{method:'POST',headers:requestHeaders,body:JSON.stringify(body)});
+      const r=await get(url,{method:'POST',headers:requestHeaders,body:JSON.stringify(body)});
       const response=await r.json();
-      if(response?.status!=='SUCCESS' || response.errors!==null || !response.data || !Array.isArray(response.data.result)) throw new Error('Huawei: native business/shape refusal');
+      if(response?.status!=='SUCCESS' || response.errors!==null || response.data==null || (url===API && !Array.isArray(response.data.result))) throw new Error('Huawei: native business/shape refusal');
       return response; // No complete/ready/count claims, credential headers or generated JD.
     } catch(error) { stopped=true; throw error; }
     finally { inFlight=false; }
+  }
+  const page=async curPage=>{
+    if(!Number.isSafeInteger(curPage) || curPage<1 || curPage>=1000) throw new Error('Huawei: invalid page');
+    return send(API,{curPage,pageSize:10,jobType:TYPES[key]});
   };
+  page.detail=id=>send(requests.detail(id).url,requests.detail(id).body);
+  page.intentions=id=>send(requests.intentions(id).url,requests.intentions(id).body);
+  return page;
 }
-module.exports={headers,open};
+function positive(id) {
+  if(!Number.isSafeInteger(id) || id<=0) throw new Error('Huawei: invalid official id');
+  return id;
+}
+const requests={
+  page:(key,curPage)=>({url:API,method:'POST',body:{curPage,pageSize:10,jobType:TYPES[key]}}),
+  detail:id=>({url:API.replace('getJobPage','getRecruitmentPositionDetail'),method:'POST',body:{advertisementId:String(positive(id))}}),
+  intentions:id=>({url:API.replace('getJobPage','getPositionIntentionList'),method:'POST',body:{jobId:positive(id)}})
+};
+module.exports={headers,open,requests,ORIGIN,API,TYPES};
