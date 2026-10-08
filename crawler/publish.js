@@ -16,7 +16,7 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
-const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal')];
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal')];
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'jobs.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -288,6 +288,11 @@ function readPublished(file) {
     if (job.url && !safeUrl(job.url)) throw new Error('Unsafe baseline job URL');
     ids.add(job.id);
   }
+  if (Object.hasOwn(data, 'unitMemberships')) {
+    const memberships = data.unitMemberships, byId = new Map(data.jobs.map(job => [job.id, job]));
+    if (!memberships || typeof memberships !== 'object' || Array.isArray(memberships)) throw new Error('Invalid baseline unit memberships');
+    for (const [id, names] of Object.entries(memberships)) if (byId.get(id)?.sourceKey !== 'alibaba' || !Array.isArray(names) || !names.length || names.some(name => typeof name !== 'string' || !name.trim()) || new Set(names).size !== names.length) throw new Error('Invalid baseline unit membership identity/names');
+  }
   return data;
 }
 
@@ -308,7 +313,13 @@ function writeBrowserData(data, dataFile, { maxBytes = 1024 * 1024 } = {}) {
       const file = 'parts/' + id + '.js', target = path.join(directory, file);
       const content = 'globalThis.ANDE_CHUNKS[' + JSON.stringify(id) + '] = ' + payload + ';\n';
       if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== content) atomicWrite(target, content);
-      parts.push({ id, file, sourceKey: jobs[0].sourceKey, company: jobs[0].company, count: texts.length, bytes: Buffer.byteLength(content) });
+      const descriptor = { id, file, sourceKey: jobs[0].sourceKey, company: jobs[0].company, count: texts.length, bytes: Buffer.byteLength(content) };
+      if (jobs[0].sourceKey === 'alibaba' && data.unitMemberships) {
+        const counts = new Map();
+        for (const job of JSON.parse(payload)) for (const name of data.unitMemberships[job.id] || ['阿里校园招聘入口']) counts.set(name, (counts.get(name) || 0) + 1);
+        descriptor.unitCounts = Object.fromEntries(counts);
+      }
+      parts.push(descriptor);
       texts = []; bytes = 2;
     };
     for (const job of jobs) {
@@ -369,7 +380,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
     source.coverage = null;
     source.message = '初版HTML遗留岗位已按用户授权退出；尚未取得已验证的新快照，不表示官网无岗位或已下架';
   }
-  const replacements = new Map();
+  const replacements = new Map(), unitMemberships = { ...baseline.unitMemberships };
   const errors = [];
   for (const site of sites) {
     if (!selected.has(site.key)) continue;
@@ -399,6 +410,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       // Once a scope is known, changing registry parameters cannot prove old jobs disappeared.
       if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
       if (previous?.lastSuccess && (Date.parse(previous.lastSuccess) > Date.parse(snapshot.completedAt) || Date.parse(previous.lastSuccess) === Date.parse(snapshot.completedAt) && !reproject)) continue;
+      if (availablePortal?.unitMemberships) Object.assign(unitMemberships, availablePortal.unitMemberships(snapshot.jobs, site));
       replacements.set(site.key, jobs);
       sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : '') + (availablePortal && !status.message.includes(availablePortal.portalNotice(site)) ? '；' + availablePortal.portalNotice(site) : ''), coverage: snapshot.coverage });
     } catch (error) {
@@ -454,7 +466,9 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   if (!legacy) notices.push('初版HTML遗留岗位不再保留；仅展示重新取得的官网岗位，可用性与完整性分别标注，首次退出不代表官网下架。');
   if ([...sources.values()].some(source => source.status === 'available')) notices.push('部分来源先发布可用岗位，尚未验证完整覆盖；缺项和采集期间变化见来源状态，不完整更新保留已有可用岗位，数量不代表官网当前在招全集。');
   if ([...sources.values()].some(source => source.status !== 'ready')) notices.push(legacy ? '部分来源失败、缺失或尚未验证，保留其已发布基线；详情见来源状态。' : '部分来源尚未取得数据；更新失败时保留已有可用版本，没有则暂不可用，不表示官网无岗位；详情见来源状态。');
-  const data = { version: 1, legacy, notices, companies, sources: [...sources.values()], jobs };
+  const jobIds = new Set(jobs.map(job => job.id));
+  const memberships = Object.fromEntries(Object.entries(unitMemberships).filter(([id]) => jobIds.has(id)));
+  const data = { version: 1, legacy, notices, companies, sources: [...sources.values()], jobs, ...(Object.keys(memberships).length ? { unitMemberships: memberships } : {}) };
   atomicWrite(dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n');
   writeBrowserData(data, dataFile);
   return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], discardedLegacy: retired.size, errors, data };

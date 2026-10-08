@@ -6,8 +6,26 @@ const JOBS=DATA.jobs;
 // Display units only: keep source identity, raw company and all job facts untouched.
 const ALIBABA_UNITS=['阿里巴巴控股'];
 const RETIRED_ALIBABA_SELECTION='旧阿里招聘范围（已退出）';
-function unitName(item){if(item.company!=='阿里巴巴')return item.company;const key=item.sourceKey||item.key;return key==='alibaba_social'?ALIBABA_UNITS[0]:key==='alibaba'?'阿里校园招聘入口':item.company;}
-const COMPANIES=DATA.companies.map(c=>({...c,name:c.name==='阿里巴巴'?ALIBABA_UNITS[0]:c.name})).sort((a,b)=>a.initial.localeCompare(b.initial)||a.name.localeCompare(b.name,'zh'));
+const UNIT_ALIASES={'阿里巴巴控股集团':'阿里巴巴控股','阿里国际数字商业集团':'阿里国际'};
+const GROUP_INITIALS={'千问事业部':'Q','千问办公':'Q','平头哥':'P','淘宝闪购':'T','灵犀互娱':'L','盒马':'H','虎鲸文娱集团':'H','阿里健康':'A','飞猪':'F','高德地图':'G','阿里校园招聘入口':'A'};
+function unitNames(item){
+  const key=item.sourceKey||item.key;
+  if(key==='alibaba'){
+    const names=item.unitCounts?Object.keys(item.unitCounts):item.id?DATA.unitMemberships?.[item.id]:null;
+    if(names?.length)return [...new Set(names.map(name=>UNIT_ALIASES[name]||name))];
+  }
+  if(item.company!=='阿里巴巴')return [item.company];
+  return [key==='alibaba_social'?ALIBABA_UNITS[0]:key==='alibaba'?'阿里校园招聘入口':item.company];
+}
+function unitName(item){return unitNames(item).join(' / ');}
+function partsFor(selected){return DATA.parts.filter(part=>!selected.size||unitNames(part).some(name=>selected.has(name)));}
+const COMPANIES=(()=>{
+  const units=DATA.companies.map(c=>({...c,name:c.name==='阿里巴巴'?ALIBABA_UNITS[0]:c.name})),known=new Set(units.map(c=>c.name));
+  for(const name of new Set((DATA.parts||JOBS).flatMap(unitNames)))if(!known.has(name)){
+    units.push({name,initial:GROUP_INITIALS[name]||(/^[a-z]/i.test(name)?name[0].toUpperCase():'#'),aliases:[]});known.add(name);
+  }
+  return units.sort((a,b)=>a.initial.localeCompare(b.initial)||a.name.localeCompare(b.name,'zh'));
+})();
 const RECRUITMENT_TYPES=[['all','全部'],['social','社招'],['campus','校招'],['internship','实习'],['talent','人才计划']];
 const PREFERENCES_KEY='ande.preferences.v1';
 // Two equal-priority word groups; negative terms affect net points only.
@@ -137,7 +155,7 @@ function recruitmentLabels(job){
 }
 function scoreText(value){return state.active?.words.length||state.active?.lowered?.length?value.toFixed(2):'—';}
 function collect(query,selected){
-  return JOBS.filter(j=>(!selected.size||selected.has(unitName(j)))&&matchesRecruitment(j,query.recruitment||'all'))
+  return JOBS.filter(j=>(!selected.size||unitNames(j).some(name=>selected.has(name)))&&matchesRecruitment(j,query.recruitment||'all'))
     .map(j=>score(j,query)).sort((a,b)=>b.value-a.value||reliableDate(b.job).localeCompare(reliableDate(a.job))||unitName(a.job).localeCompare(unitName(b.job),'zh')||a.job.id.localeCompare(b.job.id));
 }
 function reliableDate(job){const d=job.date;return ['published','updated'].includes(job.dateKind)&&/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&!Number.isNaN(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d?d:'';}
@@ -173,11 +191,14 @@ function setupScroll(){
 function highlight(text){const words=[...(state.active?.words||[]),...(state.active?.lowered||[])];if(!words.length)return esc(text);const pattern=words.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');return text.split(new RegExp(`(${pattern})`,'gi')).map((s,i)=>i%2?`<mark>${esc(s)}</mark>`:esc(s)).join('');}
 function detailHTML(id){const j=JOBS.find(j=>j.id===id);if(!j)return '';const scored=score(j,state.active||{words:[]}),match=scored.matched;return `<div class="detail-head"><h2>${esc(j.title)}</h2><p>${esc(unitName(j))}${j.category?` · ${esc(j.category)}`:''} · ${esc(j.city||'地点未明确')} · ${recruitmentLabels(j).map(esc).join(' · ')}</p><p>${dateHTML(j)} · 匹配分 <span data-match-score>${scoreText(scored.value)}</span></p>${sourceStatusHTML(j)?`<p>${sourceStatusHTML(j)} · 实际招聘及投递可用性请以官网为准。</p>`:''}</div>${state.active?.words.length||state.active?.lowered.length?`<section class="detail-section"><h3>为什么排在这里</h3><p>优先词加分 ${scored.positive.toFixed(2)} − 降权词扣分 ${scored.penalty.toFixed(2)} = ${scored.value.toFixed(2)}。降权力度暂定；分数仅反映当前可用文字，不评价岗位质量。</p><div class="chips">${match.map(w=>`<span class="word-tag">优先 · ${esc(hitText(j,w))}</span>`).join('')}${scored.downranked.map(w=>`<span class="word-tag">降权 · ${esc(hitText(j,w))}</span>`).join('')}</div></section>`:''}${j.description?`<section class="detail-section"><h3>岗位正文</h3><p>${highlight(j.description)}</p></section>`:`${j.duty?`<section class="detail-section"><h3>工作职责</h3><p>${highlight(j.duty)}</p></section>`:''}${j.requirements?`<section class="detail-section"><h3>任职要求</h3><p>${highlight(j.requirements)}</p></section>`:''}`}${!j.jdComplete?`<p class="detail-disclaimer">${jdNotice(j)}，请前往官网查看。岗位是否仍在招聘及申请条件以官网为准。</p>`:''}<div class="detail-apply">${applyHTML(j)}</div>`;}
 function renderDirectory(){
-  const totals={};(DATA.parts||JOBS).forEach(j=>{const name=unitName(j);totals[name]=(totals[name]||0)+(DATA.parts?j.count:1);});
+  const totals=Object.create(null);(DATA.parts||JOBS).forEach(item=>{
+    if(DATA.parts&&item.unitCounts){for(const [name,count]of Object.entries(item.unitCounts)){const unit=UNIT_ALIASES[name]||name;totals[unit]=(totals[unit]||0)+count;}}
+    else for(const name of unitNames(item))totals[name]=(totals[name]||0)+(DATA.parts?item.count:1);
+  });
   const available=new Set(COMPANIES.map(c=>c.initial));
   $('companyAlphabet').innerHTML=['',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ','#'].map(l=>`<button class="letter ${directory.letter===l?'on':''}" type="button" data-letter="${l}" aria-pressed="${directory.letter===l}" ${l&&!available.has(l)?'disabled':''}>${l||'全部'}</button>`).join('');
   const q=directory.query.trim().toLowerCase();const companies=COMPANIES.filter(c=>(!directory.letter||c.initial===directory.letter)&&(!q||(c.name+' '+c.aliases).toLowerCase().includes(q)));
-  $('companyOptions').innerHTML=companies.length?companies.map(c=>{const sources=(DATA.sources||[]).filter(s=>unitName(s)===c.name),count=totals[c.name]||0;const pending=sources.some(s=>s.status!=='ready');const caption=count?`${count} 个岗位${pending?' · 覆盖待完善':''}`:pending?'数据暂不可用':'0 个已取得岗位';return `<label class="company-option ${state.selected.has(c.name)?'chosen':''}"><input type="checkbox" data-company="${esc(c.name)}" ${state.selected.has(c.name)?'checked':''}><span class="company-copy"><span class="company-name" style="display:block">${esc(c.name)}</span><span class="company-count ${pending?'warning':''}" style="display:block">${caption}</span></span></label>`}).join(''):'<div class="company-empty">目录没有匹配项，不代表该单位没有招聘。</div>';
+  $('companyOptions').innerHTML=companies.length?companies.map(c=>{const sourceKeys=new Set((DATA.parts||JOBS).filter(item=>unitNames(item).includes(c.name)).map(item=>item.sourceKey)),sources=(DATA.sources||[]).filter(s=>unitName(s)===c.name||sourceKeys.has(s.key)),count=totals[c.name]||0;const pending=sources.some(s=>s.status!=='ready');const caption=count?`${count} 个岗位${pending?' · 覆盖待完善':''}`:pending?'数据暂不可用':'0 个已取得岗位';return `<label class="company-option ${state.selected.has(c.name)?'chosen':''}"><input type="checkbox" data-company="${esc(c.name)}" ${state.selected.has(c.name)?'checked':''}><span class="company-copy"><span class="company-name" style="display:block">${esc(c.name)}</span><span class="company-count ${pending?'warning':''}" style="display:block">${caption}</span></span></label>`}).join(''):'<div class="company-empty">目录没有匹配项，不代表该单位没有招聘。</div>';
 }
 function renderSelection(){
   const list=$('companyTags');
@@ -199,7 +220,7 @@ async function search(scroll=true){
   try{
     if(!globalThis.ANDE_DATA)throw new Error('岗位目录加载失败，请刷新页面后再试。');
     if(DATA.parts){
-      const parts=DATA.parts.filter(part=>!selected.size||selected.has(unitName(part)));
+      const parts=partsFor(selected);
       if(typeof globalThis.ANDE_LOAD_PARTS!=='function')throw new Error('岗位加载器未加载，请刷新后再试。');
       await globalThis.ANDE_LOAD_PARTS(parts,(done,total)=>{if(generation===queryGeneration)updateLoadStatus(`正在加载岗位数据：${done}/${total} 个分片；完整后更新结果，下面仍是上次结果。`);});
     }

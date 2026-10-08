@@ -1,0 +1,36 @@
+'use strict';
+const test=require('node:test'),a=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),vm=require('node:vm');
+const publisher=require('../crawler/publish'),{runCrawl}=require('../crawler/crawl'),portal=require('../crawler/lib/custom/alibaba_portal'),site=portal.PROFILES[0];
+const base={id:'alibaba:1',sourceKey:'alibaba',company:'阿里巴巴',title:'原始岗位',city:'北京',category:'',channels:['campus'],employment:null,talentPlan:null,date:null,dateKind:null,url:site.origin+'/campus/position/1?deptCodes=',duty:'原职责',requirements:'原要求',description:'',jdComplete:false,sourceStatus:null};
+function ui(data){const elements=new Map(),element=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,setAttribute(){},focus(){}});return elements.get(id);};const ctx=vm.createContext({URL,ANDE_DATA:data,document:{addEventListener(){},querySelectorAll(){return []},getElementById:element,querySelector:element},localStorage:{getItem(){return null;},setItem(){}}});vm.runInContext(fs.readFileSync(path.join(__dirname,'../assets/app.js'),'utf8').replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'')+'\nglobalThis.api={unitName,unitNames:typeof unitNames==="function"?unitNames:null,collect,COMPANIES,renderDirectory,detailHTML,state,partsFor:typeof partsFor==="function"?partsFor:null};',ctx);return {...ctx.api,element};}
+const companies=[{name:'阿里巴巴',initial:'A',aliases:'Alibaba'},{name:'淘天集团',initial:'T',aliases:'Taotian'},{name:'阿里云',initial:'A',aliases:'Aliyun'},{name:'阿里国际',initial:'A',aliases:'AIDC'}];
+const jobs=[base,{...base,id:'alibaba:2'},{...base,id:'alibaba:3'},{...base,id:'alibaba:4'},{...base,id:'alibaba_social:5',sourceKey:'alibaba_social',channels:['social']}];
+const unitMemberships={'alibaba:1':['淘天集团'],'alibaba:2':['淘天集团','阿里云'],'alibaba:3':['阿里巴巴控股集团'],'alibaba:4':['阿里国际数字商业集团']};
+const fixture={version:1,legacy:false,notices:[],companies,sources:[{key:'alibaba',company:'阿里巴巴',status:'available'},{key:'alibaba_social',company:'阿里巴巴',status:'ready'}],jobs,unitMemberships};
+test('official shared-campus groups join existing units, overlapping selection never duplicates or changes scores/JD/source',()=>{
+ const original=JSON.stringify(fixture),app=ui(fixture),q={words:['原职责'],lowered:[],recruitment:'all'},ids=selected=>Array.from(app.collect(q,new Set(selected)),r=>r.job.id).sort();
+ a.deepEqual(ids(['淘天集团']),['alibaba:1','alibaba:2']);a.deepEqual(ids(['阿里云']),['alibaba:2']);a.deepEqual(ids(['淘天集团','阿里云']),['alibaba:1','alibaba:2']);a.equal(ids([]).length,5);
+ a.deepEqual(ids(['阿里巴巴控股']),['alibaba:3','alibaba_social:5']);a.deepEqual(ids(['阿里国际']),['alibaba:4']);a.deepEqual(ids(['阿里校园招聘入口']),[]);a.deepEqual(ids(['未知集团']),[]);
+ a.equal(app.COMPANIES.filter(c=>c.name==='淘天集团').length,1);a.equal(app.COMPANIES.some(c=>c.name==='阿里校园招聘入口'),false);
+ a.deepEqual(Array.from(app.unitNames(jobs[1])),['淘天集团','阿里云']);app.state.active=q;a.ok(app.detailHTML('alibaba:2').includes('淘天集团 / 阿里云'));a.ok(app.detailHTML('alibaba:2').includes('原职责'));a.equal(JSON.stringify(fixture),original);
+ a.equal(app.collect(q,new Set(['淘天集团']))[0].value,app.collect(q,new Set())[0].value);
+});
+test('light catalog group counts and required parts work before any JD download, preserving unknown fallback',()=>{
+ const parts=[{id:'a',sourceKey:'alibaba',company:'阿里巴巴',count:4,unitCounts:{'淘天集团':2,'阿里云':1,'阿里巴巴控股集团':1,'阿里国际数字商业集团':1}},{id:'b',sourceKey:'alibaba_social',company:'阿里巴巴',count:1}];
+ const data={...fixture,jobs:[],parts},app=ui(data);app.renderDirectory();const html=app.element('companyOptions').innerHTML;a.ok(!html.includes('data-company="阿里校园招聘入口"'));a.ok(html.includes('data-company="淘天集团"'));a.equal(app.partsFor(new Set(['阿里云']))[0].id,'a');a.equal(app.partsFor(new Set(['阿里巴巴控股'])).length,2);a.equal(app.partsFor(new Set(['淘天集团','阿里云'])).length,1);a.equal(app.partsFor(new Set(['未知集团'])).length,0);
+ const old=ui({...fixture,unitMemberships:undefined,jobs:[base]});a.ok(old.COMPANIES.some(c=>c.name==='阿里校园招聘入口'));a.equal(old.unitName(base),'阿里校园招聘入口');
+ const extra=ui({...fixture,unitMemberships:{'alibaba:1':['Token Foundry','千问事业部']},jobs:[base]});a.ok(extra.COMPANIES.some(c=>c.name==='Token Foundry'&&c.initial==='T'));a.ok(extra.COMPANIES.some(c=>c.name==='千问事业部'&&c.initial==='Q'));a.equal(extra.COMPANIES.some(c=>c.name==='通义'),false);
+});
+function native(id,groups){return{id,name:' 原标题 ',batchId:site.body.batchIds[0],positionUrl:null,description:'原职责',requirement:'原要求',workLocations:['北京'],categories:[],circleNames:groups};}
+function collected(posts){const batchId=site.body.batchIds[0];return portal.collectAvailable([{batchId,request:{url:site.api,method:'POST',headers:{'Content-Type':'application/json',Origin:site.origin,Referer:site.url+'?batchId='+batchId},body:{batchId,pageIndex:1,pageSize:10,customDeptCode:'',channel:'campus_group_official_site',language:'zh'}},httpStatus:200,response:{success:true,errorCode:null,errorMsg:null,content:{datas:posts,totalCount:posts.length,pageSize:10,currentPage:1}}}],site);}
+test('sole publisher creates native membership metadata and part counts, protects incomplete/failed updates and original clocks',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ande-memberships-test-')),file=path.join(dir,'data/jobs.js'),outDir=path.join(dir,'out'),clock='2026-10-07T16:46:17.080Z';a.ok(portal.unitMemberships);
+ const publish=result=>{const crawl=runCrawl(site,{outDir,now:()=>clock,runner:(exec,args)=>{publisher.atomicWrite(args.at(-1),JSON.stringify({key:site.key,api:site.api,mode:'custom',...result}));return{status:0};},log(){}});a.equal(crawl.code,0);return publisher.publish({outDir,dataFile:file,sites:[site],keys:[site.key],reproject:true});};
+ try{
+  const first=publish(collected([native(1,['淘天集团']),native(2,['淘天集团','阿里云'])]));a.equal(first.code,0);a.deepEqual(first.data.unitMemberships,{'alibaba:1':['淘天集团'],'alibaba:2':['淘天集团','阿里云']});const beforeJobs=structuredClone(first.data.jobs),beforeSource=structuredClone(first.data.sources[0]);
+  const catalog=publisher.writeBrowserData(first.data,file);a.deepEqual(catalog.unitMemberships,first.data.unitMemberships);a.deepEqual(catalog.parts[0].unitCounts,{'淘天集团':2,'阿里云':1});a.equal(catalog.parts[0].count,2);a.equal(first.data.jobs[0].company,'阿里巴巴');a.equal(Object.keys(first.data.jobs[0]).length,17);a.equal(publisher.readPublished(file).jobs.length,2);
+  const second=publish(collected([native(1,[])]));a.equal(second.code,0);a.deepEqual(second.data.jobs,beforeJobs);a.deepEqual(second.data.unitMemberships,first.data.unitMemberships);a.equal(second.data.sources[0].lastSuccess,beforeSource.lastSuccess);
+  const canonical=fs.readFileSync(file,'utf8'),failed=publisher.publish({outDir,dataFile:file,sites:[site],keys:[site.key],failedKeys:[site.key]});a.equal(failed.written,false);a.equal(fs.readFileSync(file,'utf8'),canonical);
+  const bad={...second.data,unitMemberships:{'phantom:1':['冒归属']}};publisher.atomicWrite(file,'globalThis.ANDE_DATA = '+JSON.stringify(bad)+';');a.throws(()=>publisher.readPublished(file),/membership|归属/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

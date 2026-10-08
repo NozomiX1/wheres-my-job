@@ -15,7 +15,7 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
-const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal')];
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal')];
 
 function adapterCommand(site, rawFile) {
   for (const portal of availablePortals) if (portal.requiresVerification(site) && !portal.verifiedSource(site)) return null;

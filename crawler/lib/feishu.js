@@ -400,5 +400,5 @@ async function run(args, options = {}) {
   return result;
 }
 
-module.exports = { verifiedSource, classifiedScope, portalScope, portalNotice, CLASSIFIED_NOTICE, requestBody, validateInitialResponses, extractPage, normalizePost, normalizeRecord, fetchAll, fetchPortals, fetchClassified, fetchWithChrome, run };
+module.exports = { CDP, verifiedSource, classifiedScope, portalScope, portalNotice, CLASSIFIED_NOTICE, requestBody, validateInitialResponses, extractPage, normalizePost, normalizeRecord, fetchAll, fetchPortals, fetchClassified, fetchWithChrome, run };
 if (require.main === module) run(process.argv.slice(2), { log: console.log }).then(result => console.log('Complete Feishu source: ' + result.total)).catch(error => { console.error('ERR ' + error.message); process.exitCode = 1; });

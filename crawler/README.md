@@ -86,6 +86,12 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 `custom/baidu_portal.js`接入官网默认GRADUATE＋INTERN校园列表及SOCIAL社招列表，空关键词/项目、页长10，不沿用旧projectType1/排AIDU或职业筛选。正常Node原生UA，仅真实Referer及表单Content-Type，无Cookie/登录/签名；单轮串行200ms/15s、每类型200页/进程15分钟保护，按原生pages末页停，拒绝即停整个来源且不重试。保完整原生列表/请求证据，按postId去重并绑定取得类型；postId与jobId独立，官网详情链接用postId，原标题（城市前缀/岗位编号）及React TEXT两栏不改写。INTERN只证实习、渠道不推校园；其它性质/计划/日期/状态未知，列表JD先可用、详情正文完整性待核验，不冒全集/ready。失败或无可用记录不能清旧，旧百度脚本不再进入生产链。
 
+第二批8个既有key接入五个独立可用模块：`alibaba_portal`、`baichuan_portal`、`bilibili_portal`（校/社）、`ant_portal`（校/社）、`kuaishou_portal`（校/社）。精确冻结各source profile，不能删adapter/改key、公司、URI或body降级generic；只授`complete:false,verification.policy:available`，不继承同ATS或另一source的成功资格。串行请求开始间隔≥200ms、完整读取后再下一请求、15s单请求/15分钟来源预算、最多200页，真实拒绝停止无自动retry；同scope不完整更新保旧岗位及逐栏非空JD。匿名CSRF/Cookie只在内存，不伪UA/签名/ctoken/HMAC，不为列表JD机械追加详情。
+
+阿里校园取已核三个批次（应届＋日常/研究实习，阿里星不额外重复采）；B站不填可选type，两栏未知的HTML职位描述保单字段全文；蚂蚁用当前广列表空招聘类型/批次，无自造ctoken；快手校园取27届应届＋留用实习两个已核项目、原生字典及数字id详情路由。阿里/百川/蚂蚁/快手按第一方TEXT renderer保全部原字符，不沿旧职业/项目排除。百川及快手社招在用户另行授权后已通过正常官网原生翻页继续取得数据；生产CLI直接选择`lib/native-ui.js`隔离Chrome传输，不先发unsigned Node请求再自动换浏览器重试。只观察官网自身请求和点击原生下一页，复用已有CDP类，不注入SDK/生成签名/修改UA或复制会话；Cookie等敏感头只留内存，证据仅保必要公开头/成功岗位响应，百川URL只去除敏感signature，保实际动态分页Referer并严格绑定空筛选/页码。官网首页/字典自动流量可能并发；后续逐页点击≥200ms、正文队列无重叠，15s响应/900s来源/200页保护，拒绝停止、此前可用页保留。
+
+快手官网自动补`workLocationCode=domestic`，新可用证据固定version3/`native-ui-default-domestic`，保实际参数，不冒无城市列表或海外等价；登记目标scope不变，明确局部已取得范围、不完整增量保旧。旧version2无城市资料仍可独立复验；校园Node路径不变。百川及快手社招旧unsigned路径仅供显式注入fetchImpl回归，历史405/code:-1的单一根因仍未证明。快手日常实习另入口未核，性质不推全职。真实数量/资料钟及本轮材料复用发布见[第二批核验](../docs/custom-second-batch-verification.md)§6，不把发布时刻冒采集完成钟。
+
 美团详情已证 `otherInfo:"暂无"`与精确空字符串 `""`仅作为原生占位/空值保存，不添JD；其它非空值（含空格字符串）仍拒，列表仍须null，双轮完整raw稳定要求不变。
 
 美团校园新profile为官网默认1＋2、空subCode/其它筛选，不再旧2027/排LongCat/北斗。正常原生API已证pageSize=1000可返回571完整唯一岗位及原total/pageTotal；仅改变分页粒度，不改变范围。仍严格分页直至typed-null EOF，不把1000当总数上限；未来超过1000或跨页再漂移仍拒，不自动调大或重扫求绿。官网并列多选机制下，两轮分别完整枚举1应届、2实习，原生jobType逐条绑定分区、跨区身份唯一；每区total/满页/typed-null EOF/全部必要详情，两轮全部raw稳定。默认1＋2前后总数须等完整唯一union，默认首屏原生每岗亦绑定union；不据7页样本或简单194＋377求资格，任一不等/漂移/早短/必要详情失败拒整源。校园详情已证列表空项目/部门须补原生项目ID/名称及全部部门，保持完整raw；4697281262的列表与详情cityList同null、官网隐藏城市栏为合法未知，不生成工作城市标题或猜城市；不推断计划/日期/职能。官网按jobSpecialCode的已证两栏＋工作城市或六片renderer保原标题/同文/顺序，city不充jdComplete；原类型2实习，类型1性质未知。校园资格独立于社会，仍经唯一crawl→snapshot→publisher→data链。
@@ -102,7 +108,7 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 查询时按所选显示单位加载完整所需分片，未选单位仍需全部；顺序加载、缓存/inflight去重、30秒单分片超时，无自动retry。全部完成才提交冻结条件/更新结果；失败保旧，用户再次查询才重试，重置/后发查询使旧请求结果失效。所有原17字段/JD保真，未知已选单位不静默变全部。全站查询仍有全量下载成本，不承诺线上秒开。正常publisher有新可用数据时一并派生；仅改传输实现用显式rebuild维护，缺/坏canonical拒绝且不能拿catalog作更新基线。
 
-- 顶层：`version,legacy,notices,companies,sources,jobs`；目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
+- 顶层：`version,legacy,notices,companies,sources,jobs`，可选`unitMemberships`为岗位ID→官网明确单位名称数组（当前仅阿里校园）。publisher从已核原生circleNames生成，不改17岗位字段/来源身份/采集钟；不完整更新保留未取得岗位及缺新归属者的已有映射。catalog保映射，阿里分片附`unitCounts`（各原生单位在该片的唯一岗位数，可重叠；无归属计入口兜底），查询加载与所选单位相关的全部必要片后才按岗位取并集，同ID不复制；普通旧分片保持原接口。目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
 - 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`available`代表可用但完整性待补，`ready`代表原完整核验版本；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。
 - 岗位：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。旧 schema-1 记录可缺 category/sourceStatus，保留来源时不为它们补写字段。
 - 新ID为“来源key＋官方ID”，同标题不合并。可用路径按官方ID处理重复，无法安全确定身份的记录不发布并记录；旧完整路径仍要求唯一身份。跨来源去重仍待验证，不以名字相同自动合并。
