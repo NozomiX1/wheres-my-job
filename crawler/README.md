@@ -8,7 +8,7 @@
 sites.json（唯一来源登记）
   → update.js 按注册表串行调用 crawl.js
   → 可发布快照（可用性与完整性分开）
-  → publish.js 整理真实字段，完整替换／不完整增量合并
+  → publish.js 整理真实字段，整源替换
   → ../data/catalog.js + ../data/parts/（唯一数据：目录＋分片）
   → 同publisher派生 ../data/catalog.js + ../data/parts/*.js
   → ../index.html + ../assets/data-loader.js + ../assets/app.js 按查询加载/匹配排序
@@ -34,14 +34,14 @@ node crawler/publish.js --reproject huawei # 明确来源的同钟投影修复�
 |---|---|
 | `<key>_raw.json` | 当前候选；无可用结果时恢复旧文件，首次完全失败删除候选 |
 | `<key>_snapshot.json` | 可发布快照，含采集时刻、来源覆盖、原证据及complete标志 |
-| `<key>_status.json` | 最近尝试、采集时间、available／ready／失败状态及已知问题 |
+| `<key>_status.json` | 最近尝试、采集时间、ready／failed／unverified状态及已知问题 |
 
-- 子进程退出0不单独证明数据可用。计数须与实际唯一jobs一致，身份/安全链接/已取得字段通过程序基本检查；官方total另保在原生证据。`complete:true`为完整路径；`complete:false,verification.policy:'available'`为可用路径，允许单轮/重复页/total变化/缺详情，记录问题后发布，不冒全集或伪空。
-- 可用路径已接入第一批相关校/社招、第二批8源、第三批12源及阿里云独立社招（见下文独立模块与来源记录），不自动放行其它未接入入口。crawl/publisher复验正常HTTP/业务、登记scope与jobs/native绑定；按官方ID合并重复，无安全身份的记录跳过并记录，不因非关键metadata拒整源。`available`与`ready`分开展示；不完整增量保留未取得者和已有非空JD（独立职责/要求/全文分别保护），不能清旧或判下架。
+- 子进程退出0不单独证明数据可用。采集成功 = 适配器取到至少一个岗位且 total 与岗位数一致（官方 total 另记在证据里）；失败、中途出错、零岗位都不改已发布数据，也不再有「部分结果」。身份／安全链接／已取得字段只做程序基本检查。
+- OPPO、腾讯、快手、百川、网易、雷火、百度、蚂蚁、B站、TME、京东、vivo社招、华为、小红书、阿里巴巴校园等15个门户与阿里云仍沿用各自较严的证据合同（输出里的 `complete:false`、`policy:'available'` 管线已不再区分），中途失败时仍会带 `stopped` 证据返回部分结果，由 `crawl.js` 按 `portals.listStopped` 判断：列表阶段出错或触顶就整次不上架，详情阶段出错只记录；按需逐个放宽。
 - 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1改为单轮列表＋全部详情，列表职责/要求与官网详情逐字一致、详情无额外JD，`jdComplete:true`；保原城市顺序，不用换序当发布阻塞。详情请求用普通匿名Node，不伪造官网产生的signature/CSRF；拒绝即停、保留列表-only。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
 - 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
-- 同一注册范围内可发布快照才可应用。完整路径替换，可用路径增量合并；完全失败、未接入适配器及元数据不匹配不能晋升。
-- 来源范围（接口／渠道／批次等）变化无需特殊迁移：完整快照替换该来源，不完整快照与已有记录合并保旧；失败／零岗位不清旧。
+- 同一注册范围内的成功快照整源替换该来源（没取到的岗位即下架，不保存历史）；新结果少于已发布一半时拒绝，确属下架用 `--accept-shrink=<key>` 显式放行；完全失败、未接入适配器及元数据不匹配不能晋升。
+- 来源范围（接口／渠道／批次等）变化无需特殊迁移，新结果直接整源替换；失败／零岗位不清旧。
 - 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式同源`--reproject <keys>`允许在scope与真实采集钟相同的已核快照上修复投影/说明，不回退较旧快照，也不把本地重投影冒新采集，原 `index.html` 不受采集影响。
 - 文件按临时文件＋rename 写入；同一来源不应同时执行多个更新。失败状态可随其他成功来源发布；如果全部没有有效更新，公开文件不变，失败详情暂看状态文件和命令输出。
 
@@ -49,7 +49,7 @@ node crawler/publish.js --reproject huawei # 明确来源的同钟投影修复�
 
 ## 目前能被流水线验证的适配器
 
-**2026-10-09 起，小米（三入口）、携程、米哈游、上海AI实验室及七个常规阿里社招门户为单轮采集、`complete:false`＋`policy:'available'`**：岗位只需官网ID、标题、可打开的官网链接；未知字段、total不符、坏记录与中途失败只记入`issues`，详情尽力获取（403/412/429立即停详情），不再要求双轮逐字一致，也不保存逐页原始响应。下文这些来源里涉及「两轮」「逐字稳定」「未知字段拒整源」的描述是历史契约，以此处为准。**零岗位仍不能清旧数据**（`validateJobs`拒空）。阿里云（Cloud）的独立证据合同未改动。所有自研门户（含15个可用门户）由 [`lib/portals.js`](lib/portals.js) 登记，`crawl.js`/`publish.js` 只遍历该表；新增门户在那里加一项，适配器须导出`requiresVerification/verifiedSource/portalNotice/validateJobs/validateEvidence/normalizeRecord`，并由`tests/portals-registry.test.cjs`检查。
+**2026-10-09 起，小米（三入口）、携程、米哈游、上海AI实验室、七个常规阿里社招门户、飞书（字节与各SaaS门户）、北森（讯飞/vivo）及美团（社招/校园）为单轮采集，列表中途失败或触顶即整次失败（抛错，不发布部分结果；分页循环见 `lib/paginate.js`）**：岗位只需官网ID、标题、可打开的官网链接；未知字段、total不符、坏记录只记入`issues`，详情尽力获取（403/412/429立即停详情，只用列表文字）。下文这些来源里涉及「两轮」「逐字稳定」「未知字段拒整源」「complete／available」的描述是历史契约，以此处为准。**零岗位不能清旧数据**（`validateJobs`拒空）。阿里云（Cloud）的独立证据合同未改动。所有自研门户由 [`lib/portals.js`](lib/portals.js) 登记，`crawl.js`/`publish.js` 只遍历该表；新增门户在那里加一项，适配器须导出`requiresVerification/verifiedSource/portalNotice/validateJobs/validateEvidence/normalizeRecord`，并由`tests/portals-registry.test.cjs`检查。
 
 **Moka（9 来源）**：阶跃两个既有详情模式＋v0.25分别核验的七个固定`moka-portal-v1`来源；共享AES/正文/分页，不继承同系统资格。七个固定keys在调度/空snapshot归一化前核key/company/org/siteId/site/url、取得模式及受约束origin，删除模式标记不能退回宽松路径。
 
@@ -121,8 +121,8 @@ Cloud v2严格保存请求10/真实页码及响应固定500/1、原total/重复/
 
 查询时按所选显示单位加载完整所需分片，未选单位仍需全部；顺序加载、缓存/inflight去重、30秒单分片超时，无自动retry。全部完成才提交冻结条件/更新结果；失败保旧，用户再次查询才重试，重置/后发查询使旧请求结果失效。所有原17字段/JD保真，未知已选单位不静默变全部。全站查询仍有全量下载成本，不承诺线上秒开。每次发布重写目录与分片；目录或分片缺失/损坏时读取基线失败，不写公开数据。
 
-- 顶层：`version,notices,companies,sources,jobs`，可选`unitMemberships`为岗位ID→官网明确单位名称数组（当前仅阿里校园）。publisher从已核原生circleNames生成，不改17岗位字段/来源身份/采集钟；不完整更新保留未取得岗位及缺新归属者的已有映射。catalog保映射，阿里分片附`unitCounts`（各原生单位在该片的唯一岗位数，可重叠；无归属计入口兜底），查询加载与所选单位相关的全部必要片后才按岗位取并集，同ID不复制；普通旧分片保持原接口。目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
-- 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`available`代表可用但完整性待补，`ready`代表原完整核验版本；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。
+- 顶层：`version,notices,companies,sources,jobs`，可选`unitMemberships`为岗位ID→官网明确单位名称数组（当前仅阿里校园）。publisher从已核原生circleNames生成，不改17岗位字段/来源身份/采集钟；岗位消失则其映射一并移除，新内容缺归属的岗位保留旧映射。catalog保映射，阿里分片附`unitCounts`（各原生单位在该片的唯一岗位数，可重叠；无归属计入口兜底），查询加载与所选单位相关的全部必要片后才按岗位取并集，同ID不复制；普通旧分片保持原接口。目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
+- 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`ready`为有数据，`failed`为本次失败，`unverified`为尚未接入，`unavailable`为暂无数据；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。
 - 岗位：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。旧 schema-1 记录可缺 category/sourceStatus，保留来源时不为它们补写字段。
 - 新ID为“来源key＋官方ID”，同标题不合并。可用路径按官方ID处理重复，无法安全确定身份的记录不发布并记录；旧完整路径仍要求唯一身份。跨来源去重仍待验证，不以名字相同自动合并。
 - 正文保留完整可得文字、职责及要求，不截 600 字。已证官网完整正文 `description` 可与独立 `duty/requirements` 并存：页面优先一次显示完整正文；任何未被全文字面包含的独立职责/要求也必须完整显示，不能因有description就隐藏旧列表文字，独立同文两栏不互相消重；计分/词频仍只匹配标题、职责（缺失回退完整正文）、要求，不另计第四字段，不用全文伪填独立栏。已核验的 Moka 列表HTML或必要详情经 `lib/jd-text.js` 去真实标签、解码实体、保留段落，仅按明确标题分职责/要求；不能判断则全文留 description，分段时 description 为空，不重复计正文。字节的description/requirement本来就是纯文本，保留内部空白及字面 `List<T>`/实体，不复用HTML剥离。`jdComplete` 表示可靠取得完整非占位正文，不限于单独详情API，不承诺招聘方描述详尽；未证实的来源仍为 false。
@@ -147,3 +147,8 @@ git diff --check
 ```
 
 检查使用临时目录、注入子进程/响应，不访问官网。阶跃星辰、字节校园、v0.24四公司八源及v0.25七Moka来源及v0.26北森三源、v0.27七阿里社招分别做真实采集/官网/同版本页面核对；字节社招只证明限定范围、全源仍未知，其余尚未核验来源可用性、鉴权过期、完整 JD 和真实全量性能仍需逐源实测，不用这些离线检查冒充在线验收。
+
+## 重试与问题记录
+
+- `lib/retry.js`：只对临时性错误重试——网络错误／超时、HTTP 5xx、408，每个请求最多再试2次（间隔1秒、3秒）；403／412／429 等其它 4xx、重定向、验证页一律不重试。`crawl.js` 启动适配器子进程时通过 `NODE_OPTIONS=--require=lib/retry-preload.js` 给全局 fetch 加上该重试，所有适配器自动生效；飞书的页面内请求单独套用同一函数。重试时子进程向 stderr 打印 `[retry] ...`，由 `crawl.js` 计数。
+- 记录：采集失败，或成功但有重试／坏记录／total不符／详情没取全时，`crawl.js` 追加一行 JSON 到 `<outDir>/crawl-issues.jsonl`（`at,key,outcome,error|issues,retries`；`outcome` 为 ready-with-issues／failed／unverified），同时写入 `<key>_status.json` 的 `issues` 与 `message`。干净的成功不记录。该文件在被忽略的 `crawler/out/` 下，仅本机。
