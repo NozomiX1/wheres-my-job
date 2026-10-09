@@ -16,7 +16,7 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
-const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal')];
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal'), require('./lib/custom/tencent_portal'), require('./lib/custom/tme_portal'), require('./lib/custom/jd_portal'), require('./lib/custom/oppo_portal'), require('./lib/custom/leihuo_portal'), require('./lib/custom/netease_portal'), require('./lib/custom/vivo_social_portal')];
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'jobs.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -27,7 +27,7 @@ function loadSites() {
 
 function coverageFor(site) {
   // Include original scope parameters/descriptions, not a claim of whole-company coverage.
-  const keys = ['key', 'ats', 'orgId', 'siteId', 'site', 'api', 'apiOrigin', 'url', 'category', 'track', 'batch', 'body', 'origin', 'detailApi', 'headers', 'aid', 'websitePath', 'subjectIdList', 'plain', 'matchKeyword', 'note', 'fetchDetails', 'listJD', 'adapter', 'portalType', 'portalPaths', 'categoryRootIds', 'categoryGroups', 'categoryTreeHash'];
+  const keys = ['key', 'ats', 'orgId', 'siteId', 'site', 'api', 'apiOrigin', 'url', 'category', 'track', 'batch', 'body', 'query', 'origin', 'detailApi', 'dictionaryApi', 'dailyApi', 'headers', 'aid', 'websitePath', 'subjectIdList', 'plain', 'matchKeyword', 'note', 'fetchDetails', 'listJD', 'adapter', 'portalType', 'portalPaths', 'categoryRootIds', 'categoryGroups', 'categoryTreeHash'];
   if (site.ats === 'moka') keys.push('linkTemplate');
   const scope = {};
   for (const key of keys.sort()) if (site[key] !== undefined) scope[key] = site[key];
@@ -140,7 +140,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   const newXiaomiPortal = xiaomi.requiresVerification(site);
   if (newXiaomiPortal && !xiaomi.verifiedSource(site)) throw new Error('Xiaomi portal identity/scope/mode has not been verified');
   if (newXiaomiPortal) xiaomi.validateJobs(rawJobs, site);
-  const newDirectJD = newAvailablePortal || newCtripPortal || newMihoyoPortal || newShlabPortal || newXiaomiPortal || meituan.requiresVerification(site);
+  const newDirectJD = newAvailablePortal || newCtripPortal || newMihoyoPortal || newShlabPortal || newXiaomiPortal || meituan.requiresVerification(site) || ali.availableSource(site);
   const newMeituanCampus = meituanCampus.requiresVerification(site);
   if (newMeituanCampus && !meituanCampus.verifiedSource(site)) throw new Error('Meituan campus identity/scope/mode has not been verified');
   if (newMeituanCampus) meituanCampus.validateJobs(rawJobs, site);
@@ -148,7 +148,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
   if (newMeituanPortal && !meituan.verifiedSource(site)) throw new Error('Meituan portal identity/scope/mode has not been verified');
   if (newMeituanPortal) meituan.validateJobs(rawJobs, site, { available });
   const newAliPortal = ali.requiresVerification(site);
-  if (newAliPortal && !ali.verifiedSource(site)) throw new Error('Ali social portal identity/scope/mode has not been verified');
+  if (newAliPortal && !ali.verifiedSource(site) && !ali.availableSource(site)) throw new Error('Ali social portal identity/scope/mode has not been verified');
   if (newAliPortal) ali.validateJobs(rawJobs, site);
   const newMokaPortal = moka.requiresVerification(site);
   if (newMokaPortal && !moka.verifiedSource(site)) throw new Error('Moka portal identity/scope/mode has not been verified');
@@ -199,7 +199,7 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
       seen.add(id);
       for (const field of titleFields) text(job[field], field);
       const nativeTitle = text(first(job, titleFields), 'title');
-      const title = newXiaomiPortal || newAvailablePortal ? nativeTitle : nativeTitle.trim();
+      const title = newXiaomiPortal || newAvailablePortal || ali.availableSource(site) ? nativeTitle : nativeTitle.trim();
       if (!title.trim()) throw new Error('Missing title');
       for (const field of cityFields) cityText(job[field]);
       for (const field of dateFields) normalizeDate(job[field]);
@@ -338,10 +338,10 @@ function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
   const available = snapshot?.complete === false && snapshot.verification?.policy === 'available';
   const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
-  if (availablePortal && !available) throw new Error('This source only qualifies available data, not verified completeness');
+  if ((availablePortal || ali.availableSource(site)) && !available) throw new Error('This source only qualifies available data, not verified completeness');
   if (snapshot?.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
-  if (available && !availablePortal && !meituan.verifiedSource(site) && !isDeepStrictEqual(site, xiaomi.SOCIAL_PROFILE)) throw new Error('Available publication is not supported by this source');
-  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site) && !availablePortal) throw new Error('Adapter has not been verified for completeness');
+  if (available && !availablePortal && !ali.availableSource(site) && !meituan.verifiedSource(site) && !isDeepStrictEqual(site, xiaomi.SOCIAL_PROFILE)) throw new Error('Available publication is not supported by this source');
+  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !ali.verifiedSource(site) && !ali.availableSource(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site) && !ctrip.verifiedSource(site) && !mihoyo.verifiedSource(site) && !shlab.verifiedSource(site) && !xiaomi.verifiedSource(site) && !availablePortal) throw new Error('Adapter has not been verified for completeness');
   if (!status || status.version !== 1 || status.key !== site.key || status.status !== (available ? 'available' : 'ready') || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
   if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== (available ? false : true) || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
@@ -357,7 +357,7 @@ function validateSnapshot(snapshot, status, site) {
   return normalizeJobs(snapshot.jobs, site, { available, detailIds: validation?.detailIds });
 }
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, reproject = false, keys = discardLegacy || reproject ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), discardLegacy = false, reproject = false, keys = discardLegacy || reproject ? [] : sites.map(s => s.key), failedKeys = [], extendCoverage = {} } = {}) {
   const baseline = readPublished(dataFile);
   if (typeof reproject !== 'boolean' || reproject && (!keys.length || discardLegacy)) throw new Error('Reprojection requires explicit source keys and cannot retire legacy data');
   if (typeof discardLegacy !== 'boolean' || discardLegacy && (keys.length || failedKeys.length)) throw new Error('Legacy retirement must be explicit and separate from source publication');
@@ -372,6 +372,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   const selected = new Set(keys);
   const failed = new Set(failedKeys);
   if (keys.some(key => !sites.some(s => s.key === key))) throw new Error('Unknown source key');
+  if (!extendCoverage || typeof extendCoverage !== 'object' || Array.isArray(extendCoverage) || Object.keys(extendCoverage).some(key => !selected.has(key) || typeof extendCoverage[key] !== 'string' || !extendCoverage[key].startsWith('registry-v1:')) || Object.keys(extendCoverage).length && (discardLegacy || reproject)) throw new Error('Scope extension requires explicit selected keys and expected old coverage; cannot retire or reproject');
   const sources = new Map(baseline.sources.map(source => [source.key, { ...source }]));
   const initialSources = discardLegacy ? baseline.sources.filter(s => s.lastSuccess === null && (s.status === 'legacy' || s.coverage === '历史个人筛选范围，待全量化')) : [];
   for (const { key } of initialSources) {
@@ -399,20 +400,22 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         for (const job of jobs) {
           const old = merged.get(job.id);
           // A failed/missing detail must not erase a previously usable JD.
-          merged.set(job.id, old && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : {
+          merged.set(job.id, old && !reproject && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : {
             ...job, ...Object.fromEntries(['duty', 'requirements', 'description'].filter(field => old && old[field].trim() && !job[field].trim()).map(field => [field, old[field]]))
           });
         }
         jobs = [...merged.values()];
       }
       if (previous?.company && previous.company !== site.company) throw new Error('Source company changed; explicit migration required');
-      // Legacy data has no verified scope; the first verified snapshot is a one-time migration.
-      // Once a scope is known, changing registry parameters cannot prove old jobs disappeared.
-      if (previous?.lastSuccess && previous.coverage !== snapshot.coverage) throw new Error('Published coverage changed; explicit migration required');
+      // Ordinary updates remain strict. An operator-bound extension may only merge usable
+      // partial data into the exact expected baseline; omissions still cannot imply removal.
+      const coverageChanged = !!previous?.lastSuccess && previous.coverage !== snapshot.coverage;
+      if (coverageChanged && (snapshot.complete !== false || !Object.hasOwn(extendCoverage, site.key) || extendCoverage[site.key] !== previous.coverage)) throw new Error('Published coverage changed; explicit migration required');
+      if (Object.hasOwn(extendCoverage, site.key) && !coverageChanged) throw new Error('Scope extension does not match a changed published baseline');
       if (previous?.lastSuccess && (Date.parse(previous.lastSuccess) > Date.parse(snapshot.completedAt) || Date.parse(previous.lastSuccess) === Date.parse(snapshot.completedAt) && !reproject)) continue;
       if (availablePortal?.unitMemberships) Object.assign(unitMemberships, availablePortal.unitMemberships(snapshot.jobs, site));
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : '') + (availablePortal && !status.message.includes(availablePortal.portalNotice(site)) ? '；' + availablePortal.portalNotice(site) : ''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + (ali.portalNotice(site) && !status.message.includes(ali.portalNotice(site)) ? '；' + ali.portalNotice(site) : '') + (meituan.portalNotice(site) && !status.message.includes(meituan.portalNotice(site)) ? '；' + meituan.portalNotice(site) : '') + (meituanCampus.portalNotice(site) && !status.message.includes(meituanCampus.portalNotice(site)) ? '；' + meituanCampus.portalNotice(site) : '') + (ctrip.portalNotice(site) && !status.message.includes(ctrip.portalNotice(site)) ? '；' + ctrip.portalNotice(site) : '') + (mihoyo.portalNotice(site) && !status.message.includes(mihoyo.portalNotice(site)) ? '；' + mihoyo.portalNotice(site) : '') + (shlab.portalNotice(site) && !status.message.includes(shlab.portalNotice(site)) ? '；' + shlab.portalNotice(site) : '') + (xiaomi.portalNotice(site) && !status.message.includes(xiaomi.portalNotice(site)) ? '；' + xiaomi.portalNotice(site) : '') + (availablePortal && !status.message.includes(availablePortal.portalNotice(site)) ? '；' + availablePortal.portalNotice(site) : '') + (coverageChanged ? '；显式保旧扩增覆盖，原范围已发布岗位仍保留，不表示下架' : ''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);

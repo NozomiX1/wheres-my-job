@@ -15,13 +15,13 @@ const ctrip = require('./lib/custom/ctrip_portal');
 const mihoyo = require('./lib/custom/mihoyo_portal');
 const shlab = require('./lib/custom/shlab_portal');
 const xiaomi = require('./lib/custom/xiaomi_portal');
-const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal')];
+const availablePortals = [require('./lib/custom/huawei_portal'), require('./lib/custom/xiaohongshu_portal'), require('./lib/custom/baidu_portal'), require('./lib/custom/alibaba_portal'), require('./lib/custom/baichuan_portal'), require('./lib/custom/bilibili_portal'), require('./lib/custom/ant_portal'), require('./lib/custom/kuaishou_portal'), require('./lib/custom/tencent_portal'), require('./lib/custom/tme_portal'), require('./lib/custom/jd_portal'), require('./lib/custom/oppo_portal'), require('./lib/custom/leihuo_portal'), require('./lib/custom/netease_portal'), require('./lib/custom/vivo_social_portal')];
 
 function adapterCommand(site, rawFile) {
   for (const portal of availablePortals) if (portal.requiresVerification(site) && !portal.verifiedSource(site)) return null;
   const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
-  if (availablePortal) return { script: path.join(__dirname, 'lib', 'custom', site.adapter.replace('-portal-v1', '_portal.js')), args: [JSON.stringify(site), rawFile], timeout: 900000 };
-  if (ali.requiresVerification(site) && !ali.verifiedSource(site)) return null;
+  if (availablePortal) return { script: path.join(__dirname, 'lib', 'custom', site.adapter.replace('-portal-v1', '_portal.js').replaceAll('-', '_')), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (ali.requiresVerification(site) && !ali.verifiedSource(site) && !ali.availableSource(site)) return null;
   if (meituan.requiresVerification(site) && !meituan.verifiedSource(site) && !meituanCampus.verifiedSource(site)) return null;
   if (meituanCampus.requiresVerification(site) && !meituanCampus.verifiedSource(site)) return null;
   if (ctrip.requiresVerification(site) && !ctrip.verifiedSource(site)) return null;
@@ -32,7 +32,7 @@ function adapterCommand(site, rawFile) {
   if (beisen.requiresVerification(site) && !beisen.verifiedSource(site)) return null;
   if (site.ats === 'moka') return { script: path.join(__dirname, 'lib', 'moka.js'), args: [site.orgId, String(site.siteId), site.site, site.aesIv || 'de7c21ed8d6f50fe', rawFile, ...(site.fetchDetails ? ['--details'] : site.listJD ? ['--list-jd'] : []), ...(site.apiOrigin ? ['--origin=' + site.apiOrigin] : [])], timeout: site.fetchDetails || site.listJD ? 900000 : 180000 };
   if (site.ats === 'beisen') return { script: path.join(__dirname, 'lib', 'beisen.js'), args: beisen.verifiedSource(site) ? [JSON.stringify(site), rawFile] : [site.api, (site.category || ['2']).join(','), rawFile], timeout: beisen.verifiedSource(site) ? 900000 : 180000 };
-  if (ali.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ali_social_common.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
+  if (ali.verifiedSource(site) || ali.availableSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ali_social_common.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
   if (meituanCampus.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'meituan_campus_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
   if (meituan.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'meituan_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 2400000 };
   if (ctrip.verifiedSource(site)) return { script: path.join(__dirname, 'lib', 'custom', 'ctrip_portal.js'), args: [JSON.stringify(site), rawFile], timeout: 900000 };
@@ -89,7 +89,7 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     return { code: status === 'ready' ? 0 : 1, ...result };
   };
   const command = adapterCommand(site, rawFile);
-  if (!command) return saveStatus('unverified', '此适配器尚未复验分页完整性；未运行，保留已发布基线');
+  if (!command) return saveStatus('unverified', '此来源身份或正常采集协议尚未复验；未运行，保留已发布基线');
   try {
     if (oldRaw !== null) fs.unlinkSync(rawFile);
     const child = runner(process.execPath, [command.script, ...command.args], { encoding: 'utf8', timeout: command.timeout });
@@ -102,12 +102,12 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     const available = raw.complete === false;
     if (raw.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
     const availablePortal = availablePortals.find(portal => portal.verifiedSource(site));
-    if (availablePortal && !available) throw new Error('This source only qualifies available data, not verified completeness');
-    if (available && !availablePortal && !meituan.verifiedSource(site) && site.key !== xiaomi.SOCIAL_PROFILE.key) throw new Error('Available publication is not supported by this source');
+    if ((availablePortal || ali.availableSource(site)) && !available) throw new Error('This source only qualifies available data, not verified completeness');
+    if (available && !availablePortal && !ali.availableSource(site) && !meituan.verifiedSource(site) && site.key !== xiaomi.SOCIAL_PROFILE.key) throw new Error('Available publication is not supported by this source');
     let validation;
     if (availablePortal) validation = availablePortal.validateEvidence(raw.verification, jobs, site);
     if (beisen.verifiedSource(site)) beisen.validateEvidence(raw.verification, jobs, site);
-    if (ali.verifiedSource(site)) ali.validateEvidence(raw.verification, jobs, site);
+    if (ali.verifiedSource(site) || ali.availableSource(site)) validation = ali.validateEvidence(raw.verification, jobs, site);
     if (meituan.verifiedSource(site)) validation = meituan.validateEvidence(raw.verification, jobs, site);
     if (meituanCampus.verifiedSource(site)) meituanCampus.validateEvidence(raw.verification, jobs, site);
     if (ctrip.verifiedSource(site)) ctrip.validateEvidence(raw.verification, jobs, site);
@@ -117,7 +117,7 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     normalizeJobs(jobs, site, { available, detailIds: validation?.detailIds });
     const completedAt = now();
     if (!validTimestamp(completedAt) || Date.parse(completedAt) < Date.parse(lastAttempt)) throw new Error('Invalid completion timestamp');
-    const snapshot = { version: 1, key: site.key, complete: raw.complete, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) || meituan.verifiedSource(site) || meituanCampus.verifiedSource(site) || ctrip.verifiedSource(site) || mihoyo.verifiedSource(site) || shlab.verifiedSource(site) || xiaomi.verifiedSource(site) || availablePortal ? { verification: raw.verification } : {}) };
+    const snapshot = { version: 1, key: site.key, complete: raw.complete, completedAt, coverage, jobs, ...(beisen.verifiedSource(site) || ali.verifiedSource(site) || ali.availableSource(site) || meituan.verifiedSource(site) || meituanCampus.verifiedSource(site) || ctrip.verifiedSource(site) || mihoyo.verifiedSource(site) || shlab.verifiedSource(site) || xiaomi.verifiedSource(site) || availablePortal ? { verification: raw.verification } : {}) };
     atomicWrite(snapshotFile, JSON.stringify(snapshot, null, 2) + '\n');
     promoted = true;
     // Ready metadata identifies this same completed attempt, not the invocation start time.

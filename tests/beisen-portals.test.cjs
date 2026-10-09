@@ -51,7 +51,7 @@ test('Per-tenant classification/category/Kind/plan semantics and real official U
  a.equal(get('iflytek',3).talentPlan,null);a.equal(get('iflytek',3).employment,null);a.equal(get('iflytek',4).talentPlan,true);a.deepEqual(get('iflytek',4).channels,[]);a.equal(get('iflytek',4).employment,'internship');
  a.equal(get('iflytek_social',0).category,'');a.equal(get('iflytek_social',0).employment,'full-time');a.deepEqual(get('iflytek_social',0).channels,['social']);
  a.equal(get('vivo',0).talentPlan,true);a.equal(get('vivo',0).category,'设计类','Native category is preserved even for an algorithm title');a.equal(get('vivo',1).employment,'full-time');a.deepEqual(get('vivo',1).channels,[]);a.ok(get('vivo',1).url.includes('/intern/detail?'));a.equal(get('vivo',2).employment,'internship');a.deepEqual(get('vivo',2).channels,['campus']);a.equal(get('vivo',3).employment,null);
- a.equal(b.verifiedSource(pub.loadSites().find(s=>s.key==='vivo_social')),false);a.equal(adapterCommand(pub.loadSites().find(s=>s.key==='vivo_social'),'unused'),null);
+ a.equal(b.verifiedSource(pub.loadSites().find(s=>s.key==='vivo_social')),false);a.equal(p.basename(adapterCommand(pub.loadSites().find(s=>s.key==='vivo_social'),'unused').script),'vivo_social_portal.js','Social qualification is independent of campus Beisen');
  const site=sites.find(s=>s.key==='iflytek'),j=marked(fixtures.iflytek[0]);a.throws(()=>pub.normalizeJobs([{...j,CategoryId:'3',Category:'实习生招聘'}],site),/requires re-verification/);
 });
 

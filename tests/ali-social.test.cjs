@@ -99,11 +99,11 @@ test('Known host equivalent URL spellings always require verification before any
   a.equal(ali.requiresVerification({ key: 'other', adapter: 'ali-social-portal-v1' }), true);
 });
 
-test('Cloud remains coverage-blocked even if caller claims eligibility; unknown hosts never fetch', async () => {
+test('Cloud independently qualifies available data, never the seven portals complete contract', async () => {
   const cloud = siteFor(ali.PROFILES.find(p => p.key === 'aliyun_social'));
-  a.equal(ali.requiresVerification(cloud), true); a.equal(ali.verifiedSource(cloud), false);
+  a.equal(ali.requiresVerification(cloud), true); a.equal(ali.verifiedSource(cloud), false); a.equal(ali.availableSource(cloud), true);
+  a.throws(() => ali.validateEvidence({ version: 1, key: cloud.key, api: cloud.api, scans: [] }, [], cloud));
   let calls = 0; const options = { fetchImpl: async () => { calls++; throw Error('MUST NOT FETCH'); } };
-  await a.rejects(ali.run(cloud, options)); await a.rejects(ali.fetchAllFor('careers.aliyun.com', options));
   await a.rejects(ali.run({ ...cloud, qualified: true, verified: true }, options));
   a.throws(() => ali.fetchAllFor('unknown.invalid', options)); a.equal(calls, 0);
 });

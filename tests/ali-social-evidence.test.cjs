@@ -32,9 +32,9 @@ function assertProtected(data,f) {
   a.deepEqual(data.jobs.filter(j=>j.sourceKey==='protected'),[f.baseline.jobs[1]]);
 }
 
-test('Registry preserves eight existing source identities but dispatches only the seven qualified profiles', () => {
+test('Registry preserves eight independent sources: seven complete profiles and Cloud available only', () => {
   const registry=api.loadSites();a.equal(registry.length,66);
-  for(const profile of ali.PROFILES){const site=registry.find(s=>s.key===profile.key);a.equal(site.company,profile.company);a.equal(site.ats,'custom');a.equal(ali.verifiedSource(site),profile.qualified);const command=crawl.adapterCommand(site,'/tmp/not-written');if(profile.qualified){a.ok(command);a.match(command.script,/ali_social_common\.js$/);a.deepEqual(JSON.parse(command.args[0]),site);}else a.equal(command,null);}
+  for(const profile of ali.PROFILES){const site=registry.find(s=>s.key===profile.key);a.equal(site.company,profile.company);a.equal(site.ats,'custom');a.equal(ali.verifiedSource(site),profile.qualified);a.equal(ali.availableSource(site),profile.key==='aliyun_social');const command=crawl.adapterCommand(site,'/tmp/not-written');a.ok(command);a.match(command.script,/ali_social_common\.js$/);a.deepEqual(JSON.parse(command.args[0]),site);}
 });
 
 test('All seven sources carry native full evidence through crawl snapshot and the sole publisher', t => {
@@ -100,7 +100,8 @@ test('Known Ali portal scope/ATS downgrade cannot dispatch another adapter or pu
     const bad={...copy(original),...patch};a.equal(crawl.adapterCommand(bad,'/tmp/not-written'),null);a.throws(()=>api.normalizeJobs([],bad));
     const coverage=api.coverageFor(bad);a.throws(()=>api.validateSnapshot({version:1,key:bad.key,complete:true,completedAt:T3,coverage,jobs:[]},{version:1,key:bad.key,status:'ready',lastAttempt:T2,lastSuccess:T3,message:'fake0',coverage},bad));
   }
-  const cloud=api.loadSites().find(s=>s.key==='aliyun_social');a.equal(crawl.adapterCommand(cloud,'/tmp/not-written'),null);a.throws(()=>api.normalizeJobs([],cloud));
+  const cloud=api.loadSites().find(s=>s.key==='aliyun_social');a.equal(ali.availableSource(cloud),true);a.ok(crawl.adapterCommand(cloud,'/tmp/not-written'));a.throws(()=>api.normalizeJobs([],cloud));
+  const coverage=api.coverageFor(cloud);a.throws(()=>api.validateSnapshot({version:1,key:cloud.key,complete:true,completedAt:T3,coverage,jobs:[],verification:{version:1,key:cloud.key,api:cloud.api,scans:[]}},{version:1,key:cloud.key,status:'ready',lastAttempt:T2,lastSuccess:T3,message:'fake complete cloud',coverage},cloud));
 });
 
 test('Malformed or relative declared portal URIs cannot retreat to generic Moka and clear a baseline', t => {
