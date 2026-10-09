@@ -3,11 +3,11 @@ name: crawl-trial
 on:
   workflow_dispatch:
     inputs:
-      keys: { description: '来源 key，空格分隔', required: true, default: 'papegames xiaomi_social baidu oppo' }
+      keys: { description: '来源 key，空格分隔', required: true, default: 'bytedance lilith xiaomi_social' }
 jobs:
   trial:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +22,7 @@ jobs:
           for key in ${{ inputs.keys }}; do
             echo "::group::$key"
             start=$(date +%s)
-            timeout 150 node crawler/crawl.js "$key" || echo "$key exit $?"
+            timeout 2700 node crawler/crawl.js "$key" || echo "$key exit $?"
             echo "$key elapsed $(( $(date +%s) - start ))s"
             echo "::endgroup::"
           done
