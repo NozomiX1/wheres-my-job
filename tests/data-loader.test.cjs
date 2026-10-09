@@ -117,19 +117,18 @@ async function fails(pending, label) {
 }
 
 // The test timeout bounds a broken Promise; shard timeouts use the fake clock below.
-test('loads serially, keeps complete original jobs, reports progress and resolves only after all parts', { timeout: 2000 }, async () => {
+test('loads in parallel, keeps complete original jobs, reports progress and resolves only after all parts', { timeout: 2000 }, async () => {
   const f = fixture(), first = part('first'), second = part('second'), progress = [];
   const jobs = f.data.jobs;
   const pending = f.start([first, second], (done, total) => progress.push([done, total]));
   await turn();
-  assert.equal(f.requests.length, 1, 'Second part must wait for the first');
+  assert.equal(f.requests.length, 2, 'All parts are requested at once');
   assert.equal(pending.settled, false);
   assert.equal(new URL(f.requests[0].src, f.document.baseURI).href,
     new URL(`data/${first.file}`, f.document.baseURI).href);
   const originalFirst = f.complete(f.requests[0], first, [job('a:1')])[0];
   await turn();
   assert.equal(f.requests[0].parentNode, null);
-  assert.equal(f.requests.length, 2);
   assert.equal(pending.settled, false, 'First success must not resolve the whole load');
   assert.strictEqual(jobs[0], originalFirst, 'Do not reconstruct or truncate the job');
   assert.ok(progress.some(([done, total]) => done === 1 && total === 2));
@@ -297,4 +296,21 @@ test('external URLs, traversal and nonmatching lowercase hash paths reject befor
     assert.strictEqual(f.data.jobs[0], original);
     f.clean();
   }
+});
+
+test('at most 12 parts are in flight; a freed slot starts the next one; a failure stops new requests', { timeout: 2000 }, async () => {
+  const f = fixture(), parts = Array.from({ length: 30 }, (_, i) => part('p' + i, { sourceKey: 'a' }));
+  const pending = f.start(parts);
+  await turn();
+  assert.equal(f.requests.length, 12);
+  f.complete(f.requests[0], parts[0], [job('a:0')]);
+  await turn();
+  assert.equal(f.requests.length, 13, 'A finished part frees a slot for the next one');
+  f.requests[1].onerror(new Error('offline'));
+  await fails(pending);
+  await turn();
+  f.complete(f.requests[2], parts[2], [job('a:2')]);
+  await turn();
+  assert.equal(f.requests.length, 13, 'No new request after a failure');
+  assert.equal(f.data.jobs.length, 2, 'In-flight parts that finish are still cached');
 });

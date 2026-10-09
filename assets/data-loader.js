@@ -3,6 +3,7 @@
 (()=>{
   const data=globalThis.ANDE_DATA, pending=new Map(), ids=new Set((data?.jobs||[]).map(j=>j.id));
   globalThis.ANDE_CHUNKS=Object.create(null);
+  const CONCURRENCY=12;
   function load(part){
     if(pending.has(part.id))return pending.get(part.id);
     const promise=new Promise((resolve,reject)=>{
@@ -34,6 +35,9 @@
     if(!data||!Array.isArray(data.jobs)||!Array.isArray(parts))throw new Error('岗位目录未成功加载，请刷新页面。');
     for(const part of parts)if(!part||!/^[a-f0-9]{64}$/.test(part.id)||part.file!=='parts/'+part.id+'.js'||!Number.isSafeInteger(part.count)||part.count<1||typeof part.sourceKey!=='string'||typeof part.company!=='string')throw new Error('岗位分片目录无效');
     onProgress(0,parts.length);
-    for(let i=0;i<parts.length;i++){await load(parts[i]);onProgress(i+1,parts.length);}
+    // 并发取分片：同时最多 CONCURRENCY 个；有一个失败就不再启动新的，已在途的照常完成并缓存。
+    let next=0,done=0,failed=false;
+    const worker=async()=>{while(!failed&&next<parts.length){const part=parts[next++];try{await load(part);}catch(error){failed=true;throw error;}onProgress(++done,parts.length);}};
+    await Promise.all(Array.from({length:Math.min(CONCURRENCY,parts.length)},worker));
   };
 })();
