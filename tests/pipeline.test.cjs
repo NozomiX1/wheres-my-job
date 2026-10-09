@@ -94,9 +94,8 @@ test('first success reads the NEW raw, stores raw snapshot, and publishes only i
   assert.deepEqual(data.jobs.map(j => j.id).sort(), ['a:new', 'b:old']);
   assert.equal(data.jobs.find(j => j.id === 'a:new').category, '<b>官网技术</b>/产品研发');
   assert.equal(data.jobs.find(j => j.id === 'b:old').category, undefined, 'Retained old jobs keep their original optional-field presence');
-  assert.ok(fs.readFileSync(f.dataFile, 'utf8').includes('\\u003cb>官网技术\\u003c/b>'), 'JSON escaping preserves labels as text, not HTML markup');
+  assert.ok(fs.readdirSync(path.join(path.dirname(f.dataFile), 'parts')).some(name => fs.readFileSync(path.join(path.dirname(f.dataFile), 'parts', name), 'utf8').includes('\\u003cb>官网技术\\u003c/b>')), 'JSON escaping preserves labels as text, not HTML markup');
   assert.deepEqual(data.companies, oldCompanies);
-  assert.equal(data.legacy, true);
   assert.equal(data.sources.find(s => s.key === 'a').lastSuccess, T2);
   assert.equal(data.sources.find(s => s.key === 'b').coverage, null);
   assert.equal(fs.readFileSync(f.index, 'utf8'), 'DO NOT CHANGE');
@@ -243,17 +242,15 @@ test('metadata/coverage/record tampering cannot replace a published source, and 
   assert.equal(coverageFor(A), coverageFor(Object.fromEntries(Object.entries(A).reverse())));
 });
 
-test('a changed verified coverage cannot remove the prior scope or pretend old jobs were taken down', t => {
+test('a changed coverage publishes normally and replaces the source scope', t => {
   const f = fixture(t);
   crawl(A, f, [rawJob('published')], T2);
   assert.equal(publish({ ...f, keys: ['a'] }).written, true);
-  const before = fileBytes(f.dataFile);
   const expanded = { ...A, batch: 'different coverage' };
-  crawl(expanded, f, [], T3);
+  crawl(expanded, f, [rawJob('second')], T3);
   const result = publish({ ...f, sites: [expanded, B], keys: ['a'] });
-  assert.equal(result.written, false);
-  assert.ok(result.errors.some(message => message.includes('coverage changed')));
-  assert.deepEqual(fileBytes(f.dataFile), before);
+  assert.equal(result.written, true);
+  assert.deepEqual(readPublished(f.dataFile).jobs.filter(j => j.sourceKey === 'a').map(j => j.id), ['a:second']);
 });
 
 test('normalization retains every occupation, internship, plan and experience; full JD and unknowns are honest', () => {
@@ -546,25 +543,18 @@ test('update is the ONLY chain: serial process.execPath crawl, then one publish;
   assert.equal(fs.readFileSync(f.index, 'utf8'), 'DO NOT CHANGE');
 });
 
-test('notices track remaining legacy sources and JD gaps, always disclose registry scope; string aliases survive', t => {
+test('notices always disclose registry scope and only mention JD gaps when present; string aliases survive', t => {
   const f = fixture(t);
   const baseline = readPublished(f.dataFile);
   baseline.companies[0].aliases = 'Alibaba / Alpha';
-  baseline.jobs = baseline.jobs.filter(job => job.sourceKey === 'a'); // B still legacy, even with no jobs.
+  baseline.jobs = baseline.jobs.filter(job => job.sourceKey === 'a');
   fs.writeFileSync(f.dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(baseline) + ';\n');
   crawl(A, f, [{ ...rawJob('full'), jdComplete: true }]);
   const partial = publish({ ...f, keys: ['a'] });
-  assert.equal(partial.data.legacy, true);
   assert.equal(partial.data.companies[0].aliases, 'Alibaba / Alpha');
-  assert.ok(partial.data.notices.some(n => n.includes('历史个人筛选基线')));
   assert.ok(partial.data.notices.some(n => n.includes('不等于公司全量')));
+  assert.ok(!partial.data.notices.some(n => n.includes('历史个人筛选基线') || n.includes('初版HTML')));
   assert.ok(!partial.data.notices.some(n => n.includes('缺少 JD')));
-  crawl(B, f, [], T3);
-  const all = publish({ ...f, keys: ['b'] });
-  assert.equal(all.data.legacy, false);
-  assert.ok(!all.data.notices.some(n => n.includes('历史个人筛选基线')));
-  assert.ok(all.data.notices.some(n => n.includes('不等于公司全量')));
-  assert.ok(all.data.notices.length > 0);
 });
 
 test('failed top-level crawl launch cannot publish a stale ready candidate alongside a successful source', t => {

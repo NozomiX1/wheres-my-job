@@ -108,8 +108,6 @@ test('The observed 500/1 metadata is accepted ONLY on Cloud, with native ten-row
   a.equal(r.total, 10); a.match(r.issues.join(';'), /官方total 670；实际唯一岗位 10.*分页未穷尽/);
   a.deepEqual(ali.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
   a.throws(() => ali.validateEvidence({ version: 1, key: site.key, api: site.api, scans: [{ pages: [page()] }, { pages: [page()] }] }, r.jobs, site), /source binding/);
-  const seven = siteFor(ali.PROFILES[0]);
-  a.throws(() => ali.validateEvidence({ version: 1, key: seven.key, api: seven.api, scans: [{ pages: [page()] }, { pages: [page()] }] }, [], seven), /Count\/page metadata changed/);
 });
 
 test('Single pass reaches the observed early empty, preserving 500 native IDs and total670 without complete', () => {
@@ -188,7 +186,6 @@ test('Native identity/link/own fields and added JD are checked; bad nonessential
   }
   const sparse = copy(original); sparse.categories = Array(1); a.throws(() => ali.normalizeRecord(sparse, site), /sparse/);
   a.equal(ali.collectCloudAvailable([page(1, [{ ...original, newMetadata: null }])], site).total, 1);
-  const seven = siteFor(ali.PROFILES[0]); a.throws(() => ali.normalizeRecord({ ...copy(fixtures.alibaba_social.postings[0]), isLingYang: false }, seven));
 });
 
 test('Envelope, HTTP/business/metadata/body/page-order mutations cannot promote jobs or manufacture zero', () => {

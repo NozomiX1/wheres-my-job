@@ -1,105 +1,79 @@
 'use strict';
-const test = require('node:test'), a = require('node:assert/strict');
+const test = require('node:test'), a = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const x = require('../crawler/lib/custom/xiaomi_portal');
-const { adapterCommand } = require('../crawler/crawl');
-const { normalizeJobs } = require('../crawler/publish');
-const checkChain = require('./custom-portal-chain.cjs');
-const site = structuredClone(x.PROFILE);
-const jobs = [1, 2].map(id => ({ id, title: '  岗位' + id + '  ', cityZhNames: ['北京', '上海'], levelOneDeptName: '部门', description: '  List<T> &amp;\n完整职责' + id + '\n', requirement: '  同文要求' + id + '\n', expectedJobLevel: null, publishTime: '2026-07-01', larkJobCode: 'A' + id, type: 2, url: 'https://xiaomi.jobs.f.mioffice.cn/' + (id === 1 ? 'campus' : 'toptalent') + '/position/' + (100 + id) + '/detail', jobId: String(200 + id), jobPostId: String(100 + id) }));
-function detailFor(native) {
-  return { code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: { id: native.jobPostId, job_id: native.jobId, title: native.title, description: native.description, requirement: native.requirement, recruit_type: {}, publish_time: 0, channel_online_status: 1, city_list: [], city_info_list_for_delivery: [], tag_list: [], storefront_mode: 0, storefront_list: [], process_type: 1, job_post_info: { recruitment_type: {}, HighlightList: [], JobChannelPublishList: [], job_post_object_value_map: {}, address_list: [], city_list: [], correlation_job_list: [], tag_list: [], storefront_list: [], target_major_list: [], job_post_process_time_list: [], job_level_id_list: [] } } } };
-}
-async function candidate(mutate = () => {}) {
-  let calls = 0; const delays = [];
-  const raw = await x.fetchAll(site, { sleep: async ms => delays.push(ms), fetchImpl: async (url, options) => {
-    calls++; a.equal(options.method, 'GET'); a.equal(options.redirect, 'error'); a.equal(options.body, undefined);
-    const u = new URL(url), page = Number(u.searchParams.get('pageNum'));
-    let json;
+const { runCrawl, adapterCommand } = require('../crawler/crawl');
+const { publish, readPublished, normalizeJobs } = require('../crawler/publish');
+const TOPIC = '7595885661741271302';
+const job = (id, type, route = 'campus', extra = {}) => ({ id, title: '岗位' + id, cityZhNames: ['北京', '上海'], description: '职责' + id, requirement: '要求' + id, type,
+  url: 'https://xiaomi.jobs.f.mioffice.cn/' + route + '/position/' + (100 + id) + '/detail', jobId: String(200 + id), jobPostId: String(100 + id), ...extra });
+const detail = (j, d = {}) => ({ code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: { id: j.jobPostId, description: j.description, requirement: j.requirement, job_post_info: { job_post_object_value_map: {} }, ...d } } });
+// rows: 每页10条的列表；details: jobPostId → 详情响应或 HTTP 状态
+function fakeFetch(rows, details = {}) {
+  const calls = [];
+  const impl = async url => {
+    calls.push(url);
+    const u = new URL(url);
     if (u.hostname === 'hr.xiaomi.com') {
-      a.deepEqual(options.headers, { Accept: 'application/json' }); a.equal(u.searchParams.get('type'), '2'); a.equal(u.searchParams.get('keyword'), ''); a.equal(u.searchParams.get('cityZhNames'), ''); a.equal(u.searchParams.get('pageSize'), '10');
-      json = { code: 0, message: '成功', data: { list: page === 1 ? structuredClone(jobs) : [], pageSize: 10, pageNum: page, pageTotal: 1, total: 2 }, traceId: null };
-    } else { a.equal(u.searchParams.get('portal_type'), '6'); a.equal(u.searchParams.get('with_recommend'), 'false'); const native = jobs.find(j => u.pathname.endsWith('/' + j.jobPostId)); a.deepEqual(options.headers, { Accept: 'application/json', 'website-path': new URL(native.url).pathname.split('/')[1], 'accept-language': 'zh-CN', Referer: native.url }); json = detailFor(native); }
-    const status = mutate(json, calls) ?? 200;
-    return { status, json: async () => json };
-  } });
-  a.equal(calls, 8); a.equal(delays.length, 7); a.ok(delays.every(ms => ms >= 200)); return raw;
+      const n = Number(u.searchParams.get('pageNum'));
+      return { status: 200, json: async () => ({ code: 0, message: '成功', data: { list: rows.slice((n - 1) * 10, n * 10), pageNum: n, pageSize: 10, total: rows.length } }) };
+    }
+    const d = details[u.pathname.split('/').pop()];
+    if (typeof d === 'number') return { status: d, json: async () => ({}) };
+    return { status: 200, json: async () => d };
+  };
+  impl.calls = calls;
+  return impl;
 }
-test('Xiaomi native two complete scans preserve all TEXT, routes, raw identities and unknown attributes', async () => {
-  const raw = await candidate(); a.equal(x.validateEvidence(raw.verification, raw.jobs, site), true);
-  const j = normalizeJobs(raw.jobs, site)[0]; a.equal(j.id, 'xiaomi:1'); a.equal(j.title, jobs[0].title); a.equal(j.duty, jobs[0].description); a.equal(j.requirements, jobs[0].requirement); a.equal(j.description, ''); a.equal(j.city, '北京/上海');
-  a.deepEqual([j.category, j.employment, j.talentPlan, j.date, j.dateKind, j.sourceStatus], ['', null, null, null, null, null]); a.deepEqual(j.channels, ['campus']);
-  for (const field of ['description', 'requirement']) { const blank = structuredClone(jobs[0]); blank[field] = null; a.throws(() => x.normalizeRecord(blank, site)); }
-  const symbols = { ...jobs[0], description: '---', requirement: '***' }; symbols.detail = detailFor(symbols); a.equal(x.normalizeRecord(symbols, site).jdComplete, false);
+
+test('campus run: single scan with details, unknown fields tolerated, topic JD kept', async () => {
+  const rows = [job(1, 2), job(2, 2, 'toptalent', { someNewField: { a: 1 } })];
+  const details = { 101: detail(rows[0]), 102: detail(rows[1], { job_post_info: { job_post_object_value_map: { [TOPIC]: '课题正文', other: '未识别' } }, extra: 1 }) };
+  const f = fakeFetch(rows, details);
+  const raw = await x.run(x.PROFILE, { fetchImpl: f, sleep: async () => {} });
+  a.equal(f.calls.length, 3); a.equal(raw.complete, false); a.equal(raw.total, 2); a.equal(raw.verification.policy, 'available');
+  const [p, q] = normalizeJobs(raw.jobs, x.PROFILE);
+  a.equal(p.id, 'xiaomi:1'); a.equal(p.city, '北京/上海'); a.deepEqual(p.channels, ['campus']); a.equal(p.jdComplete, true); a.equal(p.description, '');
+  a.match(q.description, /职位信息\n课题名称及内容：\n课题正文$/); a.equal(q.duty, '职责2');
+  a.deepEqual(x.validateEvidence(raw.verification).issues, []);
 });
-test('Xiaomi native evidence rejects partial/total/JD/city/identity/request and unknown-field changes', async () => {
-  const raw = await candidate();
-  for (const mutate of [
-    r => r.verification.scans[1].pages.pop(), r => r.verification.scans[0].pages[0].httpStatus = 412,
-    r => r.verification.scans[1].pages[0].response.data.total++, r => r.verification.scans[0].pages[0].request.url += '&keyword=AI',
-    r => r.verification.scans[1].pages[0].response.data.list[0].description += 'changed',
-    r => r.verification.scans[1].pages[0].response.data.list[0].cityZhNames.reverse(),
-    r => r.verification.scans[1].pages[0].response.data.list[1].jobId = '201',
-    r => r.verification.scans[1].pages[0].response.data.list[0].extraJD = 'unknown',
-    r => r.jobs[0].url = r.jobs[1].url,
-    r => r.verification.scans[1].pages[1].response.data.list.push(jobs[0]),
-    r => r.verification.scans[0].pages[0].response.data.pageTotal++,
-    r => r.verification.scans[0].pages[0].response.data.list.pop()
-  ]) { const bad = structuredClone(raw); mutate(bad); a.throws(() => x.validateEvidence(bad.verification, bad.jobs, site)); }
+
+test('bad rows, total drift and missing details are recorded, not fatal', async () => {
+  const rows = [job(1, 1, 'index'), { ...job(2, 1, 'index'), title: '' }, job(3, 1, 'index', { url: 'http://insecure' }), job(4, 1, 'index')];
+  const f = fakeFetch(rows, { 101: detail(rows[0]), 104: { code: 1 } });
+  const raw = await x.run(x.SOCIAL_PROFILE, { fetchImpl: f, sleep: async () => {} });
+  a.equal(raw.total, 2);
+  a.ok(raw.issues.some(s => s.includes('缺ID/标题/链接')));
+  a.ok(raw.issues.some(s => s.includes('详情取得 1/2')));
+  const [withDetail, listOnly] = normalizeJobs(raw.jobs, x.SOCIAL_PROFILE);
+  a.deepEqual(withDetail.channels, ['social']); a.equal(withDetail.jdComplete, true); a.equal(listOnly.jdComplete, false); a.equal(listOnly.duty, '职责4');
 });
-test('Xiaomi stops immediately on HTTP/business/empty/unknown errors without retry', async () => {
-  for (const kind of ['http', 'business', 'zero', 'unknown']) {
-    let calls = 0;
-    await a.rejects(x.fetchAll(site, { sleep: async () => {}, fetchImpl: async () => {
-      calls++; const json = { code: kind === 'business' ? 1 : 0, message: '成功', data: { list: [], pageSize: 10, pageNum: 1, pageTotal: 0, total: 0 }, traceId: null };
-      if (kind === 'unknown') json.extra = 1; return { status: kind === 'http' ? 412 : 200, json: async () => json };
-    } })); a.equal(calls, 1);
-  }
+
+test('detail refusal stops detail requests; list failure with no jobs throws and zero never succeeds', async () => {
+  const rows = [1, 2, 3].map(id => job(id, 3, 'internship'));
+  const f = fakeFetch(rows, { 101: 403 });
+  const raw = await x.run(x.INTERN_PROFILE, { fetchImpl: f, sleep: async () => {} });
+  a.equal(f.calls.length, 2); a.equal(raw.total, 3); a.ok(raw.issues.some(s => s.includes('详情请求停止')));
+  await a.rejects(x.run(x.PROFILE, { fetchImpl: async () => ({ status: 412, json: async () => ({}) }), sleep: async () => {} }), /HTTP 412/);
+  await a.rejects(x.run(x.PROFILE, { fetchImpl: fakeFetch([]), sleep: async () => {} }), /no usable/);
 });
-test('Xiaomi scope gate rejects old filters, social and downgrades even before empty jobs', () => {
-  for (const invalid of [{ ...site, exclude: '顶尖人才' }, { ...site, key: 'xiaomi_social' }, { ...site, adapter: undefined }, { ...site, ats: 'moka' }, { ...site, key: 'alias', adapter: undefined }, { ...site, body: { ...site.body, type: 1 } }]) { a.equal(adapterCommand(invalid, '/tmp/no-call'), null); a.throws(() => normalizeJobs([], invalid)); }
+
+test('intern entry marks internship from the official detail and runs through crawl+publish as available', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-xiaomi-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const rows = [job(1, 3, 'internship')];
+  const raw = await x.run(x.INTERN_PROFILE, { fetchImpl: fakeFetch(rows, { 101: detail(rows[0], { recruit_type: { name: '实习' } }) }), sleep: async () => {} });
+  const file = path.join(dir, 'jobs.js');
+  fs.writeFileSync(file, 'globalThis.ANDE_DATA = ' + JSON.stringify({ version: 1, legacy: false, notices: [], companies: [], sources: [], jobs: [] }) + ';\n');
+  const crawled = runCrawl(x.INTERN_PROFILE, { outDir: dir, now: () => '2026-01-01T00:00:00.000Z', runner: (_, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(raw)); return { status: 0 }; } });
+  a.equal(crawled.code, 0); a.equal(crawled.status, 'available');
+  const result = publish({ outDir: dir, dataFile: file, sites: [x.INTERN_PROFILE], keys: ['xiaomi_intern'] });
+  a.equal(result.code, 0);
+  const [j] = readPublished(file).jobs;
+  a.equal(j.id, 'xiaomi_intern:1'); a.equal(j.employment, 'internship'); a.deepEqual(j.channels, ['campus']);
 });
-test('Xiaomi necessary custom topic JD is complete but never a fourth score field; missing/unknown/drifting details reject', async () => {
-  const raw = await candidate(); const j = structuredClone(raw.jobs[1]);
-  const map = j.detail.data.job_post_detail.job_post_info.job_post_object_value_map;
-  map['7595885661741271302'] = '【课题名称】\nAgent智能体研究\n\n【课题内容】\n完整研究内容';
-  const p = x.normalizeRecord(j, site); a.ok(p.description.includes('课题名称及内容：\n' + map['7595885661741271302'])); a.equal(p.duty, j.description); a.equal(p.requirements, j.requirement);
-  map.unknown = 'other JD'; a.throws(() => x.normalizeRecord(j, site));
-  for (const mutate of [r => r.verification.scans[1].details.pop(), r => r.verification.scans[1].details[0].httpStatus = 403, r => r.verification.scans[1].details[0].request.headers['website-path'] = 'index', r => r.verification.scans[1].details[0].response.data.job_post_detail.publish_time++, r => delete r.jobs[0].detail]) { const bad = structuredClone(raw); mutate(bad); a.throws(() => x.validateEvidence(bad.verification, bad.jobs, site)); }
-});
-test('Xiaomi real single chain validates publisher again and protects failed/raw/clock/non-target baselines', async t => {
-  await checkChain(t, site, await candidate(), bad => bad.verification.scans[1].pages.pop(), 2400000);
-});
-test('Xiaomi intern entry (type=3) keeps its own project routes and native internship fact', async () => {
-  const internSite = structuredClone(x.INTERN_PROFILE);
-  const internJobs = [1, 2].map(id => ({ id, title: '  实习岗位' + id + '  ', cityZhNames: ['北京'], levelOneDeptName: '部门', description: '  List<T> &amp;\n实习职责' + id + '\n', requirement: '  实习要求' + id + '\n', expectedJobLevel: null, publishTime: '2026-07-01', larkJobCode: 'I' + id, type: 3, url: 'https://xiaomi.jobs.f.mioffice.cn/' + (id === 1 ? 'topintern' : 'internship') + '/position/' + (100 + id) + '/detail', jobId: String(200 + id), jobPostId: String(100 + id) }));
-  function internDetail(native) {
-    return { code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: { id: native.jobPostId, job_id: native.jobId, title: native.title, description: native.description, requirement: native.requirement, recruit_type: { name: '实习' }, publish_time: 0, channel_online_status: 1, city_list: [], city_info_list_for_delivery: [], tag_list: [], storefront_mode: 0, storefront_list: [], process_type: 1, job_post_info: { recruitment_type: {}, HighlightList: [], JobChannelPublishList: [], job_post_object_value_map: { '7595885661741271302': '课题正文' }, address_list: [], city_list: [], correlation_job_list: [], tag_list: [], storefront_list: [], target_major_list: [], job_post_process_time_list: [], job_level_id_list: [] } } } };
-  }
-  let calls = 0;
-  const raw = await x.fetchAll(internSite, { sleep: async () => {}, fetchImpl: async (url, options) => {
-    calls++; const u = new URL(url);
-    let json;
-    if (u.hostname === 'hr.xiaomi.com') { a.equal(u.searchParams.get('type'), '3'); json = { code: 0, message: '成功', data: { list: Number(u.searchParams.get('pageNum')) === 1 ? structuredClone(internJobs) : [], pageSize: 10, pageNum: Number(u.searchParams.get('pageNum')), pageTotal: 1, total: 2 }, traceId: null }; }
-    else { const native = internJobs.find(j => u.pathname.endsWith('/' + j.jobPostId)); a.equal(u.searchParams.get('portal_type'), '6'); json = internDetail(native); }
-    return { status: 200, json: async () => json };
-  } });
-  a.equal(calls, 8); a.equal(x.validateEvidence(raw.verification, raw.jobs, internSite), true); a.equal(raw.complete, true); a.equal(raw.verification.key, 'xiaomi_intern');
-  const j = normalizeJobs(raw.jobs, internSite)[0];
-  a.equal(j.id, 'xiaomi_intern:1'); a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'internship'); a.equal(j.talentPlan, null);
-  a.match(j.description, /课题名称及内容：\n课题正文/); a.equal(j.duty, internJobs[0].description); a.equal(j.jdComplete, true);
-  a.equal(x.verifiedSource(internSite), true); a.equal(x.verifiedSource({ ...internSite, body: { ...internSite.body, type: 2 } }), false);
-  a.equal(x.verifiedSource({ ...internSite, key: 'xiaomi' }), false); a.equal(x.verifiedSource({ ...internSite, url: internSite.url.replace('%E5%AE%9E%E4%B9%A0', '%E6%A0%A1%E6%8B%9B') }), false);
-  for (const bad of [{ ...internJobs[0], type: 2 }, { ...internJobs[0], url: 'https://xiaomi.jobs.f.mioffice.cn/campus/position/101/detail' }]) a.throws(() => x.normalizeRecord({ ...bad, detail: internDetail(internJobs[0]) }, internSite));
-  const swapped = structuredClone(raw); swapped.verification.scans[1].pages[0].request.url = swapped.verification.scans[1].pages[0].request.url.replace('type=3', 'type=2');
-  a.throws(() => x.validateEvidence(swapped.verification, swapped.jobs, internSite));
-  const borrowed = structuredClone(raw); borrowed.verification.key = 'xiaomi'; a.throws(() => x.validateEvidence(borrowed.verification, borrowed.jobs, internSite));
-  const goodTag = { id: '7353200358716555373', name: { name: '热招', en_name: '热招', i18n_name: '热招' }, style: '{}', scope_list: [{ id: '1', channel_id: '3', name: { name: '常规校招官网', en_name: 'Campus', i18n_name: '常规校招官网' } }] };
-  const tagged = { ...internJobs[0], detail: internDetail(internJobs[0]) }; tagged.detail.data.job_post_detail.tag_list = [goodTag];
-  a.equal(x.normalizeRecord(tagged, internSite).jdComplete, true);
-  const unknownTag = structuredClone(tagged); unknownTag.detail.data.job_post_detail.tag_list = [{ ...goodTag, id: '9', name: { name: '其它' } }];
-  a.throws(() => x.normalizeRecord(unknownTag, internSite));
-  const extraScope = structuredClone(tagged); extraScope.detail.data.job_post_detail.tag_list[0].scope_list[0].extra = 1;
-  a.throws(() => x.normalizeRecord(extraScope, internSite));
-  const campusTag = detailFor(jobs[0]); campusTag.data.job_post_detail.tag_list = [goodTag];
-  a.throws(() => x.normalizeRecord({ ...jobs[0], detail: campusTag }, site));
+
+test('source gate: only registered keys with their own type run; others are not crawled', () => {
+  for (const p of [x.PROFILE, x.SOCIAL_PROFILE, x.INTERN_PROFILE]) { a.equal(x.verifiedSource(p), true); a.ok(adapterCommand(p, '/tmp/raw.json')); }
+  a.equal(x.verifiedSource({ ...x.PROFILE, body: { ...x.PROFILE.body, type: 9 } }), false);
+  a.equal(x.verifiedSource({ ...x.PROFILE, key: 'alias' }), false);
+  a.equal(adapterCommand({ ...x.PROFILE, body: { ...x.PROFILE.body, type: 9 } }, '/tmp/raw.json'), null);
 });

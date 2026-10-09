@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const { isDeepStrictEqual } = require('node:util');
 const { createHash } = require('node:crypto');
-const PAGE_SIZE = 10, MAX_PAGES = 200, ADAPTER = 'ali-social-portal-v1';
+const PAGE_SIZE = 10, MAX_PAGES = 200, LIST_PAGES = 400, ADAPTER = 'ali-social-portal-v1';
 const QUALIFIED_KEYS = new Set(['alibaba_social', 'taotian_social', 'ele_social', 'aidc_social', 'tongyi_social', 'dingtalk_social', 'quark_social']);
 const PROFILES = Object.freeze([
   ['alibaba_social', '阿里巴巴', 'talent-holding.alibaba.com', 'bootstrap'],
@@ -41,9 +41,9 @@ function requestBody(profile, pageIndex) {
 function siteFor(p) {
   return { key: p.key, company: p.company, ats: 'custom', track: 'social', batch: '社招', exclude: '(无)', adapter: ADAPTER, listJD: true, apiOrigin: p.origin, url: p.url, api: p.api, body: requestBody(p, 1) };
 }
+// 七个常规社招门户：已登记 key + 适配器名即可；阿里云(Cloud)仍走下面独立的 availableSource 合同。
 function verifiedSource(site) {
-  const p = PROFILES.find(p => p.key === site?.key);
-  return !!p && QUALIFIED_KEYS.has(p.key) && isDeepStrictEqual(site, siteFor(p));
+  return QUALIFIED_KEYS.has(site?.key) && site.adapter === ADAPTER;
 }
 function availableSource(site) {
   const p = PROFILES.find(p => p.key === 'aliyun_social');
@@ -94,45 +94,21 @@ function validateJob(job, p) {
 function validateJobs(jobs, site) {
   if (!verifiedSource(site) && !availableSource(site)) throw new Error('Unverified Ali portal identity/scope/mode');
   if (!Array.isArray(jobs)) throw new Error('Ali jobs must be an array');
-  if (availableSource(site) && (!dense(jobs) || !jobs.length)) throw new Error('Ali Cloud no usable jobs; zero cannot clear existing data');
-  const p = PROFILES.find(p => p.key === site.key), ids = new Set();
-  for (const job of jobs) {
-    if (availableSource(site)) validateCloudJob(job, p); else validateJob(job, p);
-    if (ids.has(job.id)) throw new Error('Duplicate Ali official id');
-    ids.add(job.id);
+  if (!jobs.length) throw new Error('Ali: no usable jobs; zero cannot clear existing data');
+  if (availableSource(site)) {
+    if (!dense(jobs)) throw new Error('Ali Cloud no usable jobs; zero cannot clear existing data');
+    const p = PROFILES.find(p => p.key === site.key), ids = new Set();
+    for (const job of jobs) {
+      validateCloudJob(job, p);
+      if (ids.has(job.id)) throw new Error('Duplicate Ali official id');
+      ids.add(job.id);
+    }
   }
 }
-function nativePage(page, p, index) {
-  if (!object(page) || page.httpStatus !== 200 || !isDeepStrictEqual(page.request, requestBody(p, index))) throw new Error('Ali native request/status evidence changed');
-  const json = page.response;
-  if (!object(json) || !isDeepStrictEqual(Object.keys(json).sort(), ['content', 'errorCode', 'errorMsg', 'success']) || json.success !== true || !object(json.content) || ['errorCode', 'errorMsg'].some(field => json[field] !== null && json[field] !== '')) throw new Error('Ali native business refusal/unknown response');
-  const c = json.content;
-  if (!isDeepStrictEqual(Object.keys(c).sort(), ['currentPage', 'datas', 'pageSize', 'totalCount']) || !Array.isArray(c.datas) || !Number.isSafeInteger(c.totalCount) || c.totalCount < 0 || c.pageSize !== PAGE_SIZE || c.currentPage !== index) throw new Error('Ali native Count/page metadata changed');
-  return c;
-}
-function consume(page, p, index, state, maxPages = MAX_PAGES) {
-  const c = nativePage(page, p, index);
-  if (state.total === undefined) {
-    state.total = c.totalCount;
-    if (Math.ceil(state.total / PAGE_SIZE) + 1 >= maxPages) throw new Error('Ali pagination safety ceiling reached');
-  }
-  const endpoint = state.jobs.length === state.total;
-  if (endpoint) {
-    if (c.datas.length || c.totalCount !== 0 && c.totalCount !== state.total) throw new Error('Ali native endpoint Count/page changed');
-  } else if (c.totalCount !== state.total || c.datas.length !== Math.min(PAGE_SIZE, state.total - state.jobs.length)) throw new Error('Ali native Count drift/early empty or short page');
-  for (const job of c.datas) {
-    validateJob(job, p);
-    if (state.ids.has(job.id)) throw new Error('Duplicate Ali official id');
-    state.ids.add(job.id); state.jobs.push(job);
-  }
-  return endpoint;
-}
-function stableJob(job) {
-  const { trackId, ...stable } = job;
-  // Preserve the original URL spelling and every remaining byte, not the whole-field omission.
-  const [route, query] = job.positionUrl.split('?');
-  stable.positionUrl = route + '?' + query.split('&').filter(part => decodeURIComponent(part.split('=')[0]) !== 'track_id').join('&');
-  return stable;
+// 常规社招门户的岗位只需官网ID、标题和可由 positionUrl/trackId 还原的官网链接。
+function usableJob(job, p) {
+  if (!object(job) || !Number.isSafeInteger(job.id) || job.id <= 0 || typeof job.name !== 'string' || !job.name.trim()) return false;
+  try { officialURL(job, p); return true; } catch { return false; }
 }
 function validateEvidence(evidence, jobs, site) {
   if (availableSource(site)) {
@@ -140,23 +116,8 @@ function validateEvidence(evidence, jobs, site) {
     if (!isDeepStrictEqual(jobs, result.jobs)) throw new Error('Ali Cloud jobs/native evidence binding');
     return result;
   }
-  if (!verifiedSource(site) || !object(evidence) || evidence.version !== 1 || evidence.key !== site.key || evidence.api !== site.api || !Array.isArray(evidence.scans) || evidence.scans.length !== 2) throw new Error('Missing or mismatched Ali native verification evidence');
-  validateJobs(jobs, site);
-  const p = PROFILES.find(p => p.key === site.key);
-  const scans = evidence.scans.map(scan => {
-    if (!object(scan) || !Array.isArray(scan.pages) || !scan.pages.length || scan.pages.length >= MAX_PAGES) throw new Error('Invalid Ali native scan evidence');
-    const state = { jobs: [], ids: new Set() };
-    let ended = false;
-    for (const [offset, page] of scan.pages.entries()) {
-      if (ended) throw new Error('Ali native evidence has extra pages');
-      ended = consume(page, p, offset + 1, state);
-    }
-    if (!ended || state.jobs.length !== state.total) throw new Error('Incomplete Ali native scan evidence');
-    return state;
-  });
-  const map = rows => new Map(rows.map(job => [job.id, stableJob(job)]));
-  if (scans[0].total !== scans[1].total || !isDeepStrictEqual(map(scans[0].jobs), map(scans[1].jobs)) || !isDeepStrictEqual(jobs, scans[0].jobs)) throw new Error('Ali full raw facts changed or snapshot does not match first native scan');
-  return true;
+  if (!verifiedSource(site)) throw new Error('Unverified Ali portal identity/scope/mode');
+  return { issues: Array.isArray(evidence?.issues) ? evidence.issues : [] };
 }
 // Cloud's independently observed 500/1 response metadata is not the seven portals' page contract.
 function validateCloudJob(job, p) {
@@ -429,18 +390,18 @@ function normalizeRecord(job, site) {
   const cloud = availableSource(site);
   if (!verifiedSource(site) && !cloud) throw new Error('Unverified Ali portal identity/scope/mode');
   const p = PROFILES.find(p => p.key === site.key);
-  if (cloud) validateCloudJob(job, p); else validateJob(job, p);
-  const text = value => cloud ? value ?? '' : (value ?? '').replace(/\r\n?/g, '\n').trim();
+  if (cloud) validateCloudJob(job, p); else if (!usableJob(job, p)) throw new Error('Ali: missing official id/title/url');
+  const text = value => cloud ? value ?? '' : (typeof value === 'string' ? value : '').replace(/\r\n?/g, '\n').trim();
   // Proven renderer uses browser-local Date getters, not a source-canonical calendar.
   // Keep both native timestamps in evidence; neither supplies a canonical public date.
-  return { id: String(job.id), title: job.name, city: (job.workLocations ?? []).join('/'), category: (job.categories ?? []).join('/'), channels: ['social'], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null, url: officialURL(job, p), duty: text(job.description), requirements: text(job.requirement), description: '', jdComplete: !cloud };
+  return { id: String(job.id), title: job.name, city: (Array.isArray(job.workLocations) ? job.workLocations : []).join('/'), category: (Array.isArray(job.categories) ? job.categories : []).join('/'), channels: ['social'], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null, url: officialURL(job, p), duty: text(job.description), requirements: text(job.requirement), description: '', jdComplete: !cloud };
 }
 async function run(site, options = {}) {
   if (availableSource(site)) return fetchCloudAvailable(site, options);
   if (!verifiedSource(site)) throw new Error('Unverified Ali portal identity/scope/mode');
   const p = PROFILES.find(p => p.key === site.key);
-  const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), delayMs = 200, timeoutMs = 15000, maxPages = MAX_PAGES } = options;
-  if (typeof fetchImpl !== 'function' || typeof sleep !== 'function' || !Number.isFinite(delayMs) || delayMs < 0 || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || !Number.isSafeInteger(maxPages) || maxPages < 2 || maxPages > MAX_PAGES) throw new Error('Invalid Ali request limits');
+  const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), delayMs = 200, timeoutMs = 15000, maxPages = LIST_PAGES } = options;
+  if (typeof fetchImpl !== 'function' || typeof sleep !== 'function' || !Number.isFinite(delayMs) || delayMs < 0 || !Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || !Number.isSafeInteger(maxPages) || maxPages < 2 || maxPages > LIST_PAGES) throw new Error('Invalid Ali request limits');
   const cookies = new Map();
   let requested = false;
   function cookieHeader(url) {
@@ -486,25 +447,29 @@ async function run(site, options = {}) {
   else csrf = cookieHeader(p.api).split('; ').find(pair => pair.startsWith('XSRF-TOKEN='))?.slice('XSRF-TOKEN='.length);
   if (!csrf || csrf === '[REDACTED]') throw new Error('Ali normal anonymous CSRF absent');
   const api = new URL(p.api); api.searchParams.set('_csrf', csrf);
-  const scans = [];
-  for (let round = 0; round < 2; round++) {
-    const scan = { pages: [] }, state = { jobs: [], ids: new Set() };
-    let ended = false;
-    for (let pageIndex = 1; pageIndex < maxPages; pageIndex++) {
-      const body = requestBody(p, pageIndex), response = await request(api.href, body, csrf);
+  // 单轮扫描：中途失败保留已得岗位，total 不符/坏记录只记 issues。
+  const issues = [], byId = new Map();
+  let total = null, skipped = 0, pages = 0;
+  for (let pageIndex = 1; pageIndex <= maxPages; pageIndex++) {
+    let content;
+    try {
+      const response = await request(api.href, requestBody(p, pageIndex), csrf);
       if (response.status !== 200) throw new Error('Ali list HTTP ' + response.status);
-      const page = { request: body, httpStatus: response.status, response: await response.json() };
-      scan.pages.push(page);
-      ended = consume(page, p, pageIndex, state, maxPages);
-      if (ended) break;
-    }
-    if (!ended) throw new Error('Ali pagination safety ceiling reached');
-    scans.push(scan);
+      const json = await response.json();
+      content = json?.content;
+      if (json?.success !== true || !Array.isArray(content?.datas)) throw new Error('Ali native business refusal on page ' + pageIndex);
+    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + pageIndex + '页停止：' + error.message); break; }
+    pages++;
+    if (Number.isSafeInteger(content.totalCount) && content.totalCount > 0) total = content.totalCount; // 终点页的 0 不是官方 total
+    for (const job of content.datas) { if (usableJob(job, p)) byId.set(job.id, job); else skipped++; }
+    if (!content.datas.length || total !== null && byId.size + skipped >= total) break;
+    if (pageIndex === maxPages) issues.push('达到分页上限，覆盖待补');
   }
-  const jobs = scans[0].pages.flatMap(page => page.response.content.datas);
-  const result = { complete: true, total: jobs.length, jobs, verification: { version: 1, key: p.key, api: p.api, scans } };
-  validateEvidence(result.verification, jobs, site);
-  return result;
+  const jobs = [...byId.values()];
+  if (!jobs.length) throw new Error('Ali: no usable records; zero cannot clear existing data');
+  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题/官网链接，未收录');
+  if (total !== jobs.length) issues.push('官方total ' + (total ?? '未知') + '；实际唯一岗位 ' + jobs.length);
+  return { complete: false, total: jobs.length, jobs, issues, verification: { version: 4, policy: 'available', key: p.key, api: p.api, pages, issues } };
 }
 function fetchAllFor(host, options) {
   const p = PROFILES.find(p => new URL(p.origin).hostname === host);

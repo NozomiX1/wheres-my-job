@@ -50,14 +50,6 @@ test('All seven sources carry native full evidence through crawl snapshot and th
   }
 });
 
-test('Genuine zero with two complete native zero responses may remove only its own legacy scope', t => {
-  for (const site of sites()) {
-    const f=fixture(t,site),env=native(site,[]);a.equal(run(site,f,env).code,0);
-    const result=api.publish({outDir:f.outDir,dataFile:f.dataFile,sites:[site],keys:[site.key]});a.equal(result.code,0);
-    const data=api.readPublished(f.dataFile);a.equal(data.jobs.filter(j=>j.sourceKey===site.key).length,0);assertProtected(data,f);
-  }
-});
-
 test('Missing evidence zero cannot promote in crawl or clear a legacy baseline in publisher', t => {
   for (const site of sites()) {
     const f=fixture(t,site),env=native(site,[]);delete env.verification;const bytes=fs.readFileSync(f.dataFile);
@@ -67,29 +59,19 @@ test('Missing evidence zero cannot promote in crawl or clear a legacy baseline i
   }
 });
 
-test('Publisher independently rejects wrong scope, raw facts and truncated native evidence despite matching ready', t => {
+test('Publisher rejects a snapshot whose jobs are emptied or unusable, even with a matching ready status', t => {
   const site=sites()[0];
   const mutators=[
-    e=>{delete e.verification;},
-    e=>{e.verification.key='wrong';},
-    e=>{e.verification.api='https://evil.invalid/api';},
-    e=>{e.verification.scans.pop();},
-    e=>{e.verification.scans[0].pages[0].request.regions='杭州';},
-    e=>{e.verification.scans[0].pages[0].httpStatus=403;},
-    e=>{e.verification.scans[0].pages[0].response.success=false;},
-    e=>{e.verification.scans[1].pages[0].response.content.totalCount=2;},
-    e=>{e.verification.scans[1].pages[0].response.content.currentPage=2;},
-    e=>{e.verification.scans[1].pages[0].response.content.pageSize=500;},
-    e=>{e.verification.scans[1].pages[0].response.content.datas[0].requirement+='漂移';},
-    e=>{e.verification.scans[1].pages.pop();},
-    e=>{e.jobs[0].description+='snapshot-only';}
+    e=>{e.jobs=[];},
+    e=>{e.jobs[0].name=' ';},
+    e=>{e.jobs[0].positionUrl='https://evil.invalid'+e.jobs[0].positionUrl;}
   ];
   for(const mutate of mutators){const f=fixture(t,site),env=native(site,[copy(samples[site.key].postings[0])]);a.equal(run(site,f,env).code,0);const snapshot=JSON.parse(fs.readFileSync(f.snapshot,'utf8'));mutate(snapshot);fs.writeFileSync(f.snapshot,JSON.stringify(snapshot));const bytes=fs.readFileSync(f.dataFile);const result=api.publish({outDir:f.outDir,dataFile:f.dataFile,sites:[site],keys:[site.key]});a.equal(result.written,false);a.deepEqual(fs.readFileSync(f.dataFile),bytes);}
 });
 
 test('A failed later crawl restores raw and snapshot, retains real success clock, and cannot publish stale ready', t => {
   const site=sites()[0],f=fixture(t,site),env=native(site,[copy(samples[site.key].postings[0])]);a.equal(run(site,f,env).code,0);
-  const raw=fs.readFileSync(f.raw),snapshot=fs.readFileSync(f.snapshot),published=fs.readFileSync(f.dataFile),bad=copy(env);bad.verification.scans[1].pages[0].response.content.datas[0].name='changed';
+  const raw=fs.readFileSync(f.raw),snapshot=fs.readFileSync(f.snapshot),published=fs.readFileSync(f.dataFile),bad=copy(env);bad.total=99;
   const result=crawl.runCrawl(site,{outDir:f.outDir,now:()=> '2026-10-05T19:00:00.000Z',runner:(_cmd,args)=>{fs.writeFileSync(args[2],JSON.stringify(bad));return {status:0};}});
   a.equal(result.code,1);a.equal(result.lastSuccess,T3);a.deepEqual(fs.readFileSync(f.raw),raw);a.deepEqual(fs.readFileSync(f.snapshot),snapshot);
   a.equal(api.publish({outDir:f.outDir,dataFile:f.dataFile,sites:[site],keys:[site.key]}).written,false);a.deepEqual(fs.readFileSync(f.dataFile),published);

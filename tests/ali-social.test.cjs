@@ -78,15 +78,6 @@ test('Eight immutable profiles, seven independently qualified sources, fixed nat
   a.throws(() => ali.requestBody({ key: 'unknown' }, 1));
 });
 
-test('Scope qualification cannot be deleted, rekeyed, narrowed or ATS-downgraded', () => {
-  for (const site of sites) {
-    for (const field of Object.keys(site)) { const bad = copy(site); delete bad[field]; a.equal(ali.requiresVerification(bad), true); a.equal(ali.verifiedSource(bad), false); a.throws(() => ali.validateJobs([], bad)); }
-    for (const patch of [{ key: 'ali_alias' }, { company: '其它阿里' }, { ats: 'generic' }, { track: 'campus' }, { batch: '校招' }, { exclude: '实习' }, { listJD: false }, { body: { ...site.body, regions: '杭州' } }, { body: { ...site.body, pageSize: 100 } }, { matchKeyword: '算法' }, { category: ['技术'] }, { department: '研发' }, { fetchDetails: false }, { qualified: true }]) {
-      const bad = { ...copy(site), ...patch }; a.equal(ali.requiresVerification(bad), true); a.equal(ali.verifiedSource(bad), false); a.throws(() => ali.normalizeRecord(sample(site), bad));
-    }
-  }
-});
-
 test('Known host equivalent URL spellings always require verification before any ATS dispatch', () => {
   for (const profile of ali.PROFILES) for (const field of ['api', 'url', 'apiOrigin']) {
     for (const value of [profile.origin + '/unknown?x=1', profile.origin.replace('https:', 'http:') + '/path', profile.origin + ':443/path', profile.origin + '.:443/path', profile.origin.replace('https://', 'https://user:secret@') + '/path', profile.origin.toUpperCase() + '/path']) {
@@ -133,25 +124,6 @@ test('Projection only uses native fields, independent TEXT JD and honest unknown
   }
 });
 
-test('Real angle-bracket posting keeps literal text; real endpoint-zero fixtures are not empty-source evidence', () => {
-  const site = sites.find(s => s.key === 'taotian_social'), job = fixtures.taotian_social.angle.posting;
-  a.match(job.requirement, />>>[\s\S]*<<</); a.equal(ali.normalizeRecord(job, site).requirements, job.requirement.replace(/\r\n?/g, '\n').trim());
-  for (const site of sites) { const endpoint = fixtures[site.key].endpoint; a.equal(endpoint.response.content.totalCount, 0); a.deepEqual(endpoint.response.content.datas, []);
-    const evidence = { version: 1, key: site.key, api: site.api, scans: [{ pages: [endpoint] }, { pages: [endpoint] }] };
-    a.throws(() => ali.validateEvidence(evidence, [], site));
-  }
-});
-
-test('Native IDs, own JD and every observed native metadata field are protected before projection', () => {
-  for (const site of sites) {
-    const original = sample(site);
-    for (const field of Object.keys(original)) { const job = copy(original); delete job[field]; a.throws(() => ali.normalizeRecord(job, site), field); }
-    for (const patch of [{ id: 0 }, { id: -1 }, { id: '1' }, { id: Number.MAX_SAFE_INTEGER + 1 }, { id: {} }, { name: ' ' }, { name: 3 }, { description: [] }, { requirement: {} }, { categories: [1] }, { workLocations: '杭州' }, { publishTime: '1790000000000' }, { modifyTime: -1 }, { modifyTime: 9e15 }, { status: 'OPEN' }, { positionType: '全职' }, { channels: ['social'] }, { batchName: '校园' }, { categoryName: '算法' }, { batchId: 123 }, { operations: ['apply'] }, { experience: { from: '3', to: null } }, { regionEnNameMap: [] }, { newNativeJD: '新增完整段落' }, { videoDescription: { text: '未核' } }]) a.throws(() => ali.normalizeRecord({ ...original, ...patch }, site), JSON.stringify(patch));
-    ali.validateJobs([{ ...original, description: '', requirement: null, modifyTime: null, publishTime: null }], site);
-    a.throws(() => ali.validateJobs([original, copy(original)], site), /Duplicate/);
-  }
-});
-
 test('Official detail URLs pin origin, path, posting ID and unique matching tracking query', () => {
   for (const site of sites) {
     const job = sample(site), route = '/off-campus/position-detail?positionId=' + job.id;
@@ -159,97 +131,6 @@ test('Official detail URLs pin origin, path, posting ID and unique matching trac
     a.throws(() => ali.normalizeRecord({ ...job, trackId: '' }, site));
     a.throws(() => ali.normalizeRecord({ ...job, trackId: 123 }, site));
     a.equal(ali.normalizeRecord({ ...job, positionUrl: site.apiOrigin + job.positionUrl }, site).url, site.apiOrigin + job.positionUrl);
-  }
-});
-
-test('Full evidence binds first raw array exactly and only the proven dynamic tracking pair may vary', () => {
-  for (const site of sites) {
-    const job = sample(site), env = envelope(site, [job]);
-    const second = env.verification.scans[1].pages[0].response.content.datas;
-    second[0] = track(second[0], '-dynamic');
-    a.equal(ali.validateEvidence(env.verification, env.jobs, site), true);
-    for (const field of ['description', 'requirement', 'publishTime', 'modifyTime', 'name', 'code', 'degree']) {
-      const changed = copy(env); const raw = changed.verification.scans[1].pages[0].response.content.datas[0]; raw[field] = typeof raw[field] === 'number' ? raw[field] + 1 : raw[field] + 'changed';
-      a.throws(() => ali.validateEvidence(changed.verification, changed.jobs, site), field);
-    }
-    const metadata = copy(env); metadata.verification.scans[1].pages[0].response.content.datas[0].categories = ['new']; a.throws(() => ali.validateEvidence(metadata.verification, metadata.jobs, site));
-    const spelling = copy(env); spelling.verification.scans[1].pages[0].response.content.datas[0].positionUrl = site.apiOrigin + spelling.verification.scans[1].pages[0].response.content.datas[0].positionUrl; a.throws(() => ali.validateEvidence(spelling.verification, spelling.jobs, site));
-    const snapshot = copy(env); snapshot.jobs[0] = track(snapshot.jobs[0], '-snapshot-only'); a.throws(() => ali.validateEvidence(snapshot.verification, snapshot.jobs, site));
-    const extension = copy(env); extension.verification.scans[1].pages[0].response.content.datas[0].newMetadata = null; a.throws(() => ali.validateEvidence(extension.verification, extension.jobs, site));
-  }
-});
-
-test('Evidence always replays native HTTP/business/Count/meta/requests/pages, not markers or hashes', () => {
-  const site = sites[0], env = envelope(site, [sample(site)]);
-  const mutations = [e => delete e.version, e => e.key = 'alias', e => e.api += '?alias=1', e => e.scans.pop(), e => e.scans[0].pages.pop(), e => e.scans[0].pages.push(copy(e.scans[0].pages.at(-1))), e => e.scans[0].pages[0].httpStatus = 302, e => e.scans[0].pages[0].request.regions = '杭州', e => e.scans[0].pages[0].request.pageSize = 100, e => e.scans[0].pages[0].request.extraFilter = '算法', e => e.scans[0].pages[0].response.success = false, e => e.scans[0].pages[0].response.errorCode = 'DENIED', e => delete e.scans[0].pages[0].response.content.totalCount, e => e.scans[0].pages[0].response.content.totalCount = '1', e => e.scans[0].pages[0].response.content.currentPage = 2, e => e.scans[0].pages[0].response.content.pageSize = 500, e => e.scans[0].pages[0].response.content.datas = [], e => e.scans[0].pages[1].response.content.totalCount = 7];
-  for (const mutate of mutations) { const evidence = copy(env.verification); mutate(evidence); a.throws(() => ali.validateEvidence(evidence, env.jobs, site)); }
-  a.throws(() => ali.validateEvidence(undefined, [], site));
-  a.throws(() => ali.validateEvidence({ ready: true, complete: true, hash: 'claimed', verification: true }, [], site));
-  a.throws(() => ali.validateEvidence(env.verification, [], site));
-  const capped = copy(env.verification); capped.scans[0].pages = Array.from({ length: 200 }, () => copy(capped.scans[0].pages[0])); a.throws(() => ali.validateEvidence(capped, env.jobs, site), /scan evidence/);
-  const reordered = envelope(site, rows(site, 2)); reordered.verification.scans[1].pages[0].response.content.datas.reverse(); a.equal(ali.validateEvidence(reordered.verification, reordered.jobs, site), true);
-  const reversedJobs = copy(reordered.jobs).reverse(); a.throws(() => ali.validateEvidence(reordered.verification, reversedJobs, site), /first native scan/);
-  const inherited = copy(env.verification); const c = inherited.scans[0].pages[0].response.content; const total = c.totalCount; delete c.totalCount; Object.setPrototypeOf(c, { totalCount: total }); a.throws(() => ali.validateEvidence(inherited, env.jobs, site));
-});
-
-test('Genuine zero requires two successful native first-page witnesses and retains full evidence', async () => {
-  for (const site of sites) {
-    const m = mock(site, []), result = await ali.run(site, m.options);
-    a.equal(result.complete, true); a.equal(result.total, 0); a.deepEqual(result.jobs, []); a.equal(m.posts, 2);
-    a.equal(ali.validateEvidence(result.verification, [], site), true);
-    for (const mutate of [e => e.scans.pop(), e => delete e.scans[0].pages[0].response.success, e => e.scans[1].pages[0].request.key = '仅算法', e => e.scans[1].pages[0].response.content.totalCount = 7, e => e.scans[0].pages[0].httpStatus = 403]) { const e = copy(result.verification); mutate(e); a.throws(() => ali.validateEvidence(e, [], site)); }
-  }
-});
-
-test('Serial anonymous two-wide scans retain raw native responses and require the extra empty endpoint', async () => {
-  for (const site of sites) {
-    const m = mock(site, rows(site, 11)), result = await ali.run(site, m.options);
-    a.equal(result.total, 11); a.equal(result.jobs.length, 11); a.equal(m.posts, 6);
-    a.equal(m.delays.length, m.calls.length - 1); a.equal(m.delays.every(ms => ms >= 200), true);
-    a.deepEqual(result.jobs, result.verification.scans[0].pages.flatMap(p => p.response.content.datas));
-    a.equal(ali.validateEvidence(result.verification, result.jobs, site), true);
-    a.equal(Object.hasOwn(result.jobs[0], 'listJDVerified'), false); a.equal(Object.hasOwn(result.jobs[0], 'canonicalFacts'), false);
-    for (const call of m.calls) { a.equal(call.init.redirect, 'manual'); a.equal(call.init.signal instanceof AbortSignal, true); a.equal(Object.hasOwn(call.init.headers, 'User-Agent'), false); a.equal(new URL(call.url).origin, site.apiOrigin); }
-    const request = m.calls.find(c => c.init.method === 'POST');
-    a.equal(request.init.headers.Origin, site.apiOrigin); a.equal(request.init.headers.Referer, site.url); a.match(request.init.headers.Cookie, /SESSION=offline-session/);
-    a.equal(new URL(request.url).searchParams.get('_csrf'), site.key === 'taotian_social' || site.key === 'ele_social' || site.key === 'dingtalk_social' || site.key === 'quark_social' ? 'offline-csrf' : 'offline-bootstrap-csrf');
-    a.equal(Object.hasOwn(request.init.headers, 'X-XSRF-TOKEN'), ali.PROFILES.find(p => p.key === site.key).csrfMode === 'cookie');
-  }
-});
-
-test('Endpoint can retain native total only AFTER all postings are accounted for', async () => {
-  const site = sites[0], jobs = rows(site, 2), m = mock(site, jobs, { mutate: (r, body) => { if (body.pageIndex === 2) r.content.totalCount = jobs.length; } });
-  const result = await ali.run(site, m.options); a.equal(result.total, 2); a.equal(ali.validateEvidence(result.verification, result.jobs, site), true);
-});
-
-test('Early empty/short pages, duplicates, Count drift and page caps fail immediately without retry', async () => {
-  const site = sites[0];
-  for (const mutate of [
-    r => { r.content.datas = []; }, r => { r.content.datas.pop(); },
-    r => { r.content.datas[1] = copy(r.content.datas[0]); }, r => { r.content.totalCount = 2000; },
-    r => { r.content.currentPage = 1; r.content.pageSize = 500; }
-  ]) {
-    const m = mock(site, rows(site, 11), { mutate }); await a.rejects(ali.run(site, m.options)); a.equal(m.posts, 1);
-  }
-  const drift = mock(site, rows(site, 11), { mutate: (r, body) => { if (body.pageIndex === 2) r.content.totalCount++; } }); await a.rejects(ali.run(site, drift.options)); a.equal(drift.posts, 2);
-  const early = mock(site, rows(site, 11), { mutate: (r, body) => { if (body.pageIndex === 2) { r.content.datas = []; r.content.totalCount = 0; } } }); await a.rejects(ali.run(site, early.options)); a.equal(early.posts, 2);
-  const duplicateAcrossPages = mock(site, rows(site, 11), { mutate: (r, body) => { if (body.pageIndex === 2) r.content.datas[0] = track(rows(site, 1)[0], '-round-1'); } }); await a.rejects(ali.run(site, duplicateAcrossPages.options), /Duplicate/); a.equal(duplicateAcrossPages.posts, 2);
-  const lowered = mock(site, rows(site, 11)); await a.rejects(ali.run(site, { ...lowered.options, maxPages: 3 })); a.equal(lowered.posts, 1);
-  const stableDrift = mock(site, rows(site, 2), { mutate: (r, body, round) => { if (round === 2 && body.pageIndex === 1) r.content.datas[0].requirement += 'single-round drift'; } }); await a.rejects(ali.run(site, stableDrift.options), /raw facts/);
-});
-
-test('Only the observed brands same-origin/same-path lang-removal 302 is allowed, never login/external redirects', async () => {
-  for (const site of sites.filter(s => ali.PROFILES.find(p => p.key === s.key).languageRedirect)) {
-    const m = mock(site, [], { redirect: true }); a.equal((await ali.run(site, m.options)).total, 0);
-    a.equal(m.calls.length, 4); a.equal(m.calls[1].url, site.url.replace('?lang=zh', '')); a.equal(m.delays.every(ms => ms >= 200), true);
-    for (const location of ['https://evil.invalid/off-campus/position-list', site.apiOrigin + '/login', site.apiOrigin + '/off-campus/position-list?other=1', site.apiOrigin.replace('https://', 'https://user@') + '/off-campus/position-list']) {
-      const bad = mock(site, [], { redirect: true, location }); await a.rejects(ali.run(site, bad.options)); a.equal(bad.calls.length, 1);
-    }
-    const repeated = mock(site, [], { bootstrapStatus: 302 }); await a.rejects(ali.run(site, repeated.options)); a.equal(repeated.calls.length, 2);
-  }
-  // Core bootstraps use their recorded successful final URLs directly; no redirect is authorized.
-  for (const core of sites.filter(s => !ali.PROFILES.find(p => p.key === s.key).languageRedirect)) {
-    const m = mock(core, [], { redirect: true }); await a.rejects(ali.run(core, m.options)); a.equal(m.calls.length, 1);
   }
 });
 
@@ -263,35 +144,97 @@ test('HTTP/business/unknown failures stop once, with no retries, fallback CSRF, 
   await a.rejects(ali.run(cookie, m.options), /CSRF absent/); a.equal(m.posts, 0);
 });
 
+test('Registered key + adapter qualifies; rekeyed, missing-adapter and Cloud keys do not', () => {
+  for (const site of sites) {
+    a.equal(ali.verifiedSource(site), true);
+    for (const bad of [{ ...site, key: 'ali_alias' }, { ...site, adapter: undefined }, { ...site, key: 'aliyun_social' }]) {
+      a.equal(ali.verifiedSource(bad), false); a.throws(() => ali.normalizeRecord(sample(site), bad)); a.throws(() => ali.validateJobs([], bad));
+    }
+  }
+  ali.validateJobs([sample(sites[0])], sites[0]); a.throws(() => ali.validateJobs({}, sites[0])); a.throws(() => ali.validateJobs([], sites[0]), /zero cannot clear/);
+});
+
+test('Projection tolerates unknown or missing native metadata but needs id, title and an official link', () => {
+  for (const site of sites) {
+    const original = sample(site), out = ali.normalizeRecord({ ...original, newNativeField: 'x', status: 'OPEN', description: undefined, experience: undefined }, site);
+    a.equal(out.duty, ''); a.equal(out.requirements, original.requirement.replace(/\r\n?/g, '\n').trim()); a.equal(out.id, String(original.id));
+    ali.validateJobs([original, { ...original, id: original.id + 1 }], site);
+    for (const bad of [{ id: 0 }, { id: '1' }, { name: ' ' }, { trackId: '' }, { positionUrl: 'https://evil.invalid' + original.positionUrl }]) a.throws(() => ali.normalizeRecord({ ...original, ...bad }, site), JSON.stringify(bad));
+  }
+});
+
+test('Single scan keeps raw jobs, requests are serial and anonymous, and nothing is recorded as drift', async () => {
+  for (const site of sites) {
+    const m = mock(site, rows(site, 11)), result = await ali.run(site, m.options);
+    a.equal(result.complete, false); a.equal(result.verification.policy, 'available'); a.equal(result.total, 11); a.equal(result.jobs.length, 11); a.equal(m.posts, 2);
+    a.deepEqual(result.issues, []); a.deepEqual(ali.validateEvidence(result.verification, result.jobs, site), { issues: [] });
+    a.equal(m.delays.length, m.calls.length - 1); a.equal(m.delays.every(ms => ms >= 200), true);
+    for (const call of m.calls) { a.equal(call.init.redirect, 'manual'); a.equal(call.init.signal instanceof AbortSignal, true); a.equal(Object.hasOwn(call.init.headers, 'User-Agent'), false); a.equal(new URL(call.url).origin, site.apiOrigin); }
+    const request = m.calls.find(c => c.init.method === 'POST');
+    a.equal(request.init.headers.Origin, site.apiOrigin); a.equal(request.init.headers.Referer, site.url); a.match(request.init.headers.Cookie, /SESSION=offline-session/);
+    a.equal(new URL(request.url).searchParams.get('_csrf'), ['taotian_social', 'ele_social', 'dingtalk_social', 'quark_social'].includes(site.key) ? 'offline-csrf' : 'offline-bootstrap-csrf');
+    a.equal(Object.hasOwn(request.init.headers, 'X-XSRF-TOKEN'), ali.PROFILES.find(p => p.key === site.key).csrfMode === 'cookie');
+    a.equal(ali.normalizeRecord(result.jobs[0], site).id, String(result.jobs[0].id));
+  }
+});
+
+test('Total drift, duplicates, bad rows and a failing later page are recorded, not fatal', async () => {
+  const site = sites[0], jobs = rows(site, 11);
+  const drift = await ali.run(site, mock(site, jobs, { mutate: r => { if (r.content.datas.length) r.content.totalCount = 40; } }).options);
+  a.equal(drift.total, 11); a.ok(drift.issues.some(s => s.includes('官方total 40；实际唯一岗位 11')));
+  const duplicate = await ali.run(site, mock(site, jobs, { mutate: (r, body) => { if (body.pageIndex === 2) r.content.datas[0] = track(rows(site, 1)[0], '-again'); } }).options);
+  a.equal(duplicate.total, 10);
+  const bad = await ali.run(site, mock(site, jobs, { mutate: (r, body) => { if (body.pageIndex === 1) r.content.datas[0].positionUrl = 'https://evil.invalid/x'; } }).options);
+  a.equal(bad.total, 10); a.ok(bad.issues.some(s => s.includes('缺ID/标题/官网链接')));
+  const later = mock(site, jobs, { throwAt: 3 }), partial = await ali.run(site, later.options);
+  a.equal(partial.total, 10); a.ok(partial.issues.some(s => s.includes('第2页停止'))); a.equal(later.posts, 1);
+  await a.rejects(ali.run(site, mock(site, []).options), /no usable/);
+});
+
+test('Only the observed brands same-origin/same-path lang-removal 302 is allowed, never login/external redirects', async () => {
+  for (const site of sites.filter(s => ali.PROFILES.find(p => p.key === s.key).languageRedirect)) {
+    const m = mock(site, rows(site, 2), { redirect: true }); a.equal((await ali.run(site, m.options)).total, 2);
+    a.equal(m.calls.length, 3); a.equal(m.calls[1].url, site.url.replace('?lang=zh', '')); a.equal(m.delays.every(ms => ms >= 200), true);
+    for (const location of ['https://evil.invalid/off-campus/position-list', site.apiOrigin + '/login', site.apiOrigin + '/off-campus/position-list?other=1', site.apiOrigin.replace('https://', 'https://user@') + '/off-campus/position-list']) {
+      const bad = mock(site, rows(site, 2), { redirect: true, location }); await a.rejects(ali.run(site, bad.options)); a.equal(bad.calls.length, 1);
+    }
+    const repeated = mock(site, rows(site, 2), { bootstrapStatus: 302 }); await a.rejects(ali.run(site, repeated.options)); a.equal(repeated.calls.length, 2);
+  }
+  // Core bootstraps use their recorded successful final URLs directly; no redirect is authorized.
+  for (const core of sites.filter(s => !ali.PROFILES.find(p => p.key === s.key).languageRedirect)) {
+    const m = mock(core, rows(core, 2), { redirect: true }); await a.rejects(ali.run(core, m.options)); a.equal(m.calls.length, 1);
+  }
+});
+
 test('Cookie path/domain/secure/expiry semantics protect ordinary same-origin anonymous requests', async () => {
-  const site = sites[0], m = mock(site, []), original = m.options.fetchImpl;
+  const site = sites[0], m = mock(site, rows(site, 2)), original = m.options.fetchImpl;
   m.options.fetchImpl = async (...args) => { const r = await original(...args); r.headers.getSetCookie = () => ['ROOT=ok; Path=/; Secure', 'PATH=private; Path=/off-campus', 'OTHER=bad; Domain=evil.invalid; Path=/', 'DEAD=bad; Path=/; Max-Age=0']; return r; };
   await ali.run(site, m.options);
   for (const call of m.calls.filter(c => c.init.method === 'POST')) a.equal(call.init.headers.Cookie, 'ROOT=ok');
 });
 
-test('All wrapper host calls use the same verified complete envelope and cannot run unknown/cloud portals', async () => {
-  for (const site of sites) { const m = mock(site, []), result = await ali.fetchAllFor(new URL(site.apiOrigin).hostname, m.options); a.equal(result.complete, true); a.equal(ali.validateEvidence(result.verification, result.jobs, site), true); }
+test('Host wrapper uses the same single-scan envelope and cannot run unknown portals', async () => {
+  for (const site of sites) { const m = mock(site, rows(site, 2)), result = await ali.fetchAllFor(new URL(site.apiOrigin).hostname, m.options); a.equal(result.complete, false); a.equal(result.total, 2); }
 });
 
-test('Offline CLI atomically replaces raw only after both native scans; failures leave the baseline intact', t => {
+test('Offline CLI atomically replaces raw only after a usable scan; failures leave the baseline intact', t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-ali-cli-mock-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const raw = path.join(dir, 'raw.json'), preload = path.join(dir, 'mock.cjs'), script = path.resolve(__dirname, '../crawler/lib/custom/ali_social_common.js');
   fs.writeFileSync(raw, 'preserved');
-  const payload = pageResponse(sites[0], [], 1, 0);
-  fs.writeFileSync(preload, 'globalThis.fetch=async(url,init)=>({status:200,headers:{getSetCookie:()=>[],get:()=>null},text:async()=>\'window.__sysconfig = {__token__: "offline-csrf"};\',json:async()=>('+JSON.stringify(payload)+')});\n');
+  const payload = pageResponse(sites[0], rows(sites[0], 1), 1, 1);
+  const install = () => fs.writeFileSync(preload, 'globalThis.fetch=async(url,init)=>({status:200,headers:{getSetCookie:()=>[],get:()=>null},text:async()=>\'window.__sysconfig = {__token__: "offline-csrf"};\',json:async()=>(' + JSON.stringify(payload) + ')});\n');
+  install();
   const success = spawnSync(process.execPath, ['--require', preload, script, JSON.stringify(sites[0]), raw], { encoding: 'utf8', timeout: 5000 });
-  a.equal(success.status, 0, success.stderr); a.match(success.stdout, /DONE fetched=0/);
-  const result = JSON.parse(fs.readFileSync(raw, 'utf8')); a.equal(result.complete, true); a.equal(result.total, 0); a.equal(result.verification.scans.length, 2); a.equal(ali.validateEvidence(result.verification, result.jobs, sites[0]), true);
-  const before = fs.readFileSync(raw, 'utf8'); payload.content.pageSize = 500;
-  fs.writeFileSync(preload, 'globalThis.fetch=async(url,init)=>({status:200,headers:{getSetCookie:()=>[],get:()=>null},text:async()=>\'window.__sysconfig = {__token__: "offline-csrf"};\',json:async()=>('+JSON.stringify(payload)+')});\n');
+  a.equal(success.status, 0, success.stderr); a.match(success.stdout, /DONE fetched=1/);
+  const result = JSON.parse(fs.readFileSync(raw, 'utf8')); a.equal(result.complete, false); a.equal(result.total, 1); a.equal(result.verification.policy, 'available');
+  const before = fs.readFileSync(raw, 'utf8'); payload.success = false; install();
   const failure = spawnSync(process.execPath, ['--require', preload, script, JSON.stringify(sites[0]), raw], { encoding: 'utf8', timeout: 5000 });
-  a.equal(failure.status, 1); a.match(failure.stderr, /metadata changed/); a.equal(fs.readFileSync(raw, 'utf8'), before); a.deepEqual(fs.readdirSync(dir).sort(), ['mock.cjs', 'raw.json']);
+  a.equal(failure.status, 1); a.match(failure.stderr, /business refusal/); a.equal(fs.readFileSync(raw, 'utf8'), before); a.deepEqual(fs.readdirSync(dir).sort(), ['mock.cjs', 'raw.json']);
 });
 
 test('CLI refuses unqualified sites without touching the existing raw output or making any network request', t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-ali-cli-offline-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const raw = path.join(dir, 'raw.json'); fs.writeFileSync(raw, 'preserved');
-  const site = { ...sites[0], ats: 'generic' }, result = spawnSync(process.execPath, [path.resolve(__dirname, '../crawler/lib/custom/ali_social_common.js'), JSON.stringify(site), raw], { encoding: 'utf8', timeout: 5000 });
+  const site = { ...sites[0], adapter: undefined }, result = spawnSync(process.execPath, [path.resolve(__dirname, '../crawler/lib/custom/ali_social_common.js'), JSON.stringify(site), raw], { encoding: 'utf8', timeout: 5000 });
   a.equal(result.status, 1); a.match(result.stderr, /Unverified Ali/); a.equal(fs.readFileSync(raw, 'utf8'), 'preserved'); a.deepEqual(fs.readdirSync(dir), ['raw.json']);
 });
