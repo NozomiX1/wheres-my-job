@@ -1,0 +1,26 @@
+# 试跑：在 GitHub 机器上采几个来源，只看会不会被官网拒绝；不发布、不部署。确认后由正式的 update.yml 取代。
+name: crawl-trial
+on:
+  workflow_dispatch:
+    inputs:
+      keys: { description: '来源 key，空格分隔', required: true, default: 'papegames vivo xiaomi_social baidu oppo' }
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: crawl
+        run: |
+          for key in ${{ inputs.keys }}; do
+            echo "::group::$key"
+            node crawler/crawl.js "$key" || echo "$key exit $?"
+            echo "::endgroup::"
+          done
+      - name: result
+        if: always()
+        run: |
+          for f in crawler/out/*_status.json; do echo "--- $f"; head -c 700 "$f"; echo; done
+          echo "--- issues"; cat crawler/out/crawl-issues.jsonl 2>/dev/null || echo none
