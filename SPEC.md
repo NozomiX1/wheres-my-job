@@ -108,7 +108,7 @@
 crawler/sites.json（唯一来源登记）
   → crawler/update.js（按明确keys串行编排）
   → crawler/crawl.js + 共享ATS/官网协议适配器
-  → 候选raw / 可发布snapshot（完整性单独标注）/ 尝试status
+  → 候选raw / 可发布snapshot/ 尝试status
   → crawler/publish.js（§4.3基本检查并原子替换）
   → data/catalog.js + data/parts/*.js（唯一数据：轻量目录＋按单位/来源分片；publisher读取时还原完整岗位以保旧）
   → index.html + assets/data-loader.js + assets/app.js（显式加载/查询、排序、批量渲染）
@@ -127,6 +127,7 @@ crawler/sites.json（唯一来源登记）
 - 暂用GitHub Pages开发，国内访问实测后再决定托管迁移。代码、采集任务、数据持久保存及站点部署是不同职责，本地更新/提交不等于线上部署。
 - 定时采集目标为每天北京时间08:00触发；Actions采用UTC cron时为 `0 0 * * *`。区分触发、实际开始、采集完成和发布完成，不承诺准点发布。
 - 接定时前落实成功快照跨runner持久保存和失败恢复；被忽略的本机out不能冒Actions持久存储，Pages自动部署也不是采集定时器。
+- 已定方向（[D11](DECISIONS.md)）：采集结果作为Pages部署产物，不提交回main；采集机放国内（GitHub托管机的海外IP采不了飞书系与小米）；“少于一半拒绝”的基线读线上现有目录。尚未实现。
 - 用真实全量PC数据测下载/解析/匹配排序/DOM/内存及国内访问，再决定拆分、缓存、线程或服务器检索。模拟样本、CSS窄屏或仅减少渲染不能证明真实全量性能、手机实机或首次查询秒开；数值SLA与完整上线方案仍待实测。
 
 ## 7. 验收标准
