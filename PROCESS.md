@@ -25,7 +25,7 @@
 
 按39公司/66来源读实际执行代码和已有证据，记录职业/项目/经验过滤、封顶/分页、吞详情及字段/身份风险。结论为7可复用、58改造、1必要时局部重写（百川提取），不等于这些来源已通过官网验收。
 
-回看原主站生成链，确认实习/部分职能、人才项目、社招经验>3及非正分曾被主动删除，正文未输出；召回链200上限不套用于主站。该轮只读审计、未批量采集或发布。证据：[逐来源审计](docs/source-coverage-audit.md)。
+回看原主站生成链，确认实习/部分职能、人才项目、社招经验>3及非正分曾被主动删除，正文未输出；召回链200上限不套用于主站。该轮只读审计、未批量采集或发布。证据：逐来源审计。
 
 ### 2.3 正常采集与本地替换
 
@@ -33,25 +33,25 @@
 
 | 阶段 | 实际范围与新岗位 | 替换初版/旧范围 | 发布当时总数 | 核验记录 |
 |---|---|---:|---:|---|
-| v0.17–0.18 阶跃星辰 | 校94905共128、社94904共231；更广校入口包含旧141903的20条，不重复收录 | 147 | 13,699 | [阶跃](docs/stepfun-verification.md) |
-| v0.21 字节校园 | 无职业/项目条件，双扫7,492，独立职责/要求保真 | 1,211 | 19,980 | [字节](docs/bytedance-verification.md) |
-| v0.22–0.23 字节限定社招 | 两轮已分类候选11,093；明确授权九类/75ID限定范围迁移，采用原候选与真实采集钟，不假称采用时重新请求 | 3,849 | 27,224 | [限定发布](docs/bytedance-verification.md#7-v023按明确授权迁移限定范围并本地发布) |
-| v0.24 飞书八来源 | MiniMax100/197、商汤151/86、莉莉丝82/114、叠纸40/328，共1,098 | 316 | 28,006 | [飞书批次](docs/feishu-batch-verification.md) |
-| v0.25 Moka七来源 | 月之暗面93/106、智谱23/135、DeepSeek37、鹰角103/353，共850 | 237 | 28,619 | [Moka批次](docs/moka-batch-verification.md) |
-| v0.26 北森三来源 | 讯飞非社会六频道联合166、社会727、vivo校园全项目253，共1,146 | 370 | 29,395 | [北森批次](docs/beisen-batch-verification.md) |
-| v0.27 阿里七社招来源 | 控股588、淘天475、饿了么219、国际246、通义63、钉钉99、夸克251，共1,941；不运行未获全集资格的阿里云 | 827 | 30,509 | [阿里批次](docs/ali-social-batch-verification.md) |
+| v0.17–0.18 阶跃星辰 | 校94905共128、社94904共231；更广校入口包含旧141903的20条，不重复收录 | 147 | 13,699 | 阶跃 |
+| v0.21 字节校园 | 无职业/项目条件，双扫7,492，独立职责/要求保真 | 1,211 | 19,980 | 字节 |
+| v0.22–0.23 字节限定社招 | 两轮已分类候选11,093；明确授权九类/75ID限定范围迁移，采用原候选与真实采集钟，不假称采用时重新请求 | 3,849 | 27,224 | 限定发布 |
+| v0.24 飞书八来源 | MiniMax100/197、商汤151/86、莉莉丝82/114、叠纸40/328，共1,098 | 316 | 28,006 | 飞书批次 |
+| v0.25 Moka七来源 | 月之暗面93/106、智谱23/135、DeepSeek37、鹰角103/353，共850 | 237 | 28,619 | Moka批次 |
+| v0.26 北森三来源 | 讯飞非社会六频道联合166、社会727、vivo校园全项目253，共1,146 | 370 | 29,395 | 北森批次 |
+| v0.27 阿里七社招来源 | 控股588、淘天475、饿了么219、国际246、通义63、钉钉99、夸克251，共1,941；不运行未获全集资格的阿里云 | 827 | 30,509 | 阿里批次 |
 
 各批仅明确目标keys走唯一publisher，保护非目标事实、元数据、真实成功时刻和已有out，不全站更新。以上已正常采集来源不是公司全球全集，初次旧范围退出也不称官网下架。v0.29退掉剩余初版后，上述新岗位合计23,979。
 
 ## 3. 重要发现、阻塞与修复
 
 - **阶跃详情与状态：**逐岗取详情后末尾复核，311分栏/48全文回退，其中3条官方符号正文诚实保留；12条pause仍公开列出，未提交申请证明可投。校入口广范围与发布日期有第一方证据。
-- **字节全社招仍阻塞：**原PC窗口count10,000，正常类别并集超过该下界，越界空和facet不证明穷尽；H5正常主列表HTTP405即停。限定范围单独获授权，树新增/改名/迁叶/parent矛盾拒自动更新，未分类/树外/旧类别仍未知。见[枚举研究](docs/bytedance-social-enumeration-research.md)。
-- **莉莉丝入口与重叠：**校园campus+intern联合；社会career+旧index活水，核同posting/身份/原JD后合并54条共享记录，保留index-only，不按标题删。商汤5条官方无正文保留。详见[莉莉丝](docs/lilith-verification.md)及[飞书批次](docs/feishu-batch-verification.md)。
-- **Moka模式与空正文：**六源列表已有全文，鹰角校园103必须详情后末尾列表核原字段；另确认鹰角社招原已登记，纠正早期「未登记」研究说法。DeepSeek只核官网对应140576/部门2028422，不扩幻方。智谱5条官网无正文合法保留；组织/mode/origin及AES内外业务状态绕过风险闭合，实际生产候选另正常重采。详见[Moka标准](docs/moka-standard-verification.md)、[特殊来源](docs/moka-special-verification.md)。
-- **北森字段与证据：**讯飞本源与无Category全门户权威精确分区，UUID/数字号分别唯一；两租户D4单遍解码后TEXT、两栏同文保留，原两栏仅`1`也不补造。渠道/项目/职能逐租户区分，不用vivo实习标题或频道覆盖原全职事实。空快照缺证、URI等价/降级、身份重复、缺metadata/额外JD和日期形状风险经独立反例及持久回归闭合。详见[讯飞](docs/beisen-iflytek-verification.md)、[vivo](docs/beisen-vivo-verification.md)。
-- **阿里云访问成功不授全集：**原CDP target丢失缺HTTP业务证据，只能unknown；自有socket-close/pending缺陷用fixture修复，原target丢失原因仍未知。一次普通重跑取得原生total677，但第51页早空、返回currentPage1/pageSize500与请求矛盾，不能发布500/677或热门城市partial。旧175在v0.27曾保留，v0.29仅按初版退出，不获得新成功资格。详见[核心研究](docs/ali-social-core-verification.md)。
-- **阿里七源正文与日期：**职责/要求为普通React TEXT，只CRLF/外trim，不HTML/实体解码、压内部空白或消重。modifyTime仅证浏览器local更新，没有source唯一日界，public date/dateKind保null。品牌连续性、千问跨产品及通义门户关系公开说明，不猜法律雇主或合源。畸形URI退generic/忽略未知业务封套两项P2修复并回归，七源正常生产钟保持2026-10-05T18:07:43.762Z—18:09:30.683Z，不晋升研究钟。详见[品牌研究](docs/ali-social-brands-verification.md)及[阿里批次](docs/ali-social-batch-verification.md)。
+- **字节全社招仍阻塞：**原PC窗口count10,000，正常类别并集超过该下界，越界空和facet不证明穷尽；H5正常主列表HTTP405即停。限定范围单独获授权，树新增/改名/迁叶/parent矛盾拒自动更新，未分类/树外/旧类别仍未知。见枚举研究。
+- **莉莉丝入口与重叠：**校园campus+intern联合；社会career+旧index活水，核同posting/身份/原JD后合并54条共享记录，保留index-only，不按标题删。商汤5条官方无正文保留。详见莉莉丝及飞书批次。
+- **Moka模式与空正文：**六源列表已有全文，鹰角校园103必须详情后末尾列表核原字段；另确认鹰角社招原已登记，纠正早期「未登记」研究说法。DeepSeek只核官网对应140576/部门2028422，不扩幻方。智谱5条官网无正文合法保留；组织/mode/origin及AES内外业务状态绕过风险闭合，实际生产候选另正常重采。详见Moka标准、特殊来源。
+- **北森字段与证据：**讯飞本源与无Category全门户权威精确分区，UUID/数字号分别唯一；两租户D4单遍解码后TEXT、两栏同文保留，原两栏仅`1`也不补造。渠道/项目/职能逐租户区分，不用vivo实习标题或频道覆盖原全职事实。空快照缺证、URI等价/降级、身份重复、缺metadata/额外JD和日期形状风险经独立反例及持久回归闭合。详见讯飞、vivo。
+- **阿里云访问成功不授全集：**原CDP target丢失缺HTTP业务证据，只能unknown；自有socket-close/pending缺陷用fixture修复，原target丢失原因仍未知。一次普通重跑取得原生total677，但第51页早空、返回currentPage1/pageSize500与请求矛盾，不能发布500/677或热门城市partial。旧175在v0.27曾保留，v0.29仅按初版退出，不获得新成功资格。详见核心研究。
+- **阿里七源正文与日期：**职责/要求为普通React TEXT，只CRLF/外trim，不HTML/实体解码、压内部空白或消重。modifyTime仅证浏览器local更新，没有source唯一日界，public date/dateKind保null。品牌连续性、千问跨产品及通义门户关系公开说明，不猜法律雇主或合源。畸形URI退generic/忽略未知业务封套两项P2修复并回归，七源正常生产钟保持2026-10-05T18:07:43.762Z—18:09:30.683Z，不晋升研究钟。详见品牌研究及阿里批次。
 
 ## 4. 招聘单位与初版退出（v0.28–0.29）
 
@@ -148,7 +148,7 @@
 
 ## 9. 第一批16来源：研究与原生候选采集结束，公开验收未结束
 
-用户另行授权执行第一批8对/16既有key，只本地发布验收通过者；没有授权第二、第三批、提交、推送或部署。不重抓原29成功来源，不新增公司/来源，不恢复初版。详细逐源研究见 [第一批核验](docs/custom-first-batch-verification.md)。
+用户另行授权执行第一批8对/16既有key，只本地发布验收通过者；没有授权第二、第三批、提交、推送或部署。不重抓原29成功来源，不新增公司/来源，不恢复初版。详细逐源研究见 第一批核验。
 
 - 十源本轮阻塞：小米两源、美团校园、小红书两源均出现原生重复身份；百度两源 HTTP200 业务 `no-auth/illegal-visit`；华为两源正常Node首POST HTTP412，真实Referer差异尚未闭合，不冒全官网拒绝。美团社会研究双列表/三详情不是成功；唯一正式候选第162页 total2467→2466即整源失败，未详情、未重试、没有成功快照/成功钟。
 - 四个共享协议最小接入唯一链：美团社会、携程、米哈游、上海；逐key绑定实际scope/HTTP/业务/全raw/身份/终点，必要详情失败整源拒。携程fromId路线及完整HTML、米哈游六TEXT片段、上海普通TEXT/optional requirement与公开cursor分别取证；上海markup/字符引用未知形状不盲归一，穷尽数量不冒官方total。
@@ -279,7 +279,7 @@
 
 用户要求“找一下原因”，并指出初版似乎可采。基线HEAD/线上已为c23f59d、33,324/43：§18授权后已push、Pages精确built，线上目录与本地一致，新增五源/三个单位查询JD抽样通过（非全站性能验收）；收据`/tmp/ande-ctrip-huawei-xhs-HeZYzU/release-c23f59d.json`。
 
-初版百度API实现已经带官网Referer/Origin，但旧128/609仅遗留展示数，缺对应成功raw/HTTP材料，不用旧页面冒当次采集成功。本轮正常匿名Node无伪UA/Cookie/登录/SDK，仅补真实Referer，原10月6日form与页长10的社/校首页分别返回HTTP200/ok、10条、声明total1653/159。最后仅去掉刚成功社招请求的Referer，复现HTTP200＋no-auth/illegal-visit，立刻停止后续请求。已确认当前缺Referer触发拒绝，正常协议可以取首页；10月6日未保存完整请求头，不追认其精确遗漏或改签历史失败。详见[来源记录§16](docs/custom-first-batch-verification.md#16-百度有限诊断正常referer恢复列表2026-10-07)。
+初版百度API实现已经带官网Referer/Origin，但旧128/609仅遗留展示数，缺对应成功raw/HTTP材料，不用旧页面冒当次采集成功。本轮正常匿名Node无伪UA/Cookie/登录/SDK，仅补真实Referer，原10月6日form与页长10的社/校首页分别返回HTTP200/ok、10条、声明total1653/159。最后仅去掉刚成功社招请求的Referer，复现HTTP200＋no-auth/illegal-visit，立刻停止后续请求。已确认当前缺Referer触发拒绝，正常协议可以取首页；10月6日未保存完整请求头，不追认其精确遗漏或改签历史失败。详见来源记录§16。
 
 仅3次POST、开始间隔最小317ms/无正文重叠，离线真实解析边界红/绿回放通过；无自有浏览器/服务遗留。canonical/catalog字节和纳秒mtime、131既有out均不变，未执行update/crawl/publish或全量采集，未改源码/成功钟/公开数据。第一批正式交付仍14/16来源；已解除“首页正常匿名协议不可取”的阻塞，不冒百度全量或JD完整性资格。材料`/tmp/ande-baidu-diagnosis-VM7Jkj/`仅本机；本轮两份结果文档未提交/push，不沿用§18授权。
 
@@ -308,7 +308,7 @@
 
 §21授权后已提交/push `6d3d0617cc96660e8009e30ed1469e5b127a69e3`，Pages精确built；线上catalog与本地35,609/45/102片逐字相同，冷首屏1936ms，百度三代表JD及2,285全单位查询通过。首次查询37,881ms，不冒全站性能修复；收据`/tmp/ande-baidu-delivery-Dqt7wQ/release-6d3d061.json`。用户随后“开始吧／继续”仅授权第二批8既有key，本轮不继承push授权、不扩第三批、不回补第一批边角，首次查询优化继续暂停。
 
-冻结**35,609岗/45源**后，阿里校园1,083、百川10、B站校411/社479、蚂蚁校403/社1,193、快手校506/社10，经唯一update→crawl→snapshot→publisher链本地新增**4,095岗**。现**39,704岗/53有数据源（37 ready＋16 available）**，第二批8/8均available、`complete:false`，并非八源完整成功或全球全集；详细协议、真实钟与缺口见[第二批记录](docs/custom-second-batch-verification.md)。
+冻结**35,609岗/45源**后，阿里校园1,083、百川10、B站校411/社479、蚂蚁校403/社1,193、快手校506/社10，经唯一update→crawl→snapshot→publisher链本地新增**4,095岗**。现**39,704岗/53有数据源（37 ready＋16 available）**，第二批8/8均available、`complete:false`，并非八源完整成功或全球全集；详细协议、真实钟与缺口见第二批记录。
 
 - 百川普通Node HTTP405后停止，复用此前正常官网Chrome10/total18；快手社招同首页普通unsigned Node HTTP200/code:-1“系统错误”后停止，复用此前正常Chrome10/total1212及字典。保原完成钟16:38:01.858Z／17:36:13.072Z，不新开浏览器补页、不补签名或猜拒绝原因。自动官网启动流量可能并发，不冒正式串行扫描。
 - B站初次尾页pages按实际size重算，误多请求各一个空页；它们HTTP200/code0，是本地形状/终点判断问题而非官网拒绝。红绿修正以页码×请求页长及total判断末页，离线重新绑定原42/48有效页、同钟重投影，岗位全部不变且无新官网请求；首次维护工具遗漏reproject被时钟保护拒绝，原失败稿保留。
@@ -338,7 +338,7 @@
 
 本地39,704→**40,911/53**，净增1207，第二批累计5302；百川18及快手社招1209仍available/complete:false。保全部旧ID、39,684非目标岗位/64source、39公司、阿里归属及155既有非目标out SHA/纳秒mtime；新增基本质量、116活动片/hash/count/全字段通过。436测试/语法/diff及本地HTTP三代表新增/末页JD与单位查询通过；首屏50单位无JD预取、外网/runtime/console错误0，自有资源清理。未改页面代码，无新file验收；首checker路径/hash误读已修，旧失败材料保留。
 
-细节见[第二批记录§6](docs/custom-second-batch-verification.md#6-用户另行授权后官网原生翻页跑通2026-10-08仅本地)，材料`/tmp/ande-two-portals-YP2JeR/`。未commit/push/部署，HEAD/线上仍6d3d061／35,609/45；第三批、性能、持久化及定时均未启动。
+细节见第二批记录§6，材料`/tmp/ande-two-portals-YP2JeR/`。未commit/push/部署，HEAD/线上仍6d3d061／35,609/45；第三批、性能、持久化及定时均未启动。
 
 ## 25. 第二批、集团归类及正常网页分页获授权提交/push（2026-10-08）
 
@@ -350,7 +350,7 @@
 
 用户已授权执行第三批12个既有来源，不授本轮commit/push、阿里云重试或扩来源。腾讯/TME/JD/OPPO校社各两源、网易互娱/社会、vivo社会分别核当前入口、公司/ATS/scope、正常匿名协议及实际renderer，接六个独立portal模块；旧排青云/技术大咖/TGT/固定OPPO项目不再用于新广列表。互娱沿当前公开导航102/75/104，公司仍“网易互娱”，不按网易品牌合公司；vivo社会不继承校园北森资格，GET query及OPPO文化dictionaryApi进入覆盖身份。
 
-已得11源唯一岗：腾讯校995/社2254、TME校146/社124、JD校124/社1822、OPPO校237/社155、互娱89、网易社会2646、vivo社会119，**净增8711，40,911→49,622/64**（37 ready＋27 available）。复用原生列表/详情/补充收据，经受控runUpdate→runCrawl→snapshot→publish唯一链发布；本地重演0官网请求，成功钟沿实际收据，不用09:26发布时刻刷新。全批available/complete:false及jdComplete:false，不冒全集或实际可投；细节及每源资料钟见[第三批核验](docs/custom-third-batch-verification.md)§6。
+已得11源唯一岗：腾讯校995/社2254、TME校146/社124、JD校124/社1822、OPPO校237/社155、互娱89、网易社会2646、vivo社会119，**净增8711，40,911→49,622/64**（37 ready＋27 available）。复用原生列表/详情/补充收据，经受控runUpdate→runCrawl→snapshot→publish唯一链发布；本地重演0官网请求，成功钟沿实际收据，不用09:26发布时刻刷新。全批available/complete:false及jdComplete:false，不冒全集或实际可投；细节及每源资料钟见第三批核验§6。
 
 腾讯社会1948内部详情、TME124/146必要详情、OPPO文化1次及8方向岗位详情已得；保所有取得的原两栏、额外正文、方向和native城市原序/重复/空槽，TEXT不剥HTML、HTML按独立renderer。腾讯校园900详情绑定，下一负ID-2返回HTTP200/status0但身份不匹配，触发本地guard停止，不称HTTP/业务拒绝、不改ID重试；995列表全部保留，其中5负ID＋90外部Workday共95岗正文未知。社会306外部岗位保列表正文/原链接，不冒外部额外JD已核。JD社招无官方total，链接仅官网列表入口而非唯一详情，重复/total漂移如实记录。
 
@@ -374,7 +374,7 @@
 
 HTTP代表验收还发现description覆盖显示分支会隐藏不包含在新全文中的旧职责。仅修`assets/app.js`的JD展示：优先全文一次，未被全文字面包含的独立两栏也完整显示；独立同文两栏不互去重，评分/词频/加载/查询不变。单测红→绿；旧目录测试偶然依赖雷火零岗改为明确空fixture，不冒产品故障。全套530项522 pass/0 fail/8旧回放skip，语法/diff及147片全字段/hash/count检查通过；本地HTTP7代表JD/原链接/未知提示/dirty保旧、50单位首屏仍不预取JD通过，runtime/console/外部请求错误0，自有资源清理。新正式START最小腾讯200/雷火201ms、正文重叠0；§26历史199ms不改签。无file全量、线上/全站性能或模型逐岗语义签收。
 
-详细一手URL/字段契约/证据见[补缺记录§6](docs/custom-third-batch-followup-research.md#6-父级后续执行与本地可用交付)；材料集中原统一work下`followup-20261008T112757164Z/`，首失败/checker工具数组引用误判等收据保留，不重采求绿。**未commit/push，HEAD仍f29e579，阿里云未请求**。canonical现113,625,137字节仍超100MiB，仅记限制，不转架构、不删JD或改LFS/Pages/域名；首页后台加载仅用户提出的后续方向，尚未采纳/实现，原D08不变。
+详细一手URL/字段契约/证据见补缺记录§6；材料集中原统一work下`followup-20261008T112757164Z/`，首失败/checker工具数组引用误判等收据保留，不重采求绿。**未commit/push，HEAD仍f29e579，阿里云未请求**。canonical现113,625,137字节仍超100MiB，仅记限制，不转架构、不删JD或改LFS/Pages/域名；首页后台加载仅用户提出的后续方向，尚未采纳/实现，原D08不变。
 
 ## 28. 继续补齐第三批：明确入口、有限复核、保旧扩增及已得投影（2026-10-08，仅本地）
 
@@ -392,7 +392,7 @@ HTTP代表验收还发现description覆盖显示分支会隐藏不包含在新�
 
 最终565测试＝557 pass/0 fail/8旧可选回放skip，语法/diff通过；本地HTTP12代表新JD/分组/属性/方向/原官网href/未知提示及dirty保旧通过，50单位首屏仍不预取JD/canonical，runtime/console/外部请求错误0，自有Chrome/profile/server清理。不冒file全量、线上/全站性能或模型逐岗语义签收。已执行上述可做缺口，不把available当完成；TME270/OPPO必要方向已齐者不机械重取，其它额外字段无证不冒官网没有。Workday校园89正文/社会305额外全文仍真实拒绝阻塞，不换key/客户端/重试；其它未证可靠日期/属性/范围保未知，定时/持久化/上线另项。
 
-详见[继续补齐审计与父级执行§6](docs/custom-third-batch-completion-audit.md#6-父级继续补齐与本地交付)。统一work `completion-20261008T133155216Z/`保before/publication/check-completion/page-smoke/565测试和失败日志，新增原生观察在`observe-completion-*`。canonical113,840,733字节，SHA `a2840cb2d40c29382c57fcc49961d1054320ac8753ecbb9865d931a7fe12cf2f`；catalog `ca2891979aea6a8cb73d7f5603f07d4df4f07f69f2e8dcae53336e145c19fd9b`。**未commit/push/线上验收，HEAD仍f29e579**；Git100MiB/存储/加载继续暂挂，不删JD或改LFS/Pages/域名/架构/首页预载。
+详见继续补齐审计与父级执行§6。统一work `completion-20261008T133155216Z/`保before/publication/check-completion/page-smoke/565测试和失败日志，新增原生观察在`observe-completion-*`。canonical113,840,733字节，SHA `a2840cb2d40c29382c57fcc49961d1054320ac8753ecbb9865d931a7fe12cf2f`；catalog `ca2891979aea6a8cb73d7f5603f07d4df4f07f69f2e8dcae53336e145c19fd9b`。**未commit/push/线上验收，HEAD仍f29e579**；Git100MiB/存储/加载继续暂挂，不删JD或改LFS/Pages/域名/架构/首页预载。
 
 最终再核发现网易旧3（78335/78336/78339）未观察但旧原生列表已明workType字符串0。最小社会限定v2独立验证本次v1与旧v1，仅按Native ID追加未观察旧岗、嵌08:19:35.585Z，不覆盖新2657、不改默认fetch或scope/完整性；15:01:45.699Z唯一链同钟reproject只补三就业null→全职，其它49,879岗逐字段完全同初发、源最新钟仍13:58:55.598Z/0新请求，网易最终2027全职/577实习/56未知。漏显式同钟flag的首次私有脚本非零、canonical SHA未变，原失败留存。
 
@@ -408,7 +408,7 @@ HTTP代表验收还发现description覆盖显示分支会隐藏不包含在新�
 
 最终575测试＝567 pass/0 fail/8 skip；本地HTTP腾讯6代表检查附加全文/类型/职类/原链接/未知提示/dirty保旧通过，首屏无JD预取，runtime/console/外部请求错误0，自有资源清理。页面driver未使sentinel相交时rank52目标没渲染，改用原生scrollIntoView后通过，未改产品state/加载或借测试强制扩列表。无file/线上/全站性能签收。Workday仍305独立URL/394源引用未得全文（校园89、社会305额外全文），真实新拒绝保持停止；父没有借成功共享URL或同ATS继续请求。
 
-详见[腾讯续处理§6](docs/tencent-workday-continuation-research.md#6-父级实际补齐与本地发布)，W `tencent-continuation-20261008T153427917Z/`保before、红绿/失败、discovery、publication-check、page-smoke-v4、tests-final及handoff，新Chrome材料在两个observe-tencent-continuation目录。canonical113,886,538字节，SHA `9366390ebd35354cdb6929c91ed67d8ce1f99730d1b414057bff2046afee5f6e`；catalog `0ee51c4cecff9027d5b11e525473d4fbbf729d3f505e5adfbbfbfdaaf9fb360c`。未commit/push/线上验收，HEAD仍f29e579；阿里云、存储/加载/Git100MiB及首页预载等原暂挂边界不变。
+详见腾讯续处理§6，W `tencent-continuation-20261008T153427917Z/`保before、红绿/失败、discovery、publication-check、page-smoke-v4、tests-final及handoff，新Chrome材料在两个observe-tencent-continuation目录。canonical113,886,538字节，SHA `9366390ebd35354cdb6929c91ed67d8ce1f99730d1b414057bff2046afee5f6e`；catalog `0ee51c4cecff9027d5b11e525473d4fbbf729d3f505e5adfbbfbfdaaf9fb360c`。未commit/push/线上验收，HEAD仍f29e579；阿里云、存储/加载/Git100MiB及首页预载等原暂挂边界不变。
 
 ## 30. 回到Workday正文：补371条，剩21个原链接待处理（2026-10-08采集／10-09本地发布）
 
@@ -418,13 +418,13 @@ HTTP代表验收还发现description覆盖显示分支会隐藏不包含在新�
 
 `collectResumed(priorV2,site,{priorCompletedAt,supplements,issues,stopped})`显式v3保旧v2/停止/钟，新旧原生证据独立复验；旧CLI不自动续。经唯一update→crawl→snapshot→publish于2026-10-09T03:17:32.616Z本地发布，0发布期官网请求，只description校园86／社会285变化，无新岗位，仍49,882／65有数据源、39公司／50单位。资料钟校园2026-10-08T16:48:02.635Z、社会17:05:15.564Z，旧钟嵌证据，列表未重采。保护全部旧ID/其它岗位字段、64非目标source、191非目标out SHA/纳秒mtime及阿里映射；148片逐字段/hash/count符合canonical115,217,983字节。
 
-正式Node301请求START最小446ms、正文重叠0；593测试585 pass/0 fail/8旧可选skip，默认并发首次超时日志保留，离线并发2通过，未重采求绿。HTTP六正文代表、空JD提示/原href/dirty保旧/50单位首屏不预取通过，错误/外部请求0，自有资源清理；无file/线上/性能验收。详细一手证据、SHA及本机D收据见[Workday补齐§5](docs/tencent-workday-native-collection-research.md#5-父级实际采集补充与本地发布)。未commit/push，HEAD仍f29e579；阿里云、存储/加载、Git100MiB和首页预载继续暂挂。
+正式Node301请求START最小446ms、正文重叠0；593测试585 pass/0 fail/8旧可选skip，默认并发首次超时日志保留，离线并发2通过，未重采求绿。HTTP六正文代表、空JD提示/原href/dirty保旧/50单位首屏不预取通过，错误/外部请求0，自有资源清理；无file/线上/性能验收。详细一手证据、SHA及本机D收据见Workday补齐§5。未commit/push，HEAD仍f29e579；阿里云、存储/加载、Git100MiB和首页预载继续暂挂。
 
 ## 31. 固定19个未试Workday链接已逐一检查（2026-10-09，仅诊断）
 
 用户明确“先检查那19个链接”。只对冻结19个原URL首次正常匿名Node GET，隔离精确S22、不重试；没有请求此前已拒的两个URL或换客户端，未推广成CLI自动续采。19/19均HTTP403、原生S22 permission denied，03:39:24.133–03:39:31.063Z，START最小296ms、正文重叠0。没有新JD；检查19条已完成，原正文目标仍校园3／社会20（21独立URL）待解决，各阶段都取得了权限拒绝证据，但具体原因未明，不推下架/必须登录/封IP/限频。
 
-公开canonical/catalog及197全部out SHA/纳秒mtime未变，不刷新成功钟、不发布或Git/部署。收据W `tencent-workday-check19-20261009T033711886Z/`；详见[固定19条排查§6](docs/tencent-workday-native-collection-research.md#6-用户明确要求先检查19个未试链接2026-10-09仅诊断)。
+公开canonical/catalog及197全部out SHA/纳秒mtime未变，不刷新成功钟、不发布或Git/部署。收据W `tencent-workday-check19-20261009T033711886Z/`；详见固定19条排查§6。
 
 ## 32. 阿里云恢复正常匿名处理：669可用接入，官方670仍差1（2026-10-09）
 
@@ -438,7 +438,7 @@ Cloud新增精确`availableSource(site)`，profile仍qualified:false、七源完
 
 全阶段Node269＝267×200＋2×302，其中列表254＝默认51＋边界3＋补收200，START最小200ms、正文重叠0；Chrome官网自动流量另计并可能并发。只读复核两个静态门禁反例已最小封住：敏感Cookie历史仅内存，轮换旧值回显不落盘；Cloud额外非空duty/requirements aliases拒记录且披露。当前669 jobs/2171证据datas均无该alias，不倒改材料。核心59/59，全套622＝614pass/0fail/8旧skip、并发2通过；HTTP六项/5不同岗位、886结果ID集合、已得原文/原href/dirty保旧/首屏无预取通过，外网/runtime/console错误0、自有资源清理。未冒file/线上/全站性能验收。
 
-canonical117,191,579字节，SHA `77d4f62c52fe0b1cc3835900f846550c15895714d29a6546d22993865a321032`；catalog `0c01325761e099d3cb7d17fda0ae94b176063f5fc7b2cd2c2b9800881e7d4dbe`。仅本地，未commit/push/部署，HEAD仍f29e579；100MiB无损处理、查询性能/首页预载和腾讯21URL继续挂起。材料W `aliyun-continuation-20261009T035048447Z/`；协议/收据/未证假设见[阿里云续处理§7](docs/aliyun-social-continuation-research.md#7-父级实际采集独立可用接入与残差2026-10-09)。
+canonical117,191,579字节，SHA `77d4f62c52fe0b1cc3835900f846550c15895714d29a6546d22993865a321032`；catalog `0c01325761e099d3cb7d17fda0ae94b176063f5fc7b2cd2c2b9800881e7d4dbe`。仅本地，未commit/push/部署，HEAD仍f29e579；100MiB无损处理、查询性能/首页预载和腾讯21URL继续挂起。材料W `aliyun-continuation-20261009T035048447Z/`；协议/收据/未证假设见阿里云续处理§7。
 
 ## 33. 用户明确挂起阿里云及本轮后续执行（2026-10-09）
 
@@ -469,7 +469,7 @@ canonical117,191,579字节，SHA `77d4f62c52fe0b1cc3835900f846550c15895714d29a65
 
 ## 36. 腾讯缺口复查：21条全文当前不可得（2026-10-09，仅诊断）
 
-用户恢复处理腾讯后只做合法侦察，未重试任何已拒URL：Workday公开列表288条（15请求、无拒绝）中21条缺口slug命中0；腾讯自家校园993条仅1/3仍在、社会2288条17/20仍在（SourceID=4、IsValid=true），R107849/R107662/R108025-1/R107748-2已不在任何当前列表。全部21条在近期阶段均已被403/S22拒绝，本轮未再请求；结论为正常匿名协议下当前不可取得，17条仍被官网列出故保旧、不判下架。另核：社会ByPostId对SourceID=4仍返回200，其中5条有真实Requirement（799–1232字）、12条为占位句，但官方详情页实际加载Workday嵌入（job GET 403）并显示「您搜索的页面不存在。」，内部字段并非这些外部岗位当前展示的正文，按renderer契约不并入。无数据/快照/发布改动，canonical仍50,697岗／`3d1a7158…`。社会count 2254→2288、校园995→993为未采集的列表面变化（刷新另行决定）。详见[Workday复查§7](docs/tencent-workday-native-collection-research.md#7-复查21条缺口当前公开状态2026-10-09仅诊断)。
+用户恢复处理腾讯后只做合法侦察，未重试任何已拒URL：Workday公开列表288条（15请求、无拒绝）中21条缺口slug命中0；腾讯自家校园993条仅1/3仍在、社会2288条17/20仍在（SourceID=4、IsValid=true），R107849/R107662/R108025-1/R107748-2已不在任何当前列表。全部21条在近期阶段均已被403/S22拒绝，本轮未再请求；结论为正常匿名协议下当前不可取得，17条仍被官网列出故保旧、不判下架。另核：社会ByPostId对SourceID=4仍返回200，其中5条有真实Requirement（799–1232字）、12条为占位句，但官方详情页实际加载Workday嵌入（job GET 403）并显示「您搜索的页面不存在。」，内部字段并非这些外部岗位当前展示的正文，按renderer契约不并入。无数据/快照/发布改动，canonical仍50,697岗／`3d1a7158…`。社会count 2254→2288、校园995→993为未采集的列表面变化（刷新另行决定）。详见Workday复查§7。
 
 ## 37. 小米社招与百川详情补收（2026-10-09，仅本地）
 
@@ -508,3 +508,13 @@ canonical117,191,579字节，SHA `77d4f62c52fe0b1cc3835900f846550c15895714d29a65
 - 本轮 B1 五源重采、小米/百川详情、小红书三入口、网易刷新、百度/蚂蚁抽样、小米实习、快手全项目、vivo 诊断的代码/测试/文档。
 
 `data/jobs.js`（119,385,190字节）及catalog/parts仍仅本地、未部署；线上Pages若由main自动构建将得到新代码＋仓库内旧数据（90,013,303字节版）。旧提交备份为本地标签`backup-local-7ec4e1c`（未推送）。推送范围/结果以Git历史为准；服务器/存储方案另项决定。
+
+## 41. 简化：去掉双轮校验、统一门户登记、数据只存目录＋分片（2026-10-09，仅本地）
+
+用户明确本意：只从官方招聘站取地点、JD等数据，官网可信，无需多轮或逐字段校验。据此（见 [D09](DECISIONS.md)、AGENTS.md「总原则」、SPEC §4.3）：
+
+- 小米（三入口）、携程、米哈游、上海AI实验室、七个常规阿里社招门户改为单轮采集、available；阿里云证据合同未动。自研门户统一登记于 `crawler/lib/portals.js`，`crawl.js`/`publish.js` 只遍历登记表。
+- 删除 48 个无引用的初版单公司脚本（3,374 行）；`publish.js` 去掉初版遗留退出、`extendCoverage` 与覆盖变化拦截；页面不再区分 ready/available。
+- `data/jobs.js`（114MB）已删除：浏览器本就只用 `catalog.js`＋`parts/`，二者与 `jobs.js` 逐条一致（51,805条）。`publish.js` 现从分片还原基线，发布后删除不再被引用的旧分片（不保存历史）。`data/` 共约114MB，单文件≤1MB，可直接入库。
+- 清理 `docs/` 27 个历史核验/研究报告（仅留 `license-notes.md`），Git 历史可查。
+- 验证：588 测试 562 pass/0 fail/26 旧回放skip；真实数据全量重投影与原 `jobs.js` 按岗位ID逐条一致；本地页面冒烟17项通过。未提交、未部署；其余适配器（美团、OPPO、腾讯、快手等）尚未按此简化。

@@ -9,7 +9,7 @@ sites.json（唯一来源登记）
   → update.js 按注册表串行调用 crawl.js
   → 可发布快照（可用性与完整性分开）
   → publish.js 整理真实字段，完整替换／不完整增量合并
-  → ../data/jobs.js 完整事实基线
+  → ../data/catalog.js + ../data/parts/（唯一数据：目录＋分片）
   → 同publisher派生 ../data/catalog.js + ../data/parts/*.js
   → ../index.html + ../assets/data-loader.js + ../assets/app.js 按查询加载/匹配排序
 ```
@@ -19,13 +19,10 @@ node crawler/update.js stepfun stepfun_social # 仅明确授权的keys；部分�
 node crawler/crawl.js stepfun      # 仅采集，不发布
 node crawler/publish.js stepfun    # 仅发布该来源已验证的新快照
 node crawler/publish.js --reproject huawei # 明确来源的同钟投影修复；复验快照，不重采/伪造新成功时间
-node crawler/publish.js --discard-legacy # 独立维护：按用户授权退出初版HTML遗留，不读/发布候选
-node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建浏览器分片，不采集、不改基线/采集钟
 ```
 
 无参数的 `update.js` 遍历全部来源，`publish.js` 检查全部来源；日常操作明确keys，不以无参数全站执行代替检查。`run_daily.ps1` 是主入口的薄兼容包装，不另维护名单。没有 HTML 生成器、CSV 聚合、召回切批或个人评分入口。
 
-`--discard-legacy`仅是已授权的初版维护操作，不能与source keys/failedKeys混用，不读候选；只退出精确初版身份及元数据，不按日期/JD空/未知属性删除已核官网岗位，不制造零快照或成功时刻，重复执行为无写入no-op。常规更新按现行SPEC先发布可用数据、披露缺口；完全失败或缺证零保已有可用版本，不回退初版。
 
 批次结果、实际统计、初版退出及验收范围集中在 [PROCESS.md](../PROCESS.md)。下文只说明操作与技术契约；旧来源报告的保初版/未提交是历史，不覆盖现行规格。
 
@@ -44,13 +41,15 @@ node crawler/publish.js --rebuild-browser-data # 仅从完整公开基线重建�
 - 美团生产CLI现为单轮列表＋能取得的详情，真实拒绝/请求错误即停止后续请求，但此前可用数据仍可发布；小米社招type1改为单轮列表＋全部详情，列表职责/要求与官网详情逐字一致、详情无额外JD，`jdComplete:true`；保原城市顺序，不用换序当发布阻塞。详情请求用普通匿名Node，不伪造官网产生的signature/CSRF；拒绝即停、保留列表-only。原严格fetchAll/旧source合同用于兼容已有完整快照和离线回归，后续按来源逐步迁移，不为本次重写所有模块。
 - 首次完整成功会读取刚写出的文件。显式成功且 `total:0,jobs:[]` 可替换此来源；未知结构、缺列表、错误空数组、提前空页或触顶不是有效空。
 - 同一注册范围内可发布快照才可应用。完整路径替换，可用路径增量合并；完全失败、未接入适配器及元数据不匹配不能晋升。
-- 已验证发布后如果接口／渠道／批次等范围改变，拒绝自动替换；已授权的保旧扩增可经`publish({keys:[key],extendCoverage:{[key]:expectedOldCoverage},...})`明确绑定预期旧scope，只允许新范围身份复验后的`complete:false`增量，保所有未取得旧岗与逐栏非空JD，不判下架；错旧coverage/未选key/公司变化仍拒，不能与reproject或discardLegacy混用。普通update没有自动迁移权限。初版退出不是官网下架。
-- 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式同源`--reproject <keys>`允许在scope与真实采集钟相同的已核快照上修复投影/说明，不回退较旧快照，也不把本地重投影冒新采集；显式独立 `--discard-legacy` 仅为初版维护例外，不是伪空快照资格，原 `index.html` 不受采集影响。
+- 来源范围（接口／渠道／批次等）变化无需特殊迁移：完整快照替换该来源，不完整快照与已有记录合并保旧；失败／零岗位不清旧。
+- 部分来源可用时只应用这些来源，其他来源保留已有可用版本和真实采集时间；无该版本则暂无数据，不回退初版。整体命令仍返回非零。正常发布无已验证新快照、无 `out/` 或坏基线时不写公开文件；显式同源`--reproject <keys>`允许在scope与真实采集钟相同的已核快照上修复投影/说明，不回退较旧快照，也不把本地重投影冒新采集，原 `index.html` 不受采集影响。
 - 文件按临时文件＋rename 写入；同一来源不应同时执行多个更新。失败状态可随其他成功来源发布；如果全部没有有效更新，公开文件不变，失败详情暂看状态文件和命令输出。
 
 `out/` 只是本机可复用快照，不是临时 Actions runner 的持久存储。以后接定时采集时还需落实成功快照持久化和 Pages 发布，不能把 Pages 自动部署当作采集定时器。
 
 ## 目前能被流水线验证的适配器
+
+**2026-10-09 起，小米（三入口）、携程、米哈游、上海AI实验室及七个常规阿里社招门户为单轮采集、`complete:false`＋`policy:'available'`**：岗位只需官网ID、标题、可打开的官网链接；未知字段、total不符、坏记录与中途失败只记入`issues`，详情尽力获取（403/412/429立即停详情），不再要求双轮逐字一致，也不保存逐页原始响应。下文这些来源里涉及「两轮」「逐字稳定」「未知字段拒整源」的描述是历史契约，以此处为准。**零岗位仍不能清旧数据**（`validateJobs`拒空）。阿里云（Cloud）的独立证据合同未改动。所有自研门户（含15个可用门户）由 [`lib/portals.js`](lib/portals.js) 登记，`crawl.js`/`publish.js` 只遍历该表；新增门户在那里加一项，适配器须导出`requiresVerification/verifiedSource/portalNotice/validateJobs/validateEvidence/normalizeRecord`，并由`tests/portals-registry.test.cjs`检查。
 
 **Moka（9 来源）**：阶跃两个既有详情模式＋v0.25分别核验的七个固定`moka-portal-v1`来源；共享AES/正文/分页，不继承同系统资格。七个固定keys在调度/空snapshot归一化前核key/company/org/siteId/site/url、取得模式及受约束origin，删除模式标记不能退回宽松路径。
 
@@ -78,11 +77,11 @@ UUID Id与数字JobAdId是不同字段；全源双唯一性在投影前也复验
 
 **阿里云社招（独立available）**：`ali_social_common.availableSource(site)`仅放行精确`aliyun_social`公司/ATS/adapter/URI/channel/body；Cloud profile仍`qualified:false`，七源完整v1及双扫/10页长metadata规则不变，不借同公司/ATS或删mode降级generic。Cloud正常匿名bootstrap仅允许已观察同origin/path去lang302；Cookie/CSRF纯内存，包含旧/新敏感Cookie值的响应不能落盘，真实拒绝立即停源、不自动重试或切客户端。串行START≥200ms（sleep后while重核）、请求含正文15s、来源900s、最多200页；先所得非零真实partial可经唯一链发布，不授缺证零/complete/ready。
 
-Cloud v2严格保存请求10/真实页码及响应固定500/1、原total/重复/早空/停止；两栏直接React TEXT，标题/内部空白/CRLF/独立同文保留，日期/性质/计划未知，详情完整性不冒true。未知非空追加JD（包括原生duty/requirements aliases）拒该记录并披露，不静默吞文。显式`collectCloudSupplemented(baseV2,site,{baseCompletedAt,categoryEvidence,regionEvidence,regionSearchEvidence,scans,issues,stopped})`生成v3，嵌完整旧证/钟，只追加未得Native ID，旧500所有raw/文字/URL保留。类别根＋原序子码、hot地点、More地点搜索及两官方菜单词各有自身原生协议/字典证据；仅为原空筛选范围的子查询，不反推单岗属性。列表/category/hot channel为`group_official_site`，More搜索/bootstrap/detail为`aliyun_group_official_site`，不互换；补收新页≤200，partial可发布，默认CLI仍新取v2、不自动续旧v3。目前669对官方670差1，完整性仍未知；实际钟/保护/限额与材料见[阿里云续处理§7](../docs/aliyun-social-continuation-research.md#7-父级实际采集独立可用接入与残差2026-10-09)。
+Cloud v2严格保存请求10/真实页码及响应固定500/1、原total/重复/早空/停止；两栏直接React TEXT，标题/内部空白/CRLF/独立同文保留，日期/性质/计划未知，详情完整性不冒true。未知非空追加JD（包括原生duty/requirements aliases）拒该记录并披露，不静默吞文。显式`collectCloudSupplemented(baseV2,site,{baseCompletedAt,categoryEvidence,regionEvidence,regionSearchEvidence,scans,issues,stopped})`生成v3，嵌完整旧证/钟，只追加未得Native ID，旧500所有raw/文字/URL保留。类别根＋原序子码、hot地点、More地点搜索及两官方菜单词各有自身原生协议/字典证据；仅为原空筛选范围的子查询，不反推单岗属性。列表/category/hot channel为`group_official_site`，More搜索/bootstrap/detail为`aliyun_group_official_site`，不互换；补收新页≤200，partial可发布，默认CLI仍新取v2、不自动续旧v3。目前669对官方670差1，完整性仍未知；实际钟/保护/限额与材料见阿里云续处理§7。
 
 **custom（44 来源登记）**：除上述阿里共享社招，第一批既有来源已接入五个独立官网协议模块：`meituan_portal`（社招；`meituan_campus_portal`共享其原生解析、按官网1＋2分类型枚举校园）、`ctrip_portal`、`mihoyo_portal`、`shlab_portal`（这三者各自校/社两key）、`xiaomi_portal`（校招完整路径＋社招可用路径）。固定profile只授已核协议/scope的执行入口，不授完整成功：fresh HTTP/原生业务、全部身份/字段/JD、双完整扫描及全raw绑定须通过crawl与publisher两边复验；失败不落partial候选，未证有效零先拒。未接入口不继承同公司/同系统资格；阿里云只凭自身独立可用契约放行。旧custom请求/解密/个人方向备注不作当前证据，不能盲加complete或继续旧筛选链。
 
-本批四协议正常匿名Node、串行至少200ms/15s超时，触顶拒整源；美团/米哈游必要详情采用40分钟有界子进程，携程/上海15分钟（非SLA）。美团六片、米哈游六片为实际TEXT renderer，完整正文一次显示，独立职责/要求原字段计分；其它真实正文不另造评分字段。携程原生requirements是完整HTML职位描述，复用已核HTML转换，fromId构官网详情链接，不机械重复列表已有全文。社招双语/组合标题的分栏语义未核验，先保完整正文、独立职责/要求留空，匹配使用全文回退；不按岗位ID猜分栏。上海使用原生has_more和推进游标双穷尽，无官方total；`countKind:cursor-exhaustion`标明derived唯一记录数，保公开分页cursor原值以重演request链（非会话凭证），两条已证requirement省略与非法null/未知JD严格区分；当前SSR只证普通TEXT/LF→BR，未证markup/字符引用正文形状整源拒绝，不盲剥HTML（普通amp/数值比较仍保真）。scope的origin/detailApi/headers亦绑定coverage；源级语义/原始字段证据见 [第一批核验记录](../docs/custom-first-batch-verification.md)，成功/失败及实际数量以数据/Git和PROCESS为准。旧字节custom仅是共享实现的兼容入口，不另发布。
+本批四协议正常匿名Node、串行至少200ms/15s超时，触顶拒整源；美团/米哈游必要详情采用40分钟有界子进程，携程/上海15分钟（非SLA）。美团六片、米哈游六片为实际TEXT renderer，完整正文一次显示，独立职责/要求原字段计分；其它真实正文不另造评分字段。携程原生requirements是完整HTML职位描述，复用已核HTML转换，fromId构官网详情链接，不机械重复列表已有全文。社招双语/组合标题的分栏语义未核验，先保完整正文、独立职责/要求留空，匹配使用全文回退；不按岗位ID猜分栏。上海使用原生has_more和推进游标双穷尽，无官方total；`countKind:cursor-exhaustion`标明derived唯一记录数，保公开分页cursor原值以重演request链（非会话凭证），两条已证requirement省略与非法null/未知JD严格区分；当前SSR只证普通TEXT/LF→BR，未证markup/字符引用正文形状整源拒绝，不盲剥HTML（普通amp/数值比较仍保真）。scope的origin/detailApi/headers亦绑定coverage；源级语义/原始字段证据见 第一批核验记录，成功/失败及实际数量以数据/Git和PROCESS为准。旧字节custom仅是共享实现的兼容入口，不另发布。
 
 `custom/huawei_portal.js`接入固定CR/SR默认广列表及详情/岗位意向；复用`huawei_http.js`的正常匿名transport（真实Referer、公开bootstrap CSRF仅内存可为空、原生UA、串行200ms/15s、拒绝后锁存停止）。按官网声明的末页停止，不为可用发布强求越界EOF。全部意向按原顺序保留真实标题/HTML正文及独立两栏；未取得者不造JD，额外正文完整性与日期/性质/人才计划仍未知。仅可用资格，不冒完整成功。显式`huawei_portal.js <siteJSON> <rawFile> --resume-details=<snapshot>`可复用同源已核列表续取正文，经正常crawl/publisher复验，记录未重采列表，默认更新不自动复用旧列表。
 
@@ -94,13 +93,13 @@ Cloud v2严格保存请求10/真实页码及响应固定500/1、原total/重复/
 
 阿里校园取已核三个批次（应届＋日常/研究实习，阿里星不额外重复采）；B站不填可选type，两栏未知的HTML职位描述保单字段全文；蚂蚁用当前广列表空招聘类型/批次，无自造ctoken；快手校园覆盖官网字典全部12个项目（含往届仍在列项目，经 extendCoverage 保旧扩增 506→714）、原生字典及数字id详情路由。阿里/百川/蚂蚁/快手按第一方TEXT renderer保全部原字符，不沿旧职业/项目排除。百川及快手社招在用户另行授权后已通过正常官网原生翻页继续取得数据；生产CLI直接选择`lib/native-ui.js`隔离Chrome传输，不先发unsigned Node请求再自动换浏览器重试。只观察官网自身请求和点击原生下一页，复用已有CDP类，不注入SDK/生成签名/修改UA或复制会话；Cookie等敏感头只留内存，证据仅保必要公开头/成功岗位响应，百川URL只去除敏感signature，保实际动态分页Referer并严格绑定空筛选/页码。官网首页/字典自动流量可能并发；后续逐页点击≥200ms、正文队列无重叠，15s响应/900s来源/200页保护，拒绝停止、此前可用页保留。百川校园列表后另按官网详情GET `/api/v1/job/posts/<id>?portal_type=6&with_recommend=false`补全部18条详情；普通匿名Node不含页面signature/CSRF，按官网renderer组合“职位描述/职位要求/职位信息·部门”，详情无额外JD；详情拒绝或任一未过验证时保留列表-only并披露。
 
-快手官网自动补`workLocationCode=domestic`，新可用证据固定version3/`native-ui-default-domestic`，保实际参数，不冒无城市列表或海外等价；登记目标scope不变，明确局部已取得范围、不完整增量保旧。旧version2无城市资料仍可独立复验；校园Node路径不变。百川及快手社招旧unsigned路径仅供显式注入fetchImpl回归，历史405/code:-1的单一根因仍未证明。快手日常实习另入口未核，性质不推全职。真实数量/资料钟及本轮材料复用发布见[第二批核验](../docs/custom-second-batch-verification.md)§6，不把发布时刻冒采集完成钟。
+快手官网自动补`workLocationCode=domestic`，新可用证据固定version3/`native-ui-default-domestic`，保实际参数，不冒无城市列表或海外等价；登记目标scope不变，明确局部已取得范围、不完整增量保旧。旧version2无城市资料仍可独立复验；校园Node路径不变。百川及快手社招旧unsigned路径仅供显式注入fetchImpl回归，历史405/code:-1的单一根因仍未证明。快手日常实习另入口未核，性质不推全职。真实数量/资料钟及本轮材料复用发布见第二批核验§6，不把发布时刻冒采集完成钟。
 
 第三批11个既有key接入六个独立可用模块：`tencent_portal`、`tme_portal`、`jd_portal`、`oppo_portal`（各校/社两源）、`netease_portal`（网易社会＋网易互娱）、`vivo_social_portal`。各key独立冻结公司/ATS/adapter/URI/当前广列表参数及补充接口；GET `query`与OPPO文化`dictionaryApi`也进入scope身份，删除adapter/改公司或body不能降级generic；后续雷火取得独立`leihuo_portal`资格；阿里云另按上述独立available契约接入。正式请求串行START间隔≥200ms、正文读完才下一次，15s请求/900s来源/200页保护，只授available，不因数量吻合升complete。真实拒绝停源不重试；身份guard另记，不冒HTTP/业务拒绝，已得可用资料经唯一链发布时复用真实资料钟。
 
-腾讯按安全字符串PostId/postId（含负ID）绑定内外部入口；OA/SourceID1内部详情与外部链接独立绑定。后续只在已证明的project12、`-2…-6`、原列表id/position/职类/原标题与原响应id/tid/project/recruitType全部相合时接受null postId，不改原ID，也不全局放宽；历史v1 guard收据仍保留。`tencent_workday`仅授官网列表实际链接的Tencent tenant/site正常匿名GET、原externalUrl/slug/reqId/GUID绑定及单HTML全文，不造独立两栏。v2补充证据嵌原v1列表/详情，可复用稀疏已得响应，未请求者保未知；CLI正常全量取得后也补外部详情，HTTP拒绝停源无retry。一份Workday成功材料分别绑定两个独立列表，后续403停止同门户，不自动换source key或浏览器再请求。用户了解拒绝后另行明确继续腾讯，新授权阶段从开始正常Chrome检查：Document200、官网自身正文API仍403，即停，未取得额外全文/刷新成功钟；不是旧阶段的自动fallback。随后只按已得校园显式recruitLabelName前三可见token标593实习/640青云true（应届不推全职，其余计划未知），按已绑定internal supplement取5个tidName职类；另保全部非空bonus原文，独立同文不互消重。空JD已证属性可显式同钟reproject，普通partial全空保护及逐栏旧正文保护仍在。见[腾讯续处理§6](../docs/tencent-workday-continuation-research.md#6-父级实际补齐与本地发布)。后续明确新授权的`collectResumed(priorV2,site,{priorCompletedAt,supplements,issues,stopped})`生成v3，嵌完整旧v2/旧停止及真实钟，仅补未得正文，不自动恢复CLI；新旧证据与Native绑定均独立复验。Workday可选`canonical:{url,listing:{request,httpStatus,response}}`只接纳由同空筛选匿名公开列表证明的地点段变化，完整原posting slug/reqId/site/GUID、原GET与原腾讯公开链接不改；缺证或其它身份变化仍拒。当前本地已补校园86／社会285条全文，剩校园3／社会20；公开285个匹配原链接均已得，新旧真实S22收据保留。见[Workday补齐§5](../docs/tencent-workday-native-collection-research.md#5-父级实际采集补充与本地发布)。TME校园空type保四类，两源取必要详情；京东校园publishId、社会requirementId独立，社会真实链接仅列表入口而非唯一详情。OPPO校园补一次真实文化字典，社会仅补8个方向岗位详情；所有已得原两栏、额外正文及方向保留，不自造方向编号/城市标题。网易互娱公司仍为“网易互娱”，只取当前导航102/75/104，不借社招或雷火资格；vivo社会M字符串job_id与显示H码分开，单HTML全文不猜两栏，也不继承校园北森资格；组织范围已做有界诊断：company_id 0–10/20/50/100/200/999/1000/10000仅1有岗、group_id 1–10不改变结果、官网无组织筛选/字典。各源TEXT/HTML按独立renderer证据转换；原城市重复/空槽/顺序、标题、字面字符和已得正文不删减。实际数量、钟、缺口与HTTP页面范围见[第三批核验](../docs/custom-third-batch-verification.md)§6。
+腾讯按安全字符串PostId/postId（含负ID）绑定内外部入口；OA/SourceID1内部详情与外部链接独立绑定。后续只在已证明的project12、`-2…-6`、原列表id/position/职类/原标题与原响应id/tid/project/recruitType全部相合时接受null postId，不改原ID，也不全局放宽；历史v1 guard收据仍保留。`tencent_workday`仅授官网列表实际链接的Tencent tenant/site正常匿名GET、原externalUrl/slug/reqId/GUID绑定及单HTML全文，不造独立两栏。v2补充证据嵌原v1列表/详情，可复用稀疏已得响应，未请求者保未知；CLI正常全量取得后也补外部详情，HTTP拒绝停源无retry。一份Workday成功材料分别绑定两个独立列表，后续403停止同门户，不自动换source key或浏览器再请求。用户了解拒绝后另行明确继续腾讯，新授权阶段从开始正常Chrome检查：Document200、官网自身正文API仍403，即停，未取得额外全文/刷新成功钟；不是旧阶段的自动fallback。随后只按已得校园显式recruitLabelName前三可见token标593实习/640青云true（应届不推全职，其余计划未知），按已绑定internal supplement取5个tidName职类；另保全部非空bonus原文，独立同文不互消重。空JD已证属性可显式同钟reproject，普通partial全空保护及逐栏旧正文保护仍在。见腾讯续处理§6。后续明确新授权的`collectResumed(priorV2,site,{priorCompletedAt,supplements,issues,stopped})`生成v3，嵌完整旧v2/旧停止及真实钟，仅补未得正文，不自动恢复CLI；新旧证据与Native绑定均独立复验。Workday可选`canonical:{url,listing:{request,httpStatus,response}}`只接纳由同空筛选匿名公开列表证明的地点段变化，完整原posting slug/reqId/site/GUID、原GET与原腾讯公开链接不改；缺证或其它身份变化仍拒。当前本地已补校园86／社会285条全文，剩校园3／社会20；公开285个匹配原链接均已得，新旧真实S22收据保留。见Workday补齐§5。TME校园空type保四类，两源取必要详情；京东校园publishId、社会requirementId独立，社会真实链接仅列表入口而非唯一详情。OPPO校园补一次真实文化字典，社会仅补8个方向岗位详情；所有已得原两栏、额外正文及方向保留，不自造方向编号/城市标题。网易互娱公司仍为“网易互娱”，只取当前导航102/75/104，不借社招或雷火资格；vivo社会M字符串job_id与显示H码分开，单HTML全文不猜两栏，也不继承校园北森资格；组织范围已做有界诊断：company_id 0–10/20/50/100/200/999/1000/10000仅1有岗、group_id 1–10不改变结果、官网无组织筛选/字典。各源TEXT/HTML按独立renderer证据转换；原城市重复/空槽/顺序、标题、字面字符和已得正文不删减。实际数量、钟、缺口与HTTP页面范围见第三批核验§6。
 
-`custom/leihuo_portal.js`是独立来源资格，不继承`netease_portal`。正常公司官网→校园热招菜单闭合应届project77页长10、日常P4/workType1页长12两个当前协议；原登记管理系统的登录门禁不代表公众校园必须登录。两栏均按当前独立innerHTML renderer分别转换（不是只凭`_s`判TEXT），保原标题、Native ID/URI、已得伏羲机器人等部门记录，不猜法律雇主或时间戳日期。两接口ID域若碰撞保首次并报告后者未应用，不造复合ID或合错正文；当前180条无碰撞。固定query及dailyApi进入scope，串行START唤醒重核≥200ms、15s请求/正文、900s全源、总200页保护；拒绝停全源、不跳另一入口重试，partial可发布、缺证零不能清旧。后续沿同一当前router正常匿名验证research68与intern73：研究4页40、暑期当前0，新增精确四入口profile并显式保旧扩增；旧两入口profile仅保其精确历史资格，不借旧profile授新项目。共享Position两栏HTML绑定原ehr_project_id/原URI，22页220唯一；单项目有效零不清整源。不同入口截止日期不替代当前列表或可投验证。见[补缺记录§6](../docs/custom-third-batch-followup-research.md#6-父级后续执行与本地可用交付)及[继续补齐审计与执行](../docs/custom-third-batch-completion-audit.md)。
+`custom/leihuo_portal.js`是独立来源资格，不继承`netease_portal`。正常公司官网→校园热招菜单闭合应届project77页长10、日常P4/workType1页长12两个当前协议；原登记管理系统的登录门禁不代表公众校园必须登录。两栏均按当前独立innerHTML renderer分别转换（不是只凭`_s`判TEXT），保原标题、Native ID/URI、已得伏羲机器人等部门记录，不猜法律雇主或时间戳日期。两接口ID域若碰撞保首次并报告后者未应用，不造复合ID或合错正文；当前180条无碰撞。固定query及dailyApi进入scope，串行START唤醒重核≥200ms、15s请求/正文、900s全源、总200页保护；拒绝停全源、不跳另一入口重试，partial可发布、缺证零不能清旧。后续沿同一当前router正常匿名验证research68与intern73：研究4页40、暑期当前0，新增精确四入口profile并显式保旧扩增；旧两入口profile仅保其精确历史资格，不借旧profile授新项目。共享Position两栏HTML绑定原ehr_project_id/原URI，22页220唯一；单项目有效零不清整源。不同入口截止日期不替代当前列表或可投验证。见补缺记录§6及继续补齐审计与执行。
 
 继续补齐时，`oppo_portal`新增精确SOCIAL＋OFFEN两渠道profile：旧SOC页长100/155＋已得8方向保原v2证据和钟；v3独立绑定日常页长10/10岗、其原OFFEN URI及JOB-TYPE字典，类别只按实际dictValue→dictName，不复制岗位或把实习推校/社渠道。CLI依次正常SOC/必要详情、OFFEN、职能字典，任一拒绝停全源；原校园culture与旧v2资格不变。`jd_portal`社招补独立同空筛选`job_count`证据，新v3保1838原槽/1828唯一/10重复，数字0或数差不清旧/冒完整，旧v2仍有效；正常CLI先计数再列表，拒绝无retry。腾讯同钟投影补完整已得showTitle/showTxt/父方向文字，网易社会用官网严格workType枚举及极客计划徽标补性质/计划，其它未知不猜。网易另有显式`collectRetained(newV1,priorV1,site,priorCompletedAt)`：v2独立验证同社会精确scope的两份原列表，仅追加新列表未观察的旧Native ID，嵌旧真实钟且不覆盖新记录/冒全集；正常fetch仍v1，不自动读取out。实际旧3岗原workType0全职已得，按此保钟复用补齐，而不是以未观察推测属性或换旧钟为新采集。互娱日常原href P8/workType1单独正常观察/2页159记录，与网易本次广列表逐原生ID及全部raw完全相同，不另复制或改归属；不能仅因同ATS、名称或workType数值判覆盖。当前JD渲染器字段已齐且代表详情无差异者不机械重取全部详情，仍不因count或抽样签ready。
 
@@ -114,15 +113,15 @@ Cloud v2严格保存请求10/真实页码及响应固定500/1、原total/重复/
 
 ## 发布数据契约
 
-`../data/jobs.js`仍为完整canonical静态脚本：`globalThis.ANDE_DATA = <JSON>;`，用于程序读取/更新保旧，不再是首页阻塞脚本。浏览器同HTTP/file可用，不动态请求招聘官网。
+`../data/catalog.js`（轻量目录）＋`../data/parts/*.js`（按单位/来源分片的完整正文）是唯一公开数据；publisher读取时把分片还原成完整岗位，发布后删除不再被引用的旧分片（不保存历史）。浏览器同HTTP/file可用，不动态请求招聘官网。
 
-第三批及阿里云续处理后本地canonical为117,191,579字节，已超过GitHub普通Git单文件100MiB限制；后续提交/push前需另行决定无损存储处理，不以删岗位/JD凑大小。本轮未更换LFS/存储架构/域名或部署配置。
+全部分片单个≤1MB、目录约190KB，均远小于GitHub单文件限制，可直接入库部署。
 
 同一publisher按真实company/sourceKey和约1MiB切分完整岗位为hash命名的`data/parts/*.js`，单个超长JD不截断；分片不代表查询或岗位上限。`catalog.js`复用全部来源/公司/notice元数据，jobs为空、parts含id/file/sourceKey/company/count/bytes，首屏目录数量从parts统计，不把尚未下载当零岗位。先写所有分片再替换catalog，旧hash文件保留供缓存/已打开页面，不自动清旧。
 
-查询时按所选显示单位加载完整所需分片，未选单位仍需全部；顺序加载、缓存/inflight去重、30秒单分片超时，无自动retry。全部完成才提交冻结条件/更新结果；失败保旧，用户再次查询才重试，重置/后发查询使旧请求结果失效。所有原17字段/JD保真，未知已选单位不静默变全部。全站查询仍有全量下载成本，不承诺线上秒开。正常publisher有新可用数据时一并派生；仅改传输实现用显式rebuild维护，缺/坏canonical拒绝且不能拿catalog作更新基线。
+查询时按所选显示单位加载完整所需分片，未选单位仍需全部；顺序加载、缓存/inflight去重、30秒单分片超时，无自动retry。全部完成才提交冻结条件/更新结果；失败保旧，用户再次查询才重试，重置/后发查询使旧请求结果失效。所有原17字段/JD保真，未知已选单位不静默变全部。全站查询仍有全量下载成本，不承诺线上秒开。每次发布重写目录与分片；目录或分片缺失/损坏时读取基线失败，不写公开数据。
 
-- 顶层：`version,legacy,notices,companies,sources,jobs`，可选`unitMemberships`为岗位ID→官网明确单位名称数组（当前仅阿里校园）。publisher从已核原生circleNames生成，不改17岗位字段/来源身份/采集钟；不完整更新保留未取得岗位及缺新归属者的已有映射。catalog保映射，阿里分片附`unitCounts`（各原生单位在该片的唯一岗位数，可重叠；无归属计入口兜底），查询加载与所选单位相关的全部必要片后才按岗位取并集，同ID不复制；普通旧分片保持原接口。目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
+- 顶层：`version,notices,companies,sources,jobs`，可选`unitMemberships`为岗位ID→官网明确单位名称数组（当前仅阿里校园）。publisher从已核原生circleNames生成，不改17岗位字段/来源身份/采集钟；不完整更新保留未取得岗位及缺新归属者的已有映射。catalog保映射，阿里分片附`unitCounts`（各原生单位在该片的唯一岗位数，可重叠；无归属计入口兜底），查询加载与所选单位相关的全部必要片后才按岗位取并集，同ID不复制；普通旧分片保持原接口。目录来源独立于当前关键词结果。来源覆盖/数据缺失必须保留提示；初版遗留已退出，`legacy:false` 不意味着全部公司或来源已经接入。
 - 公司：`name,initial,aliases`；来源：`key,company,status,lastSuccess,lastAttempt,message,coverage`。`available`代表可用但完整性待补，`ready`代表原完整核验版本；时间是资料实际采集时刻，旧材料按新政策恢复发布须公开说明，不冒本次新采集或拿恢复/发布时间补钟。
 - 岗位：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。旧 schema-1 记录可缺 category/sourceStatus，保留来源时不为它们补写字段。
 - 新ID为“来源key＋官方ID”，同标题不合并。可用路径按官方ID处理重复，无法安全确定身份的记录不发布并记录；旧完整路径仍要求唯一身份。跨来源去重仍待验证，不以名字相同自动合并。

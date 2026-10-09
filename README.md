@@ -21,9 +21,9 @@
 
 **仍不冒全集：**12源明确入口都有可用数据；数量漂移、未知属性及其它未证范围不靠猜测补齐。腾讯新授权阶段取得284个原链接的Workday全文，分别补校园86／社会285条；当前公开列表中与原腾讯完整posting身份相合的285个URL（含此前1份）已取得。仍缺校园3正文／社会20额外全文（21个独立URL），不在当前Workday列表不推下架；新R107662正常匿名请求403/S22后门户停止，旧R108032未重试。用户随后明确排查其余19个原链接，19个首次匿名请求也全部403/S22，无新JD，拒绝原因仍未知。腾讯仍挂起，不自动重试这些URL。
 
-**阿里云续处理（现已按用户要求挂起，见[暂停记录](PROCESS.md#33-用户明确挂起阿里云及本轮后续执行2026-10-09)）：**先取得默认500岗，再沿官网类别、地点及菜单关键词补169，共669岗及原生两栏JD／官网链接，经唯一链本地接入。官网报告670，**仍差1，身份及原因未定位，未冒全集或原目标完成**；“500/1”是分页metadata，不是HTTP500。本阶段200个补收正式列表请求保护已达，未继续官网网络。显示单位阿里云886＝独立社招669＋原阿里校园归属217，不复制岗位。614离线测试通过／8旧可选跳过，本地HTTP六项检查（5个不同岗位）及150活动片全字段/hash/count通过，不冒file、线上或全站性能验收。详见[阿里云续处理§7](docs/aliyun-social-continuation-research.md#7-父级实际采集独立可用接入与残差2026-10-09)。
+**阿里云续处理（现已按用户要求挂起，见[暂停记录](PROCESS.md#33-用户明确挂起阿里云及本轮后续执行2026-10-09)）：**先取得默认500岗，再沿官网类别、地点及菜单关键词补169，共669岗及原生两栏JD／官网链接，经唯一链本地接入。官网报告670，**仍差1，身份及原因未定位，未冒全集或原目标完成**；“500/1”是分页metadata，不是HTTP500。本阶段200个补收正式列表请求保护已达，未继续官网网络。显示单位阿里云886＝独立社招669＋原阿里校园归属217，不复制岗位。614离线测试通过／8旧可选跳过，本地HTTP六项检查（5个不同岗位）及150活动片全字段/hash/count通过，不冒file、线上或全站性能验收。详见阿里云续处理§7。
 
-第三批及本轮全部**代码/测试/文档已按用户要求提交并push（数据不入库）**，提交标识以Git历史为准；**数据（`data/jobs.js` 119,385,190字节及catalog/parts）仍仅本地、未部署**，线上仍是旧版本。原未推送提交7ec4e1c因含超100MiB的`data/jobs.js`被改写为代码-only提交，本地备份标签`backup-local-7ec4e1c`保留。存储/加载问题按用户要求暂挂，未改架构或采用首页预载，不删岗/JD凑大小。详见[第三批结果与缺口](docs/custom-third-batch-verification.md)、[补缺记录](docs/custom-third-batch-followup-research.md#6-父级后续执行与本地可用交付)、[继续补齐审计及结果](docs/custom-third-batch-completion-audit.md)、[腾讯续处理](docs/tencent-workday-continuation-research.md)、[Workday公开列表与正文补齐](docs/tencent-workday-native-collection-research.md#5-父级实际采集补充与本地发布)及[交付记录](PROCESS.md)。
+代码/测试/文档已按用户要求提交并push；**数据现为 `data/catalog.js`＋`data/parts/`（共约114MB，单文件均≤1MB，可直接入库），本地更新后尚未提交／部署**，线上仍是旧版本。详见[PROCESS.md](PROCESS.md)与docs/里的历史核验记录。
 
 ## 本地查看与检查
 
@@ -42,7 +42,7 @@ git diff --check
 node crawler/update.js stepfun stepfun_social
 ```
 
-它沿唯一采集/验证/发布链更新 `data/jobs.js`，不重建HTML。无参数update会遍历全部登记来源，勿作为日常检查；部分失败返回非零，失败不清上次已验证数据，也不回退初版遗留。
+它沿唯一采集/验证/发布链更新 `data/catalog.js` 与 `data/parts/`，不重建HTML。无参数update会遍历全部登记来源，勿作为日常检查；部分失败返回非零，失败不清上次已验证数据，也不回退初版遗留。
 
 适配器资格、Chrome环境、快照与分步命令见 [crawler/README.md](crawler/README.md)。本机 `crawler/out/` 被Git忽略，尚不等于定时任务的持久存储；定时采集与上线收尾尚未完成。
 
@@ -57,7 +57,7 @@ node crawler/update.js stepfun stepfun_social
 | [CONTEXT.md](CONTEXT.md) | 领域用语 |
 | [crawler/README.md](crawler/README.md) | 采集工具操作与适配器契约 |
 
-`index.html` / `assets/` 是原生界面与浏览器排序，`data/jobs.js` 是公开数据，`crawler/sites.json` 是唯一来源登记，`crawler/` 实现安全采集/发布，`tests/` 提供无依赖离线检查。`docs/` 保留来源核验与研究记录，不替代当前SPEC。
+`index.html` / `assets/` 是原生界面与浏览器排序，`data/catalog.js`＋`data/parts/` 是公开数据，`crawler/sites.json` 是唯一来源登记，`crawler/` 实现安全采集/发布，`tests/` 提供无依赖离线检查。`docs/license-notes.md` 是许可选择前的历史参考；来源核验与研究记录已清理，需要时查 Git 历史，不替代当前SPEC。
 
 ## 使用许可（禁止商用）
 
