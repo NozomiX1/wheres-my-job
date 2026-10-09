@@ -3,7 +3,7 @@ name: crawl-trial
 on:
   workflow_dispatch:
     inputs:
-      keys: { description: '来源 key，空格分隔', required: true, default: 'papegames vivo xiaomi_social baidu oppo' }
+      keys: { description: '来源 key，空格分隔', required: true, default: 'papegames xiaomi_social baidu oppo' }
 jobs:
   trial:
     runs-on: ubuntu-latest
@@ -12,11 +12,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      - name: probe
+        run: |
+          for u in https://hr.xiaomi.com/ https://talent.baidu.com/ https://careers.oppo.com/ https://papegames.jobs.feishu.cn/; do
+            curl -m 15 -sS -o /dev/null -w "$u %{http_code} connect=%{time_connect}s total=%{time_total}s\n" "$u" || echo "$u curl-fail $?"
+          done
       - name: crawl
         run: |
           for key in ${{ inputs.keys }}; do
             echo "::group::$key"
-            node crawler/crawl.js "$key" || echo "$key exit $?"
+            start=$(date +%s)
+            timeout 150 node crawler/crawl.js "$key" || echo "$key exit $?"
+            echo "$key elapsed $(( $(date +%s) - start ))s"
             echo "::endgroup::"
           done
       - name: result
