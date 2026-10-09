@@ -16,8 +16,8 @@
 <script>setTimeout(()=>{const notice=document.getElementById('startupNotice');if(notice)notice.textContent='界面加载超时，请检查网络后刷新。';},10000);</script>
 <noscript>请启用 JavaScript，以浏览岗位和使用关键词排序。</noscript>
 <dialog id="detailDialog" aria-labelledby="detailDialogTitle">
-  <div class="dialog-head"><span class="eyebrow" id="detailDialogTitle">岗位详情</span><button class="icon-button" data-action="close-detail" aria-label="关闭岗位详情">✕</button></div>
-  <div class="detail-content" id="modalDetail"></div>
+  <div class="dialog-head"><span class="eyebrow" id="detailDialogTitle">岗位详情</span><span class="dialog-actions"><span id="detailApply"></span><button class="icon-button" data-action="close-detail" aria-label="关闭岗位详情"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></button></span></div>
+  <div class="detail-content" id="modalDetail" tabindex="-1" autofocus></div>
 </dialog>
 </body>
 </html>
