@@ -26,7 +26,7 @@ test('single scan merges details over list rows, keeps unknown fields and record
   const rows = [list(1), list(2), { ...list(3), title: '' }, list(1)];
   const f = fakeFetch(rows, { details: { 1: detailOf(1) }, total: 9 });
   const raw = await m.fetchAll(campus, opts(f));
-  a.equal(raw.complete, false); a.equal(raw.total, 2); a.equal(raw.verification.policy, 'available');
+  a.equal(raw.total, 2);
   a.equal(f.calls.filter(c => c.startsWith('list')).length, 2); // total 声称 9 但只有 4 条：多请求一页，空页即停
   a.ok(raw.issues.some(s => s.includes('官方total 9'))); a.ok(raw.issues.some(s => s.includes('缺ID/标题'))); a.ok(raw.issues.some(s => s.includes('详情取得 1/2')));
   const [full, listOnly] = normalizeJobs(raw.jobs, campus);

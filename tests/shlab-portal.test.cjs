@@ -27,7 +27,7 @@ test('single cursor scan keeps markup text verbatim, tolerates unknown fields an
   const rows = Array.from({ length: 9 }, (_, i) => row(i + 1)); rows.push(row(10, { title: ' ' }), row(1));
   const f = fakeFetch(rows);
   const raw = await s.run(campus, opts(f));
-  a.equal(f.calls.length, 2); a.equal(raw.complete, false); a.equal(raw.total, 9); a.equal(raw.verification.policy, 'available');
+  a.equal(f.calls.length, 2); a.equal(raw.total, 9);
   a.ok(raw.issues.some(m => m.includes('缺ID/标题')));
   const j = normalizeJobs(raw.jobs, campus)[0];
   a.equal(j.id, 'shlab:1001'); a.equal(j.duty, '职责1\n<b>原样文本</b> &amp;'); a.equal(j.requirements, '要求1');
@@ -35,14 +35,12 @@ test('single cursor scan keeps markup text verbatim, tolerates unknown fields an
   a.equal(j.url, 'https://www.shlab.org.cn/joinus/detail/1001?mode=campus'); a.equal(j.jdComplete, true);
 });
 
-test('minimal records still publish; later page failure and cyclic cursor keep earlier rows', async () => {
+test('minimal records still publish; a later page failure or cyclic cursor fails the whole run', async () => {
   const bare = normalizeJobs([{ id: '5', title: 'T' }], social)[0];
   a.equal(bare.city, ''); a.equal(bare.duty, ''); a.equal(bare.employment, null); a.equal(bare.sourceStatus, null); a.equal(bare.jdComplete, false);
   const rows = Array.from({ length: 15 }, (_, i) => row(i + 1));
-  const failed = await s.run(social, opts(fakeFetch(rows, { failOn: 2 })));
-  a.equal(failed.total, 7); a.ok(failed.issues.some(m => m.includes('第2页停止')));
-  const cyclic = await s.run(social, opts(fakeFetch(rows, { brokenCursor: true })));
-  a.ok(cyclic.issues.some(m => m.includes('游标')));
+  await a.rejects(s.run(social, opts(fakeFetch(rows, { failOn: 2 }))), /HTTP 403/);
+  await a.rejects(s.run(social, opts(fakeFetch(rows, { brokenCursor: true }))), /cursor/);
 });
 
 test('first-page refusal and effective zero never succeed', async () => {

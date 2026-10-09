@@ -85,16 +85,13 @@ test('Baichuan preserves complete TEXT/title/CR/whitespace and exact named facts
   a.deepEqual([empty.duty, empty.requirements, empty.description, empty.city, empty.category, empty.jdComplete], ['', '/', '', '', '', false]);
   a.ok(Object.isFrozen(r.jobs[0].post.extraNative)); a.notEqual(r.jobs[0].post, native);
 });
-test('Baichuan safely rejects independent nested/custom JD and unsafe IDs, skips bad rows while retaining other available records', () => {
-  const bad = [row(2, { id: 7680029585811360002 }), row(2, { id: '../login?evil' }), row(2, { id: ' 7680029585811360002' }), row(2, { id: '0000029585811360002' }),
-    row(2, { title: 2 }), row(2, { description: {} }), row(2, { job_post_info: [] }), row(2, { job_post_info: { description: '独立额外正文' } }),
-    row(2, { job_post_info: { requirement: '独立额外要求' } }), row(2, { job_post_info: { job_post_object_value_map: { custom: '课题正文' } } }),
-    row(2, { job_function: { name: 3 } }), row(2, { job_category: { name: '产品' } })];
-  const missing = row(2); delete missing.requirement; bad.push(missing);
+test('Baichuan skips rows without a usable id/title while retaining other available records', () => {
+  const bad = [row(2, { id: 7680029585811360002 }), row(2, { id: '../login?evil' }), row(2, { id: ' 7680029585811360002' }), row(2, { id: '0000029585811360002' }), row(2, { title: 2 }), row(2, { job_post_info: [] })];
   for (const post of bad) a.throws(() => b.normalizeRecord({ post }, site));
-  const r = b.collectAvailable([page(0, bad.slice(0, 9), 14), page(10, [...bad.slice(9), row()], 14)], site);
-  a.equal(r.total, 1); a.match(r.issues.join(';'), /列表记录未应用.*nested Feishu JD/); a.match(r.issues.join(';'), /列表页不完整/);
-  a.deepEqual(r.verification.pages[0].response.data.job_post_list, bad.slice(0, 9)); a.equal(b.validateEvidence(r.verification, r.jobs, site).total, 1);
+  const r = b.collectAvailable([page(0, bad, 7), page(10, [row()], 7)], site);
+  a.equal(r.total, 1); a.match(r.issues.join(';'), /列表记录未应用/);
+  a.deepEqual(r.verification.pages[0].response.data.job_post_list, bad); a.equal(b.validateEvidence(r.verification, r.jobs, site).total, 1);
+  // Unknown extra metadata and an independent nested JD no longer block a row (the shared Feishu projection is lenient).
   const duplicateNested = row(2); duplicateNested.job_post_info.description = duplicateNested.description;
   a.equal(b.normalizeRecord({ post: duplicateNested }, site).duty, duplicateNested.description);
   for (const pages of [[], [page(0, [], 0)], [page(0, [bad[0]], 1)]]) a.throws(() => b.collectAvailable(pages, site));

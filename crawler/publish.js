@@ -6,9 +6,7 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { createHash } = require('node:crypto');
 const { normalizeJD } = require('./lib/jd-text');
-const feishu = require('./lib/feishu');
 const moka = require('./lib/moka');
-const beisen = require('./lib/beisen');
 const portals = require('./lib/portals');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'catalog.js');
@@ -115,44 +113,34 @@ function buildUrl(site, id) {
   return '';
 }
 
-function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
+function normalizeJobs(rawJobs, site, { detailIds } = {}) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   if (!Array.isArray(rawJobs)) throw new Error('Jobs must be an array');
   const portal = portals.requiring(site);
   if (portal && !portal.qualifies(site)) throw new Error(portal.unverified);
-  if (portal) portal.mod.validateJobs(rawJobs, site, ...(portal.passOptions ? [{ available }] : []));
+  if (portal) portal.mod.validateJobs(rawJobs, site);
   const newDirectJD = portal?.directJD(site);
   const newMokaPortal = moka.requiresVerification(site);
   if (newMokaPortal && !moka.verifiedSource(site)) throw new Error('Moka portal identity/scope/mode has not been verified');
-  const newBeisenPortal = beisen.requiresVerification(site);
-  if (newBeisenPortal && !beisen.verifiedSource(site)) throw new Error('Beisen portal identity/scope/mode has not been verified');
-  if (newBeisenPortal) beisen.validateJobs(rawJobs, site);
-  const titleFields = site.ats === 'beisen' ? ['JobAdName', 'JobName', 'name', 'title'] : site.ats === 'moka' ? ['name', 'jobTitle', 'title'] : ['title', 'name', 'jobTitle'];
-  const cityFields = site.ats === 'beisen' ? ['LocNames', 'WorkLocationName', 'workPlaceName', 'city'] : site.ats === 'moka' ? ['locations', 'cityList', 'city'] : ['city', 'cities', 'city_list', 'locations'];
+  const titleFields = site.ats === 'moka' ? ['name', 'jobTitle', 'title'] : ['title', 'name', 'jobTitle'];
+  const cityFields = site.ats === 'moka' ? ['locations', 'cityList', 'city'] : ['city', 'cities', 'city_list', 'locations'];
   const detailedMoka = site.ats === 'moka' && site.fetchDetails === true;
   const fullMoka = detailedMoka || site.ats === 'moka' && site.listJD === true;
-  const dateFields = fullMoka ? ['publishedAt'] : site.ats === 'beisen' ? ['PostDate', 'PublishTime', 'publishTime', 'date'] : site.ats === 'moka' ? ['createdAt', 'openedAt', 'publishTime', 'date'] : ['date', 'publish', 'publish_time'];
-  const categoryFields = site.ats === 'moka' ? ['category', 'zhineng'] : site.ats === 'feishu' ? ['category', 'job_category', 'jobFunction'] : ['category'];
+  const dateFields = fullMoka ? ['publishedAt'] : site.ats === 'moka' ? ['createdAt', 'openedAt', 'publishTime', 'date'] : ['date', 'publish', 'publish_time'];
+  const categoryFields = site.ats === 'moka' ? ['category', 'zhineng'] : ['category'];
   const descriptionFields = ['description', 'desc', 'jobDescription', 'job_description', 'JobDescription', 'summary', 'jobSummary'];
   const dutyFields = ['duty', 'descDuty', 'Duty', 'Responsibility', 'workContent', 'jobDuty'];
   const requireFields = ['requirements', 'requirement', 'descRequire', 'Require', 'Requirement', 'jobRequire', 'qualification', 'workRequire', 'positionDemand', 'serviceCondition'];
-  if (site.ats === 'beisen') dutyFields.push('jobDescription', 'description');
   const seen = new Set();
   return rawJobs.map((job, index) => {
     try {
       if (!job || typeof job !== 'object' || Array.isArray(job)) throw new Error('Invalid job object');
-      if (portal) job = portal.mod.normalizeRecord(job, site, ...(portal.passOptions ? [{ available, detailIds }] : []));
-      if (newBeisenPortal) job = beisen.normalizeRecord(job, site);
+      if (portal) job = portal.mod.normalizeRecord(job, site, ...(portal.passOptions ? [{ detailIds }] : []));
       if (newMokaPortal) {
         moka.validateListJob(job, site.orgId, site.siteId);
         // Only proven native fields may supply public facts; ignore unverified aliases/canonical claims.
         const fields = ['id', 'orgId', 'title', 'locations', 'zhineng', 'commitment', 'jobDescription', 'publishedAt', 'status', 'detailVerified', 'listJDVerified', 'deptId'];
         job = Object.fromEntries(fields.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]]));
-      }
-      if (feishu.verifiedSource(site)) {
-        const verified = feishu.normalizeRecord(job, site);
-        for (const [field, value] of Object.entries(verified)) if (JSON.stringify(job[field]) !== JSON.stringify(value)) throw new Error('Feishu normalized facts do not match the full raw post: ' + field);
-        job = verified;
       }
       const idFields = ['id', 'Id', 'JobAdId', 'jobAdId', 'PostId', 'positionId'];
       for (const field of idFields) if (job[field] != null && !(typeof job[field] === 'string' || (Number.isSafeInteger(job[field]) && job[field] >= 0))) throw new Error('Invalid official id');
@@ -199,10 +187,6 @@ function normalizeJobs(rawJobs, site, { available = false, detailIds } = {}) {
       if (!channels.length) {
         if (site.ats === 'moka' && site.site === 'social') channels.push('social');
         if (site.ats === 'moka' && site.site === 'campus' && (fullMoka || employment !== 'internship')) channels.push('campus');
-        if (site.ats === 'beisen' && (site.category || ['2']).length === 1) {
-          if ((site.category || ['2'])[0] === '1') channels.push('social');
-          if ((site.category || ['2'])[0] === '2' && employment !== 'internship') channels.push('campus');
-        }
       }
       const urlFields = ['url', 'PostURL', 'jobUrl'];
       for (const field of urlFields) text(job[field], field);
@@ -316,21 +300,17 @@ function writeBrowserData(data, catalogFile, { maxBytes = 1024 * 1024 } = {}) {
 
 function validateSnapshot(snapshot, status, site) {
   const coverage = coverageFor(site);
-  const available = snapshot?.complete === false && snapshot.verification?.policy === 'available';
   const portal = portals.qualified(site);
-  if (portal?.availableOnly(site) && !available) throw new Error('This source only qualifies available data, not verified completeness');
-  if (snapshot?.verification?.policy === 'available' && !available) throw new Error('Available data cannot claim verified completeness');
-  if (available && !portal?.canBeAvailable(site)) throw new Error('Available publication is not supported by this source');
-  if (!['moka', 'beisen'].includes(site.ats) && !feishu.verifiedSource(site) && !portal) throw new Error('Adapter has not been verified for completeness');
-  if (!status || status.version !== 1 || status.key !== site.key || status.status !== (available ? 'available' : 'ready') || typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
-  if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.complete !== (available ? false : true) || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
-  if (beisen.requiresVerification(site)) beisen.validateEvidence(snapshot.verification, snapshot.jobs, site);
+  if (site.ats !== 'moka' && !portal) throw new Error('Adapter has not been verified');
+  if (!status || status.version !== 1 || status.key !== site.key || !['ready', 'available'].includes(status.status) || // 'available' only appears in snapshots written before 2026-10-09
+    typeof status.message !== 'string' || status.coverage !== coverage) throw new Error('Source is not ready for this registry coverage');
+  if (!snapshot || snapshot.version !== 1 || snapshot.key !== site.key || snapshot.coverage !== coverage || !validTimestamp(snapshot.completedAt) || snapshot.completedAt !== status.lastSuccess || !validTimestamp(status.lastAttempt) || Date.parse(status.lastAttempt) > Date.parse(snapshot.completedAt)) throw new Error('Snapshot metadata does not match the successful attempt');
   const required = portals.requiring(site);
   const validation = required?.mod.validateEvidence(snapshot.verification, snapshot.jobs, site);
-  return normalizeJobs(snapshot.jobs, site, { available, detailIds: validation?.detailIds });
+  return normalizeJobs(snapshot.jobs, site, { detailIds: validation?.detailIds });
 }
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [] } = {}) {
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [], acceptShrink = [] } = {}) {
   const baseline = readPublished(dataFile);
   if (typeof reproject !== 'boolean' || reproject && !keys.length) throw new Error('Reprojection requires explicit source keys');
   const selected = new Set(keys);
@@ -350,23 +330,20 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       if (failed.has(site.key)) throw new Error('本轮 crawl 子进程失败或未验证，保留已发布基线');
       const snapshot = JSON.parse(fs.readFileSync(path.join(outDir, site.key + '_snapshot.json'), 'utf8'));
       let jobs = validateSnapshot(snapshot, status, site);
-      if (snapshot.complete === false) {
-        const merged = new Map(baseline.jobs.filter(j => j.sourceKey === site.key).map(j => [j.id, j]));
-        for (const job of jobs) {
-          const old = merged.get(job.id);
-          // A failed/missing detail must not erase a previously usable JD.
-          merged.set(job.id, old && !reproject && ![job.duty, job.requirements, job.description].some(v => v.trim()) ? old : {
-            ...job, ...Object.fromEntries(['duty', 'requirements', 'description'].filter(field => old && old[field].trim() && !job[field].trim()).map(field => [field, old[field]]))
-          });
-        }
-        jobs = [...merged.values()];
-      }
+      // 整源替换：这次取到的就是该来源现在的全部岗位。新内容里为空的正文字段不抹掉旧的非空正文（详情没取到时）。
+      const old = new Map(baseline.jobs.filter(j => j.sourceKey === site.key).map(j => [j.id, j]));
+      jobs = jobs.map(job => {
+        const o = old.get(job.id), restored = o ? ['duty', 'requirements', 'description'].filter(field => o[field].trim() && !job[field].trim()) : [];
+        return restored.length ? { ...job, ...Object.fromEntries(restored.map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
+      });
+      // 防护：新结果少于旧数据一半，多半是被截断，拒绝替换（确属下架需显式 acceptShrink）。
+      if (old.size && jobs.length < old.size / 2 && !acceptShrink.includes(site.key)) throw new Error('New result has ' + jobs.length + ' jobs, fewer than half of the ' + old.size + ' published; keeping published data');
       if (previous?.company && previous.company !== site.company) throw new Error('Source company changed; explicit migration required');
       if (previous?.lastSuccess && (Date.parse(previous.lastSuccess) > Date.parse(snapshot.completedAt) || Date.parse(previous.lastSuccess) === Date.parse(snapshot.completedAt) && !reproject)) continue;
       const memberships = portals.qualified(site)?.mod.unitMemberships;
       if (memberships) Object.assign(unitMemberships, memberships(snapshot.jobs, site));
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: snapshot.complete === false ? 'available' : 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已验证完整来源快照（仅此来源范围）') + (feishu.classifiedScope(site) && !status.message.includes(feishu.CLASSIFIED_NOTICE) ? '；' + feishu.CLASSIFIED_NOTICE : '') + (feishu.portalNotice(site) && !status.message.includes(feishu.portalNotice(site)) ? '；' + feishu.portalNotice(site) : '') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + (beisen.portalNotice(site) && !status.message.includes(beisen.portalNotice(site)) ? '；' + beisen.portalNotice(site) : '') + portals.notices(site).filter(n => !status.message.includes(n)).map(n => '；' + n).join(''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已更新（仅此来源范围）') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + portals.notices(site).filter(n => !status.message.includes(n)).map(n => '；' + n).join(''), coverage: snapshot.coverage });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -388,13 +365,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
     companies.push({ name: source.company, initial: /^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#', aliases: [] });
   }
   const notices = ['数据范围以各注册来源的渠道、批次及接口参数为准；注册来源不等于公司全量，跨来源机会暂不合并。'];
-  if ([...sources.values()].some(source => source.key === 'bytedance_social' && source.coverage?.includes('"adapter":"bytedance-classified-v1"'))) notices.push(feishu.CLASSIFIED_NOTICE);
-  for (const key of ['lilith', 'lilith_social']) {
-    const source = sources.get(key), site = sites.find(s => s.key === key);
-    if (source?.lastSuccess && source.coverage?.includes('"portalPaths":') && feishu.portalNotice(site)) notices.push(feishu.portalNotice(site));
-  }
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"moka-portal-v1"'))) notices.push(moka.PORTAL_NOTICE);
-  if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"beisen-portal-v1"'))) notices.push(beisen.PORTAL_NOTICE);
   // 门户来源通知：先按门户分组（pass 1，按 rank），再按站点逐个（pass 2）。只统计已有成功快照且 coverage 匹配的来源。
   const hasNotice = (portal, site) => {
     const source = sources.get(site.key);
@@ -410,7 +381,6 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   }
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');
   if (jobs.some(job => job.sourceStatus && job.sourceStatus !== 'open')) notices.push('部分岗位的官网接口状态非 open，条目中已标明；实际招聘及投递可用性请以官网为准。');
-  if ([...sources.values()].some(source => source.status === 'available')) notices.push('部分来源先发布可用岗位，尚未验证完整覆盖；缺项和采集期间变化见来源状态，不完整更新保留已有可用岗位，数量不代表官网当前在招全集。');
   if ([...sources.values()].some(source => source.status !== 'ready')) notices.push('部分来源尚未取得数据；更新失败时保留已有可用版本，没有则暂不可用，不表示官网无岗位；详情见来源状态。');
   const jobIds = new Set(jobs.map(job => job.id));
   const memberships = Object.fromEntries(Object.entries(unitMemberships).filter(([id]) => jobIds.has(id)));
@@ -424,7 +394,8 @@ if (require.main === module) {
   try {
     const keys = process.argv.slice(2);
     const reproject = keys[0] === '--reproject';
-    const result = publish(reproject ? { keys: keys.slice(1), reproject: true } : keys.length ? { keys } : {});
+    const shrink = keys.filter(k => k.startsWith('--accept-shrink=')).flatMap(k => k.slice(16).split(',')), names = keys.filter(k => !k.startsWith('--accept-shrink='));
+    const result = publish(reproject ? { keys: names.slice(1), reproject: true, acceptShrink: shrink } : names.length ? { keys: names, acceptShrink: shrink } : { acceptShrink: shrink });
     console.log(result.written ? 'Published sources: ' + result.updated.join(', ') : 'No verified updates; published data unchanged');
     for (const error of result.errors) console.error(error);
     process.exitCode = result.code;

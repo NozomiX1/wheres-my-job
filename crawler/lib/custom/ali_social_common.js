@@ -1,5 +1,6 @@
 // Independently reviewed Chinese social portals; Cloud has a separate available-only contract.
 'use strict';
+const { paginate } = require('../paginate');
 const fs = require('node:fs');
 const { isDeepStrictEqual } = require('node:util');
 const { createHash } = require('node:crypto');
@@ -448,28 +449,17 @@ async function run(site, options = {}) {
   if (!csrf || csrf === '[REDACTED]') throw new Error('Ali normal anonymous CSRF absent');
   const api = new URL(p.api); api.searchParams.set('_csrf', csrf);
   // 单轮扫描：中途失败保留已得岗位，total 不符/坏记录只记 issues。
-  const issues = [], byId = new Map();
-  let total = null, skipped = 0, pages = 0;
-  for (let pageIndex = 1; pageIndex <= maxPages; pageIndex++) {
-    let content;
-    try {
-      const response = await request(api.href, requestBody(p, pageIndex), csrf);
-      if (response.status !== 200) throw new Error('Ali list HTTP ' + response.status);
-      const json = await response.json();
-      content = json?.content;
-      if (json?.success !== true || !Array.isArray(content?.datas)) throw new Error('Ali native business refusal on page ' + pageIndex);
-    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + pageIndex + '页停止：' + error.message); break; }
-    pages++;
-    if (Number.isSafeInteger(content.totalCount) && content.totalCount > 0) total = content.totalCount; // 终点页的 0 不是官方 total
-    for (const job of content.datas) { if (usableJob(job, p)) byId.set(job.id, job); else skipped++; }
-    if (!content.datas.length || total !== null && byId.size + skipped >= total) break;
-    if (pageIndex === maxPages) issues.push('达到分页上限，覆盖待补');
-  }
+  const issues = [];
+  const { rows: byId, pages } = await paginate(async pageIndex => {
+    const response = await request(api.href, requestBody(p, pageIndex), csrf);
+    if (response.status !== 200) throw new Error('Ali list HTTP ' + response.status);
+    const json = await response.json(), content = json?.content;
+    if (json?.success !== true || !Array.isArray(content?.datas)) throw new Error('Ali native business refusal on page ' + pageIndex);
+    return { rows: content.datas, total: content.totalCount };
+  }, { maxPages, idOf: job => job.id, usable: job => usableJob(job, p), issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('Ali: no usable records; zero cannot clear existing data');
-  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题/官网链接，未收录');
-  if (total !== jobs.length) issues.push('官方total ' + (total ?? '未知') + '；实际唯一岗位 ' + jobs.length);
-  return { complete: false, total: jobs.length, jobs, issues, verification: { version: 4, policy: 'available', key: p.key, api: p.api, pages, issues } };
+  return { total: jobs.length, jobs, issues, verification: { key: p.key, api: p.api, pages, issues } };
 }
 function fetchAllFor(host, options) {
   const p = PROFILES.find(p => new URL(p.origin).hostname === host);

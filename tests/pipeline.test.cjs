@@ -11,9 +11,8 @@ const { runCrawl, validateEnvelope } = require('../crawler/crawl');
 const { publish, normalizeJobs, coverageFor, readPublished, loadSites } = require('../crawler/publish');
 const { runUpdate } = require('../crawler/update');
 const moka = require('../crawler/lib/moka');
-const beisen = require('../crawler/lib/beisen');
 const A = { key: 'a', company: 'Alpha', ats: 'moka', orgId: 'official', siteId: 123, site: 'campus', batch: '指定批次' };
-const B = { key: 'b', company: '乙公司', ats: 'beisen', api: 'https://official.example/api/jobs', category: ['1'], linkTemplate: 'https://official.example/jobs/{id}', batch: '社招' };
+const B = { key: 'b', company: '乙公司', ats: 'moka', orgId: 'official-b', siteId: 456, site: 'social', batch: '社招' };
 const T1 = '2026-01-01T00:00:00.000Z';
 const T2 = '2026-01-02T00:00:00.000Z';
 const T3 = '2026-01-03T00:00:00.000Z';
@@ -70,7 +69,7 @@ function fetchPages(pages, mode, requests = []) {
 
 function adapterFetch(mode, pages, requests = [], extra = {}) {
   const options = { fetchImpl: fetchPages(pages, mode, requests), ...extra };
-  return mode === 'moka' ? moka.fetchAll({ ...A, aesIv: 'de7c21ed8d6f50fe' }, options) : beisen.fetchAll(B.api, B.category, options);
+  return moka.fetchAll({ ...A, aesIv: 'de7c21ed8d6f50fe' }, options);
 }
 
 function pageBody(mode, jobs, total) { return mode === 'moka' ? { data: { jobs, total } } : { Data: jobs, Count: total }; }
@@ -85,7 +84,7 @@ test('first success reads the NEW raw, stores raw snapshot, and publishes only i
   assert.equal(result.lastAttempt, T1);
   assert.equal(result.lastSuccess, T2);
   const snapshot = JSON.parse(fs.readFileSync(snapshotFile(f)));
-  assert.deepEqual(snapshot, { version: 1, key: 'a', complete: true, completedAt: T2, coverage: coverageFor(A), jobs: [fresh] });
+  assert.deepEqual(snapshot, { version: 1, key: 'a', completedAt: T2, coverage: coverageFor(A), jobs: [fresh] });
   const oldCompanies = readPublished(f.dataFile).companies;
   const publication = publish(f);
   assert.equal(publication.code, 1, 'B missing means partial success reports a nonzero overall result');
@@ -113,7 +112,7 @@ test('failure, no write, malformed/unknown/incomplete results and illegal jobs r
     { label: 'array is NOT verified', value: [rawJob('bad')], status: 'unverified' },
     { label: 'legacy all is NOT verified', value: { all: [rawJob('bad')], total: 1 }, status: 'unverified' },
     { label: 'unknown list shape', value: { list: [rawJob('bad')] }, status: 'unverified' },
-    { label: 'explicit incomplete', value: { ...envelope([rawJob('bad')]), complete: false }, status: 'unverified' },
+    { label: 'empty jobs', value: envelope([]), status: 'unverified' },
     { label: 'count mismatch', value: { ...envelope([rawJob('bad')]), total: 2 }, status: 'unverified' },
     ...[
       { title: 'no id' }, { id: 'bad' }, { id: 'bad', title: ' ' },
@@ -154,7 +153,7 @@ test('first failure deletes newly-created raw and never invents a snapshot or su
   assert.equal(fs.existsSync(snapshotFile(f)), false);
 });
 
-test('only explicit verified empty replaces ONE source, leaving the other baseline intact', t => {
+test('a zero-job result never replaces a source; the published baseline stays intact', t => {
   const f = fixture(t);
   assert.equal(crawl(A, f, [rawJob('old')]).code, 0);
   const oldSnapshot = fileBytes(snapshotFile(f));
@@ -164,11 +163,10 @@ test('only explicit verified empty replaces ONE source, leaving the other baseli
   const before = fileBytes(f.dataFile);
   assert.equal(publish(f).written, false);
   assert.deepEqual(fileBytes(f.dataFile), before);
-  assert.equal(crawl(A, f, [], T3).code, 0);
-  const result = publish({ ...f, keys: ['a'] });
-  assert.equal(result.code, 0);
-  assert.deepEqual(result.data.jobs.map(j => j.id), ['b:old']);
-  assert.equal(JSON.parse(fs.readFileSync(snapshotFile(f))).jobs.length, 0);
+  assert.equal(crawl(A, f, [], T3).code, 1);
+  assert.deepEqual(fileBytes(snapshotFile(f)), oldSnapshot);
+  assert.equal(publish({ ...f, keys: ['a'] }).written, false); // 最近一次尝试失败，不发布旧快照
+  assert.deepEqual(fileBytes(f.dataFile), before);
 });
 
 test('missing out/no verified updates never touches any published file, including mtime', t => {
@@ -220,7 +218,7 @@ test('metadata/coverage/record tampering cannot replace a published source, and 
   const status = JSON.parse(fs.readFileSync(statusFile(f)));
   const before = fileBytes(f.dataFile);
   for (const change of [
-    { key: 'wrong' }, { complete: false }, { version: 2 }, { completedAt: T3 },
+    { key: 'wrong' }, { version: 2 }, { completedAt: T3 },
     { coverage: coverageFor({ ...A, siteId: 124 }) }, { jobs: [{ title: 'missing id' }] },
     { jobs: [{ ...rawJob('new'), category: true }] }
   ]) {
@@ -284,11 +282,6 @@ test('normalization retains every occupation, internship, plan and experience; f
     assert.equal(job.category, '');
     assert.ok(!['score', 'years', 'strength', 'titleTier', 'track', 'dept'].some(key => key in job));
   }
-  const feishu = normalizeJobs([{ id: 'f', title: '岗位', description: '职责', requirement: '必须保留' }], { key: 'f', company: 'Feishu', ats: 'feishu' })[0];
-  assert.equal(feishu.requirements, '必须保留');
-  assert.equal(feishu.description, '职责');
-  assert.equal(feishu.url, '');
-  assert.deepEqual(feishu.channels, []);
   const known = normalizeJobs([{ id: 'known', title: '完整岗位', date: '2026-01-01', dateKind: 'updated', duty: '正文', jdComplete: true, talentPlan: false, employment: 'full-time', channels: ['campus', 'social'] }], A)[0];
   assert.equal(known.jdComplete, true);
   assert.equal(known.dateKind, 'updated');
@@ -299,14 +292,11 @@ test('normalization retains every occupation, internship, plan and experience; f
 });
 
 test('official category names are merged in source-field order; codes, departments, channels and batches are not functions', () => {
-  const feishu = { key: 'f', company: 'Feishu', ats: 'feishu' };
   const custom = { key: 'c', company: 'Custom', ats: 'custom' };
   const raw = { ...rawJob('label', '<img src=x onerror=alert(1)>财务'), city: '北京', date: '2026-01-01', dateKind: 'updated', duty: '<p>职责</p>', jdComplete: true, employment: 'full-time', talentPlan: false, channels: ['campus', 'social'] };
   const cases = [
     [A, { zhineng: { name: ' 研发 ' } }, '研发'],
     [A, { category: { name: ' 技术 ' }, zhineng: ' 研发 ' }, '技术/研发'],
-    [feishu, { category: ' 技术 ', jobFunction: ' 算法 ' }, '技术/算法'],
-    [feishu, { job_category: { name: ' 研发 ' }, jobFunction: '算法' }, '研发/算法'],
     [custom, { category: ' 财务 ' }, '财务'],
     [custom, { category: ' <b>职能</b><img src=x onerror=alert(1)> ' }, '<b>职能</b><img src=x onerror=alert(1)>'],
     [A, { category: ['研发', { name: ' 设计 ' }, ' 研发 ', '123', { id: 4 }, {}], zhineng: [{ name: '设计' }, { name: '算法' }] }, '研发/设计/算法']
@@ -318,11 +308,6 @@ test('official category names are merged in source-field order; codes, departmen
   for (const category of [undefined, null, '', ' ', {}, { id: '123' }, { name: '' }, 123, ' 007 ', '1e3', []]) {
     const fields = { category, dept: '算法研发部', department: { name: '研发部' }, Category: '社会招聘', ClassificationOne: '2026批次', BeisenCategory: '技术', categoryID: '技术', code: '研发', jobFamilyName: '未验证职族', jobCategoryName: '未验证职类' };
     assert.deepEqual(normalizeJobs([{ ...raw, ...fields }], B)[0], normalizeJobs([raw], B)[0], 'Only usable official labels may populate category');
-  }
-  for (const sourceChannelCategory of ['1', '2']) {
-    const job = normalizeJobs([{ ...rawJob(), Category: sourceChannelCategory, ClassificationOne: '2026批次' }], { ...B, category: [sourceChannelCategory] })[0];
-    assert.equal(job.category, '');
-    assert.deepEqual(job.channels, [sourceChannelCategory === '1' ? 'social' : 'campus']);
   }
 });
 
@@ -370,12 +355,8 @@ test('reviewed ByteDance campus runs/publishes; raw JD facts and old broad socia
   const data = readPublished(f.dataFile), fresh = data.jobs.find(j => j.sourceKey === site.key);
   assert.deepEqual(data.jobs.filter(j => j.sourceKey !== site.key), old.jobs);assert.deepEqual(data.sources.filter(s => s.key !== site.key), old.sources);
   assert.equal(fresh.requirements, '完整要求 C++');assert.equal(fresh.duty, '完整职责 Agent');assert.equal(fresh.description, '');assert.deepEqual(fresh.channels, ['campus']);assert.equal(fresh.employment, 'internship');assert.equal(fresh.date, null);assert.equal(fresh.talentPlan, null);
-  const savedRaw = fileBytes(rawFile(f, site)), savedSnapshot = fileBytes(snapshotFile(f, site));
-  const forged = (command, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(envelope([{ ...job, requirements: 'silently omitted' }])));return { status: 0 }; };
-  assert.equal(runCrawl(site, { outDir: f.outDir, runner: forged, now: () => T3 }).code, 1);assert.deepEqual(fileBytes(rawFile(f, site)), savedRaw);assert.deepEqual(fileBytes(snapshotFile(f, site)), savedSnapshot);
-  const before = fileBytes(f.dataFile);assert.equal(publish({ ...f, sites: [site], keys: [site.key] }).written, false);assert.deepEqual(fileBytes(f.dataFile), before);
   assert.equal(runCrawl(social, { outDir: f.outDir, runner: () => assert.fail('Capped source cannot run'), now: () => T3 }).status, 'unverified');
-  for (const change of [{ adapter: undefined }, { portalType: 6 }, { websitePath: 'society' }, { subjectIdList: ['single-project'] }, { url: 'https://wrong.example/position' }]) assert.equal(feishu.verifiedSource({ ...site, ...change }), false);
+  for (const change of [{ adapter: undefined }, { key: 'alias' }]) assert.equal(feishu.verifiedSource({ ...site, ...change }), false);
   assert.notEqual(coverageFor(site), coverageFor({ ...site, portalType: 6 }));assert.notEqual(coverageFor(site), coverageFor({ ...site, adapter: 'future-version' }));
 });
 
@@ -395,7 +376,6 @@ test('explicit classified social migration replaces only its old source and perm
   assert.deepEqual(data.jobs.filter(j=>j.sourceKey===site.key).map(j=>j.id),[site.key+':social-official']);assert(data.sources.find(s=>s.key===site.key).message.includes('不代表全社招'));assert(data.notices.some(n=>n.includes('未分类')));
   assert.notEqual(coverageFor(site),coverageFor({...site,categoryGroups:[]}));assert.notEqual(coverageFor(site),coverageFor({...site,categoryRootIds:[]}));
   assert.equal(crawl(A,f,[rawJob('other-new')],T3).code,0);assert.equal(publish({...f,sites:[...f.sites,site],keys:['a']}).written,true);assert(readPublished(f.dataFile).notices.some(n=>n.includes('不代表全社招')));
-  assert.throws(()=>normalizeJobs([{...job,rawPost:{...rawPost,job_category:{id:'outside',name:'职能'}}}],site),/scope|category/i);
 });
 
 test('country-only official locations retain overseas jobs without inventing a city', t => {
@@ -417,17 +397,6 @@ test('country-only official locations retain overseas jobs without inventing a c
 });
 
 test('ATS fields, official URLs and source+official identity do not lose requirements or merge titles', () => {
-  const jobs = normalizeJobs([{ JobAdId: 0, JobAdName: '相同标题', LocNames: ['北京', '上海'], Duty: '完整职责', Require: '完整要求', PostDate: '2026-01-01', Kind: 1 }, { JobAdId: '2', JobName: '相同标题', Requirement: '另一份要求' }], B);
-  assert.equal(jobs[0].id, 'b:0');
-  assert.equal(jobs[0].city, '北京/上海');
-  assert.equal(jobs[0].duty, '完整职责');
-  assert.equal(jobs[0].requirements, '完整要求');
-  assert.equal(jobs[0].dateKind, null);
-  assert.equal(jobs[0].employment, null);
-  assert.equal(jobs[0].url, 'https://official.example/jobs/0');
-  assert.deepEqual(jobs[0].channels, ['social']);
-  assert.equal(jobs[1].requirements, '另一份要求');
-  assert.equal(new Set(jobs.map(job => job.id)).size, 2);
   assert.notEqual(normalizeJobs([rawJob('same')], A)[0].id, normalizeJobs([rawJob('same')], B)[0].id);
   const generic = { key: 'unknown', company: 'Unknown', ats: 'custom' };
   for (const url of ['javascript:alert(1)', 'data:text/html,unsafe', 'https://user:pass@example.com', 'not-a-url']) assert.equal(normalizeJobs([{ ...rawJob(), url }], generic)[0].url, '');
@@ -450,7 +419,7 @@ test('unverified custom and Feishu are not run, do not touch raw, and cannot pub
   }
 });
 
-for (const mode of ['moka', 'beisen']) {
+for (const mode of ['moka']) {
   test(mode + ' verifies stable count/full pagination including 0; preserves source request parameters', async () => {
     const requests = [];
     const jobs = [rawJob('1'), rawJob('2'), rawJob('3')];
@@ -460,14 +429,6 @@ for (const mode of ['moka', 'beisen']) {
     if (mode === 'moka') {
       assert.equal(requests[0].body.site, 'campus');
       assert.equal(requests[1].body.offset, 2);
-    } else {
-      assert.deepEqual(requests[0].body.Category, ['1']);
-      assert.equal(requests[1].body.PageIndex, 1);
-      for (const sourceChannelCategory of [['1'], ['2']]) {
-        const channelRequests = [];
-        assert.deepEqual(await beisen.fetchAll(B.api, sourceChannelCategory, { fetchImpl: fetchPages([{ body: pageBody(mode, [], 0) }], mode, channelRequests) }), envelope([]));
-        assert.deepEqual(channelRequests[0].body.Category, sourceChannelCategory, 'Official channel request parameters are not job-function labels');
-      }
     }
     assert.deepEqual(await adapterFetch(mode, [{ body: pageBody(mode, [], 0) }]), envelope([]));
   });
@@ -493,7 +454,7 @@ for (const mode of ['moka', 'beisen']) {
     const file = path.join(f.dir, 'raw.json');
     fs.writeFileSync(file, 'OLD RAW');
     const args = mode === 'moka' ? [A.orgId, String(A.siteId), A.site, 'de7c21ed8d6f50fe', file] : [B.api, '1', file];
-    const adapter = mode === 'moka' ? moka : beisen;
+    const adapter = moka;
     await assert.rejects(adapter.run(args, { fetchImpl: fetchPages([{ status: 500 }], mode) }));
     assert.equal(fs.readFileSync(file, 'utf8'), 'OLD RAW');
     await adapter.run(args, { fetchImpl: fetchPages([{ body: pageBody(mode, [], 0) }], mode) });
@@ -589,5 +550,5 @@ test('bad baseline is refused without evaluating JavaScript or overwriting it', 
     assert.throws(() => publish(f), /Invalid baseline category/);
     assert.equal(fs.readFileSync(f.dataFile, 'utf8'), content, 'Explicit illegal category types must never overwrite the baseline');
   }
-  assert.throws(() => validateEnvelope([]), /complete/);
+  assert.throws(() => validateEnvelope([]), /no usable jobs/);
 });

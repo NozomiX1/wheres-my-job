@@ -11,7 +11,6 @@ test('third-batch sources independently qualify available snapshots; exact scope
     assert(portal.verifiedSource(site), key + ' fixed registry identity');
     const command = adapterCommand(site, '/tmp/unused-third-batch-raw.json');
     assert.equal(path.basename(command.script), file); assert.equal(command.timeout, 900000);
-    assert.throws(() => validateSnapshot({ complete: true, jobs: [], verification: { policy: 'available' } }, null, site), /complete/);
     for (const change of [{ adapter: undefined }, { ats: 'moka' }, { company: '未核单位' }, { key: 'future_unknown' }, { body: { ...site.body, pageSize: 999 } }]) {
       const bad = { ...site, ...change }; if (Object.hasOwn(change, 'adapter')) delete bad.adapter;
       assert.equal(adapterCommand(bad, '/tmp/unused-third-batch-raw.json'), null, key + ' blocks downgrade');
@@ -24,6 +23,5 @@ test('third-batch sources independently qualify available snapshots; exact scope
   const cloud = sites.find(s => s.key === 'aliyun_social');
   assert.equal(require('../crawler/lib/custom/ali_social_common').availableSource(cloud), true);
   assert.equal(path.basename(adapterCommand(cloud, '/tmp/unused-third-batch-raw.json').script), 'ali_social_common.js');
-  assert.throws(() => validateSnapshot({ complete: true, jobs: [], verification: { policy: 'available' } }, null, cloud), /complete/);
   assert.equal(sites.find(s => s.key === 'netease_huyu').company, '网易互娱');
 });

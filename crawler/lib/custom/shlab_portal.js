@@ -1,4 +1,5 @@
 'use strict';
+const { paginate } = require('../paginate');
 // 上海AI实验室 www.shlab.org.cn：校园(mode=campus)与社会(mode=social)共用游标分页接口，JD 在列表里。
 // 宽松策略：单轮游标穷尽；岗位只需官网ID和标题；元数据缺失按空处理；坏记录/中途失败只记 issues，不挡整源。
 const fs = require('node:fs');
@@ -58,30 +59,25 @@ function requestFor(p, cursor) {
 async function run(site, options = {}) {
   const p = profileFor(site);
   const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), maxPages = MAX_PAGES } = options;
-  const issues = [], byId = new Map(), cursors = new Set(['']);
-  let cursor = '', skipped = 0, pages = 0, ended = false;
-  for (let index = 1; index <= maxPages; index++) {
-    let data;
-    try {
-      if (index > 1) await sleep(200);
-      // 不伪装UA，不带 cookie/CSRF/会话；page_token 是公开分页游标，不是凭据。
-      const response = await fetchImpl(requestFor(p, cursor), { method: 'GET', headers: { Accept: 'application/json', Referer: p.url }, redirect: 'error', signal: AbortSignal.timeout(15000) });
-      if (response.status !== 200) throw new Error('SHLAB list HTTP ' + response.status);
-      const json = await response.json();
-      if (json.errno !== 0 || !Array.isArray(json.data?.items)) throw new Error('SHLAB native business refusal on page ' + index);
-      data = json.data;
-    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + index + '页停止：' + error.message); break; }
-    pages++;
-    for (const job of data.items) { if (usable(job)) byId.set(job.id, job); else skipped++; }
-    if (!data.has_more) { ended = true; break; }
-    if (typeof data.page_token !== 'string' || !data.page_token.trim() || cursors.has(data.page_token)) { issues.push('游标缺失或重复，分页在第' + index + '页停止'); break; }
-    cursors.add(data.page_token); cursor = data.page_token;
-  }
-  if (!ended && !issues.length) issues.push('达到分页上限，覆盖待补');
+  const issues = [], cursors = new Set(['']);
+  let cursor = '';
+  const { rows: byId, pages } = await paginate(async index => {
+    if (index > 1) await sleep(200);
+    // 不伪装UA，不带 cookie/CSRF/会话；page_token 是公开分页游标，不是凭据。
+    const response = await fetchImpl(requestFor(p, cursor), { method: 'GET', headers: { Accept: 'application/json', Referer: p.url }, redirect: 'error', signal: AbortSignal.timeout(15000) });
+    if (response.status !== 200) throw new Error('SHLAB list HTTP ' + response.status);
+    const json = await response.json();
+    if (json.errno !== 0 || !Array.isArray(json.data?.items)) throw new Error('SHLAB native business refusal on page ' + index);
+    const data = json.data;
+    if (data.has_more) {
+      if (typeof data.page_token !== 'string' || !data.page_token.trim() || cursors.has(data.page_token)) throw new Error('SHLAB: pagination cursor missing or repeated after page ' + index);
+      cursors.add(data.page_token); cursor = data.page_token;
+    }
+    return { rows: data.items, done: !data.has_more };
+  }, { maxPages, idOf: job => job.id, usable, issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('SHLAB: no usable records; zero cannot clear existing data');
-  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题，未收录');
-  return { complete: false, countKind: 'cursor-exhaustion', total: jobs.length, jobs, issues, verification: { version: 2, policy: 'available', key: p.key, api: p.api, pages, issues } };
+  return { total: jobs.length, jobs, issues, verification: { key: p.key, api: p.api, pages, issues } };
 }
 module.exports = { PROFILES, requiresVerification, verifiedSource, validateJobs, normalizeRecord, validateEvidence, fetchAll: run, run, portalNotice };
 if (require.main === module) {

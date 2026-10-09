@@ -1,4 +1,5 @@
 'use strict';
+const { paginate } = require('../paginate');
 // 携程 careers.ctrip.com：校招 category=2、社招 category=1，同一列表接口（POST，JD 在列表里）。
 // 宽松策略：单轮采集；岗位只需官网ID、fromId、标题；total 不符/坏记录/中途失败只记 issues，不挡整源。
 const fs = require('node:fs');
@@ -56,29 +57,18 @@ function portalNotice(site) {
 async function fetchAll(site, options = {}) {
   profile(site);
   const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), maxPages = MAX_PAGES } = options;
-  const issues = [], byId = new Map();
-  let total = null, skipped = 0, pages = 0;
-  for (let index = 1; index <= maxPages; index++) {
-    let list;
-    try {
-      await sleep(200);
-      const r = await fetchImpl(API, { method: 'POST', headers: HEADERS, body: JSON.stringify(requestBody(site, index)), redirect: 'manual', signal: AbortSignal.timeout(15000) });
-      if (r.status !== 200) throw new Error('Ctrip: list HTTP ' + r.status);
-      const json = await r.json();
-      if (json.retCode !== '201' || !Array.isArray(json.retValue?.recruitJobAdList)) throw new Error('Ctrip: native business refusal on page ' + index);
-      if (Number.isSafeInteger(json.retValue.total)) total = json.retValue.total;
-      list = json.retValue.recruitJobAdList;
-    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + index + '页停止：' + error.message); break; }
-    pages++;
-    for (const job of list) { if (usable(job)) byId.set(job.id, job); else skipped++; }
-    if (!list.length || total !== null && byId.size + skipped >= total) break;
-    if (index === maxPages) issues.push('达到分页上限，覆盖待补');
-  }
+  const issues = [];
+  const { rows: byId, pages } = await paginate(async index => {
+    await sleep(200);
+    const r = await fetchImpl(API, { method: 'POST', headers: HEADERS, body: JSON.stringify(requestBody(site, index)), redirect: 'manual', signal: AbortSignal.timeout(15000) });
+    if (r.status !== 200) throw new Error('Ctrip: list HTTP ' + r.status);
+    const json = await r.json();
+    if (json.retCode !== '201' || !Array.isArray(json.retValue?.recruitJobAdList)) throw new Error('Ctrip: native business refusal on page ' + index);
+    return { rows: json.retValue.recruitJobAdList, total: json.retValue.total };
+  }, { maxPages, idOf: job => job.id, usable, issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('Ctrip: no usable records; zero cannot clear existing data');
-  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题，未收录');
-  if (total !== jobs.length) issues.push('官方total ' + total + '；实际唯一岗位 ' + jobs.length);
-  return { complete: false, total: jobs.length, jobs, issues, verification: { version: 2, policy: 'available', key: site.key, api: API, pages, issues } };
+  return { total: jobs.length, jobs, issues, verification: { key: site.key, api: API, pages, issues } };
 }
 async function run(args, options = {}) {
   if (!Array.isArray(args) || args.length !== 2 || typeof args[0] !== 'string' || !args[1]) throw new Error('Usage: ctrip_portal.js <siteJSON> <rawFile>');

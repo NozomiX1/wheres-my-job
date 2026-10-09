@@ -1,38 +1,57 @@
 'use strict';
-const fs=require('node:fs'),{randomUUID}=require('node:crypto'),{isDeepStrictEqual:equal}=require('node:util');
-const social=require('./meituan_portal'),{shape,array,check,record,request,response,consumeDetail,detailRequest,SECTIONS}=social.protocol;
-const PROFILE=JSON.parse(JSON.stringify({...social.PROFILE,key:'meituan',adapter:'meituan-campus-partitions-v1',track:'campus',batch:'校招',url:'https://zhaopin.meituan.com/web/campus'}));
-PROFILE.body.jobType=[{code:'1',subCode:[]},{code:'2',subCode:[]}];
-PROFILE.body.page.pageSize=1000;
-(function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}})(PROFILE);
-const MAX=1000,SIZE=1000,DETAIL_API='https://zhaopin.meituan.com/api/official/job/getJobDetail';
-function verifiedSource(site){try{shape(site,Object.keys(PROFILE),'campus source');return equal(site,PROFILE);}catch{return false;}}
-function requiresVerification(site){return site?.key==='meituan'||site?.adapter===PROFILE.adapter;}
-function source(site){check(verifiedSource(site),'unverified campus source identity/scope/mode');}
-function portalNotice(site){return verifiedSource(site)?'美团校园仅覆盖官网默认校招1＋2全部应届/实习入口，分类型完整枚举后按原范围合并；不代表全部招聘渠道。按官网特殊类型保留两栏＋工作城市或六片完整JD，职责/要求用于排序；类型2已证实习，其余性质、计划、职能及可靠官网日期未知，原状态码不证明实际可投性。':'';}
-function listRequest(n,code){const body=structuredClone(PROFILE.body);body.page.pageNo=n;if(code)body.jobType=[{code,subCode:[]}];return request(PROFILE.api,body);}
-function state(){return{total:null,totalPage:null,rows:[],byId:new Map()};}
-function page(raw,n,code,s,max=MAX){const data=response(raw,listRequest(n,code));shape(data,['list','page','traceId'],'campus list data');check(data.traceId===null,'unknown traceId');shape(data.page,['pageNo','pageSize','totalCount','totalPage'],'campus page');const p=data.page;
- check(p.pageNo===n&&Number.isSafeInteger(p.pageNo)&&p.pageSize===SIZE&&Number.isSafeInteger(p.totalCount)&&p.totalCount>0&&Number.isSafeInteger(p.totalPage)&&p.totalPage===Math.ceil(p.totalCount/SIZE),'campus native pagination');check(p.totalPage+1<max,'campus page safety ceiling');
- if(s.total===null){s.total=p.totalCount;s.totalPage=p.totalPage;}check(s.total===p.totalCount&&s.totalPage===p.totalPage,'campus totals changed');
- if(n===s.totalPage+1){check(data.list===null&&s.rows.length===s.total,'campus typed-null endpoint/count');return true;}
- check(n<=s.totalPage,'campus extra page');array(data.list,'campus list');check(data.list.length===Math.min(SIZE,s.total-(n-1)*SIZE),'campus early empty/short page');
- for(const row of data.list){record(row,'list','campus');check(!code||row.jobType===code,'partition scope leakage');check(!s.byId.has(row.jobUnionId),'Duplicate campus native identity');s.byId.set(row.jobUnionId,row);s.rows.push(row);}return false;}
-function validateJobs(jobs,site){source(site);array(jobs,'campus jobs');check(jobs.length>0,'campus effective zero unverified');const ids=new Set();for(const row of jobs){record(row,'detail','campus');check(!ids.has(row.jobUnionId),'Duplicate campus identity');ids.add(row.jobUnionId);}return true;}
-function normalizeRecord(row,site){source(site);record(row,'detail','campus');const short=['1','2','3','4','7','8','9'].includes(row.jobSpecialCode),sections=short?[['jobDuty','岗位职责'],['jobRequirement','任职要求']]:SECTIONS;let description=sections.filter(([k])=>row[k]!==null&&row[k]!=='').map(([k,title])=>title+'\n'+row[k]).join('\n\n');if(short&&row.cityList!==null)description+=(description?'\n\n':'')+'工作城市\n'+row.cityList.map(v=>v.name).join('、');return{id:row.jobUnionId,title:row.name,city:(row.cityList??[]).map(v=>v.name),category:'',description,duty:row.jobDuty??'',requirements:row.jobRequirement??'',date:null,dateKind:null,employment:row.jobType==='2'?'internship':null,talentPlan:null,channels:row.jobType==='2'?[]:['campus'],sourceStatus:row.jobStatus,jdComplete:sections.some(([k])=>/[\p{L}\p{N}]/u.test(row[k]??'')),url:'https://zhaopin.meituan.com/web/position/detail?jobUnionId='+encodeURIComponent(row.jobUnionId)+'&jobShareType=1'};}
-function maps(rows){return new Map(rows.map(row=>[row.jobUnionId,row]));}
-function analyze(scan){shape(scan,['partitions'],'campus scan');array(scan.partitions,'partitions');check(scan.partitions.length===2,'both campus partitions required');const rows=[],full=[];
- for(let i=0;i<2;i++){const part=scan.partitions[i],code=String(i+1);shape(part,['code','pages','details'],'campus partition');check(part.code===code,'partition identity/order');array(part.pages,'partition pages');array(part.details,'partition details');check(part.pages.length>1&&part.pages.length<MAX,'campus missing endpoint/ceiling');const s=state();let ended=false;for(let n=0;n<part.pages.length;n++){check(!ended,'campus extra page after endpoint');ended=page(part.pages[n],n+1,code,s);}check(ended&&part.details.length===s.total,'campus missing endpoint/details');rows.push(...s.rows);full.push(...part.details.map((r,n)=>consumeDetail(r,s.rows[n],'campus')));}
- check(maps(rows).size===rows.length&&maps(full).size===full.length,'duplicate across campus partitions');return{rows,full};}
-function validateEvidence(evidence,jobs,site){validateJobs(jobs,site);shape(evidence,['version','key','api','detailApi','bounds','scans'],'campus verification');check(evidence.version===1&&evidence.key===PROFILE.key&&evidence.api===PROFILE.api&&evidence.detailApi===DETAIL_API,'campus evidence identity');array(evidence.bounds,'campus bounds');array(evidence.scans,'campus scans');check(evidence.bounds.length===2&&evidence.scans.length===2,'two campus bounds/scans required');const bounds=evidence.bounds.map(raw=>{const s=state();check(!page(raw,1,null,s),'invalid campus default bound');return s;});const scans=evidence.scans.map(analyze);
- for(const s of scans){check(s.rows.length===bounds[0].total&&s.rows.length===bounds[1].total,'partition union/default total mismatch');validateJobs(s.full,site);for(const bound of bounds)for(const row of bound.rows)check(equal(row,maps(s.rows).get(row.jobUnionId)),'default/partition raw membership binding');}
- check(equal(bounds[0].byId,bounds[1].byId),'campus default bound facts drift');check(equal(maps(scans[0].rows),maps(scans[1].rows)),'campus full partition list facts drift');check(equal(maps(scans[0].full),maps(scans[1].full)),'campus full detail/JD drift');check(equal(jobs,scans[0].full),'campus jobs/raw binding');return true;}
-async function fetchAll(site,options={}){source(site);const{fetchImpl=globalThis.fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),delayMs=200,timeoutMs=15000,maxPages=MAX}=options;check(typeof fetchImpl==='function'&&typeof sleep==='function'&&Number.isFinite(delayMs)&&delayMs>=0&&Number.isSafeInteger(timeoutMs)&&timeoutMs>0&&Number.isSafeInteger(maxPages)&&maxPages>1&&maxPages<=MAX,'invalid campus limits');
- async function get(req){await sleep(Math.max(200,delayMs));const r=await fetchImpl(req.url,{method:req.method,headers:req.headers,body:JSON.stringify(req.body),redirect:'manual',signal:AbortSignal.timeout(Math.min(15000,timeoutMs))});check(r?.status===200,'HTTP status');return{request:req,httpStatus:r.status,response:await r.json()};}
- const evidence={version:1,key:PROFILE.key,api:PROFILE.api,detailApi:DETAIL_API,bounds:[await get(listRequest(1))],scans:[]};const bound=state();page(evidence.bounds[0],1,null,bound);let first;
- for(let round=0;round<2;round++){if(round)await sleep(15000);const scan={partitions:[]};for(const code of ['1','2']){const p={code,pages:[],details:[]},s=state();let ended=false;for(let n=1;n<maxPages;n++){const raw=await get(listRequest(n,code));ended=page(raw,n,code,s,maxPages);p.pages.push(raw);if(ended)break;}check(ended,'campus page ceiling/incomplete');for(const row of s.rows){const raw=await get(detailRequest(row.jobUnionId));consumeDetail(raw,row,'campus');p.details.push(raw);}scan.partitions.push(p);}
- const current=analyze(scan);check(current.rows.length===bound.total,'campus union/default total mismatch');if(first){check(equal(maps(first.rows),maps(current.rows)),'campus full partition list facts drift');check(equal(maps(first.full),maps(current.full)),'campus full detail/JD drift');}else first=current;evidence.scans.push(scan);}
- evidence.bounds.push(await get(listRequest(1)));const jobs=first.full;validateEvidence(evidence,jobs,site);return{complete:true,total:jobs.length,jobs,verification:evidence};}
-async function run(args,options={}){check(Array.isArray(args)&&args.length===2&&typeof args[0]==='string'&&typeof args[1]==='string'&&args[1].length>0,'campus CLI args');const site=JSON.parse(args[0]);source(site);const result=await fetchAll(site,options),envelope={key:site.key,api:site.api,mode:'custom',...result},temporary=args[1]+'.tmp-'+randomUUID();try{fs.writeFileSync(temporary,JSON.stringify(envelope,null,2)+'\n',{flag:'wx'});fs.renameSync(temporary,args[1]);}finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}return envelope;}
-module.exports={PROFILE,verifiedSource,requiresVerification,portalNotice,validateJobs,normalizeRecord,validateEvidence,fetchAll,run};
-if(require.main===module)run(process.argv.slice(2)).catch(e=>{console.error(e.message);process.exitCode=1;});
+// 美团校园：官网默认校招入口 = 类型1（应届）＋类型2（实习）两个分区，按分区分别分页后合并（同一列表/详情接口见 meituan_portal.js）。
+// 宽松策略同社招：单轮、详情尽力而为、差异只记 issues。
+const fs = require('node:fs');
+const { randomUUID } = require('node:crypto');
+const social = require('./meituan_portal');
+const { client, paginate, fetchDetails, envelope, listRequest, usable, text } = social.shared;
+const PROFILE = { ...structuredClone(social.PROFILE), key: 'meituan', adapter: social.shared.CAMPUS_ADAPTER, track: 'campus', batch: '校招', url: 'https://zhaopin.meituan.com/web/campus' };
+PROFILE.body.jobType = [{ code: '1', subCode: [] }, { code: '2', subCode: [] }];
+PROFILE.body.page.pageSize = 1000;
+const PARTITIONS = ['1', '2'];
+
+const requiresVerification = site => site?.key === 'meituan' || site?.adapter === PROFILE.adapter;
+const verifiedSource = site => site?.key === PROFILE.key && site.adapter === PROFILE.adapter;
+const portalNotice = site => verifiedSource(site) ? '美团校园仅覆盖官网默认校招1＋2全部应届/实习入口，分类型枚举后按原范围合并；不代表全部招聘渠道。按官网特殊类型保留两栏＋工作城市或六片完整JD，职责/要求用于排序；类型2已证实习，其余性质、计划、职能及可靠官网日期未知，原状态码不证明实际可投性。' : '';
+const validateJobs = social.validateJobs;
+const validateEvidence = social.validateEvidence;
+
+function normalizeRecord(row, site) {
+  if (!verifiedSource(site)) throw new Error('Meituan campus: unverified source identity/scope/mode');
+  if (!usable(row)) throw new Error('Meituan campus: missing official id/title');
+  // 这些特殊类型只展示两栏＋工作城市，其余展示六片完整JD。
+  const short = ['1', '2', '3', '4', '7', '8', '9'].includes(row.jobSpecialCode), sections = short ? [['jobDuty', '岗位职责'], ['jobRequirement', '任职要求']] : social.SECTIONS;
+  const cities = (Array.isArray(row.cityList) ? row.cityList : []).map(v => v?.name).filter(Boolean);
+  let description = sections.filter(([k]) => text(row[k]) !== '').map(([k, title]) => title + '\n' + row[k]).join('\n\n');
+  if (short && cities.length) description += (description ? '\n\n' : '') + '工作城市\n' + cities.join('、');
+  return { id: row.jobUnionId, title: row.name, city: cities, category: '', description, duty: text(row.jobDuty), requirements: text(row.jobRequirement), date: null, dateKind: null,
+    employment: row.jobType === '2' ? 'internship' : null, talentPlan: null, channels: row.jobType === '2' ? [] : ['campus'], sourceStatus: row.jobStatus ?? null,
+    // 旧快照的行都是详情行；新行只有取到详情才算 JD 完整。
+    jdComplete: row.detailFetched !== false && sections.some(([k]) => /[\p{L}\p{N}]/u.test(text(row[k]))),
+    url: 'https://zhaopin.meituan.com/web/position/detail?jobUnionId=' + encodeURIComponent(row.jobUnionId) + '&jobShareType=1' };
+}
+
+async function fetchAll(site, options = {}) {
+  if (!verifiedSource(site)) throw new Error('Meituan campus: unverified source identity/scope/mode');
+  const get = client(options), rows = new Map(), issues = [];
+  let pages = 0;
+  for (const jobType of PARTITIONS) {
+    const part = await paginate(get, n => listRequest(n, { body: PROFILE.body, jobType }), rows, issues, { maxPages: options.maxPages, label: '类型' + jobType + ' ' });
+    pages += part.pages;
+  }
+  if (options.withDetails !== false) {
+    await fetchDetails(get, rows, issues);
+    for (const [id, row] of rows) if (!row.detailFetched) rows.set(id, { ...row, detailFetched: false });
+  }
+  return envelope(site, rows, issues, { pages });
+}
+
+async function run(args, options = {}) {
+  if (!Array.isArray(args) || args.length !== 2 || !args[1]) throw new Error('Usage: meituan_campus_portal.js <siteJSON> <outputFile>');
+  const site = JSON.parse(args[0]);
+  const result = await fetchAll(site, options), out = { key: site.key, api: site.api, mode: 'custom', ...result }, temporary = args[1] + '.tmp-' + randomUUID();
+  try { fs.writeFileSync(temporary, JSON.stringify(out, null, 2) + '\n', { flag: 'wx' }); fs.renameSync(temporary, args[1]); } finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
+  return out;
+}
+module.exports = { PROFILE, verifiedSource, requiresVerification, portalNotice, validateJobs, normalizeRecord, validateEvidence, fetchAll, run };
+if (require.main === module) run(process.argv.slice(2)).catch(e => { console.error(e.message); process.exitCode = 1; });

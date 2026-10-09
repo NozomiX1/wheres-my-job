@@ -23,7 +23,7 @@ test('single scan keeps usable rows, tolerates unknown fields and records total 
   const rows = [row(1), row(2, { requirements: null }), row(3, { jobTitle: '' }), row(4, { id: 'x' }), row(1)];
   const f = fakeFetch(rows, { total: 9 });
   const raw = await c.fetchAll(campus, opts(f));
-  a.deepEqual(f.calls, [1, 2]); a.equal(raw.complete, false); a.equal(raw.total, 2); a.equal(raw.verification.policy, 'available');
+  a.deepEqual(f.calls, [1, 2]); a.equal(raw.total, 2);
   a.ok(raw.issues.some(s => s.includes('缺ID/标题') && s.includes('2')));
   a.ok(raw.issues.some(s => s.includes('官方total 9')));
   const [x, y] = normalizeJobs(raw.jobs, campus);
@@ -32,10 +32,10 @@ test('single scan keeps usable rows, tolerates unknown fields and records total 
   a.equal(y.description, ''); a.equal(y.jdComplete, false);
 });
 
-test('social keeps the whole description as fallback; later page failure keeps earlier rows', async () => {
+test('social keeps the whole description as fallback; a later page failure fails the whole run', async () => {
   const rows = Array.from({ length: 12 }, (_, i) => row(i + 1));
-  const raw = await c.fetchAll(social, opts(fakeFetch(rows, { failOn: 2 })));
-  a.equal(raw.total, 10); a.ok(raw.issues.some(s => s.includes('第2页停止')));
+  await a.rejects(c.fetchAll(social, opts(fakeFetch(rows, { failOn: 2 }))), /HTTP 429/);
+  const raw = await c.fetchAll(social, opts(fakeFetch(rows)));
   const j = normalizeJobs(raw.jobs, social)[0];
   a.deepEqual(j.channels, ['social']); a.equal(j.duty, ''); a.equal(j.requirements, ''); a.ok(j.description.includes('任职要求'));
   a.match(j.url, /#\/experienced\/job-detail\//);

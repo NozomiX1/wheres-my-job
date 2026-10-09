@@ -1,4 +1,5 @@
 'use strict';
+const { paginate } = require('../paginate');
 // 小米 HR 门户（hr.xiaomi.com）：校招 type=2、社招 type=1、实习 type=3 共用同一套列表/详情接口。
 // 宽松策略：单轮采集；只保证岗位有官网ID、标题和官网链接；缺详情、total 不符、少数坏记录只记 issues，不挡整源。
 const fs = require('node:fs');
@@ -67,24 +68,14 @@ async function run(site, options = {}) {
     if (res.status !== 200) { const e = new Error('Xiaomi: native HTTP ' + res.status); e.http = res.status; throw e; }
     return res.json();
   }
-  const issues = [], byId = new Map();
-  let total = null, skipped = 0, pages = 0;
-  for (let n = 1; n <= maxPages; n++) {
-    let json;
-    try {
-      json = await get(listRequest(n, site));
-      if (json.code !== 0 || !Array.isArray(json.data?.list)) throw new Error('Xiaomi: native business refusal on page ' + n);
-    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + n + '页停止：' + error.message); break; }
-    pages++;
-    if (Number.isSafeInteger(json.data.total)) total = json.data.total;
-    for (const job of json.data.list) { if (usable(job)) byId.set(job.id, job); else skipped++; }
-    if (!json.data.list.length || total !== null && byId.size + skipped >= total) break;
-    if (n === maxPages) issues.push('达到分页上限，覆盖待补');
-  }
+  const issues = [];
+  const { rows: byId, pages } = await paginate(async n => {
+    const json = await get(listRequest(n, site));
+    if (json.code !== 0 || !Array.isArray(json.data?.list)) throw new Error('Xiaomi: native business refusal on page ' + n);
+    return { rows: json.data.list, total: json.data.total };
+  }, { maxPages, idOf: job => job.id, usable, issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('Xiaomi: no usable records; zero cannot clear existing data');
-  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题/链接，未收录');
-  if (total !== jobs.length) issues.push('官方total ' + total + '；实际唯一岗位 ' + jobs.length);
 
   // 详情尽力而为：官网拒绝(403/412/429)立即停止详情，其它单条失败跳过，连续5次失败也停止。
   if (withDetails) {
@@ -101,7 +92,7 @@ async function run(site, options = {}) {
     }
     if (got < jobs.length) issues.push('详情取得 ' + got + '/' + jobs.length + '，其余仅有列表职责/要求');
   }
-  return { complete: false, total: jobs.length, jobs, issues, verification: { version: 4, policy: 'available', key: site.key, api: API, pages, issues } };
+  return { total: jobs.length, jobs, issues, verification: { key: site.key, api: API, pages, issues } };
 }
 
 module.exports = { PROFILE, SOCIAL_PROFILE, INTERN_PROFILE, requiresVerification, verifiedSource, portalNotice, validateJobs, validateEvidence, normalizeRecord, run };

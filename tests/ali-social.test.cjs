@@ -166,7 +166,7 @@ test('Projection tolerates unknown or missing native metadata but needs id, titl
 test('Single scan keeps raw jobs, requests are serial and anonymous, and nothing is recorded as drift', async () => {
   for (const site of sites) {
     const m = mock(site, rows(site, 11)), result = await ali.run(site, m.options);
-    a.equal(result.complete, false); a.equal(result.verification.policy, 'available'); a.equal(result.total, 11); a.equal(result.jobs.length, 11); a.equal(m.posts, 2);
+    a.equal(result.total, 11); a.equal(result.jobs.length, 11); a.equal(m.posts, 2);
     a.deepEqual(result.issues, []); a.deepEqual(ali.validateEvidence(result.verification, result.jobs, site), { issues: [] });
     a.equal(m.delays.length, m.calls.length - 1); a.equal(m.delays.every(ms => ms >= 200), true);
     for (const call of m.calls) { a.equal(call.init.redirect, 'manual'); a.equal(call.init.signal instanceof AbortSignal, true); a.equal(Object.hasOwn(call.init.headers, 'User-Agent'), false); a.equal(new URL(call.url).origin, site.apiOrigin); }
@@ -178,16 +178,15 @@ test('Single scan keeps raw jobs, requests are serial and anonymous, and nothing
   }
 });
 
-test('Total drift, duplicates, bad rows and a failing later page are recorded, not fatal', async () => {
+test('Total drift, duplicates, bad rows and drift are recorded, not fatal; a failing later page fails the whole run', async () => {
   const site = sites[0], jobs = rows(site, 11);
   const drift = await ali.run(site, mock(site, jobs, { mutate: r => { if (r.content.datas.length) r.content.totalCount = 40; } }).options);
   a.equal(drift.total, 11); a.ok(drift.issues.some(s => s.includes('官方total 40；实际唯一岗位 11')));
   const duplicate = await ali.run(site, mock(site, jobs, { mutate: (r, body) => { if (body.pageIndex === 2) r.content.datas[0] = track(rows(site, 1)[0], '-again'); } }).options);
   a.equal(duplicate.total, 10);
   const bad = await ali.run(site, mock(site, jobs, { mutate: (r, body) => { if (body.pageIndex === 1) r.content.datas[0].positionUrl = 'https://evil.invalid/x'; } }).options);
-  a.equal(bad.total, 10); a.ok(bad.issues.some(s => s.includes('缺ID/标题/官网链接')));
-  const later = mock(site, jobs, { throwAt: 3 }), partial = await ali.run(site, later.options);
-  a.equal(partial.total, 10); a.ok(partial.issues.some(s => s.includes('第2页停止'))); a.equal(later.posts, 1);
+  a.equal(bad.total, 10); a.ok(bad.issues.some(s => s.includes('缺ID/标题')));
+  await a.rejects(ali.run(site, mock(site, jobs, { throwAt: 3 }).options), /offline transport unknown/);
   await a.rejects(ali.run(site, mock(site, []).options), /no usable/);
 });
 
@@ -214,7 +213,7 @@ test('Cookie path/domain/secure/expiry semantics protect ordinary same-origin an
 });
 
 test('Host wrapper uses the same single-scan envelope and cannot run unknown portals', async () => {
-  for (const site of sites) { const m = mock(site, rows(site, 2)), result = await ali.fetchAllFor(new URL(site.apiOrigin).hostname, m.options); a.equal(result.complete, false); a.equal(result.total, 2); }
+  for (const site of sites) { const m = mock(site, rows(site, 2)), result = await ali.fetchAllFor(new URL(site.apiOrigin).hostname, m.options); a.equal(result.total, 2); }
 });
 
 test('Offline CLI atomically replaces raw only after a usable scan; failures leave the baseline intact', t => {
@@ -226,7 +225,7 @@ test('Offline CLI atomically replaces raw only after a usable scan; failures lea
   install();
   const success = spawnSync(process.execPath, ['--require', preload, script, JSON.stringify(sites[0]), raw], { encoding: 'utf8', timeout: 5000 });
   a.equal(success.status, 0, success.stderr); a.match(success.stdout, /DONE fetched=1/);
-  const result = JSON.parse(fs.readFileSync(raw, 'utf8')); a.equal(result.complete, false); a.equal(result.total, 1); a.equal(result.verification.policy, 'available');
+  const result = JSON.parse(fs.readFileSync(raw, 'utf8')); a.equal(result.total, 1);
   const before = fs.readFileSync(raw, 'utf8'); payload.success = false; install();
   const failure = spawnSync(process.execPath, ['--require', preload, script, JSON.stringify(sites[0]), raw], { encoding: 'utf8', timeout: 5000 });
   a.equal(failure.status, 1); a.match(failure.stderr, /business refusal/); a.equal(fs.readFileSync(raw, 'utf8'), before); a.deepEqual(fs.readdirSync(dir).sort(), ['mock.cjs', 'raw.json']);

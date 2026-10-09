@@ -1,4 +1,5 @@
 'use strict';
+const { paginate } = require('../paginate');
 // 米哈游 jobs.mihoyo.com：校招(hireType=1)与社招(hireType=0)共用列表+详情接口（POST）。
 // 宽松策略：单轮列表 + 逐岗详情（尽力而为）；岗位只需官网ID和标题；缺详情时只有列表字段；
 // total 不符/坏记录/中途失败只记 issues，不挡整源。
@@ -63,24 +64,14 @@ async function fetchAll(site, options = {}) {
     if (json.code !== 0 || json.success !== true) throw new Error('Mihoyo: native business refusal');
     return json.data;
   }
-  const issues = [], byId = new Map();
-  let total = null, skipped = 0, pages = 0;
-  for (let n = 1; n <= maxPages; n++) {
-    let data;
-    try {
-      data = await post(p.api, { ...structuredClone(p.body), pageNo: n });
-      if (!Array.isArray(data?.list)) throw new Error('Mihoyo: unexpected list shape on page ' + n);
-    } catch (error) { if (!byId.size) throw error; issues.push('列表请求在第' + n + '页停止：' + error.message); break; }
-    pages++;
-    if (Number.isSafeInteger(data.total)) total = data.total;
-    for (const row of data.list) { if (usable(row)) byId.set(row.id, row); else skipped++; }
-    if (!data.list.length || total !== null && byId.size + skipped >= total) break;
-    if (n === maxPages) issues.push('达到分页上限，覆盖待补');
-  }
+  const issues = [];
+  const { rows: byId, pages } = await paginate(async n => {
+    const data = await post(p.api, { ...structuredClone(p.body), pageNo: n });
+    if (!Array.isArray(data?.list)) throw new Error('Mihoyo: unexpected list shape on page ' + n);
+    return { rows: data.list, total: data.total };
+  }, { maxPages, idOf: row => row.id, usable, issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('Mihoyo: no usable records; zero cannot clear existing data');
-  if (skipped) issues.push('列表中 ' + skipped + ' 条缺ID/标题，未收录');
-  if (total !== jobs.length) issues.push('官方total ' + total + '；实际唯一岗位 ' + jobs.length);
 
   // 详情尽力而为：官网拒绝(403/412/429)立即停止详情；其它单条失败跳过，连续5次失败也停止。
   if (withDetails) {
@@ -97,7 +88,7 @@ async function fetchAll(site, options = {}) {
     }
     if (got < jobs.length) issues.push('详情取得 ' + got + '/' + jobs.length + '，其余仅有列表字段');
   }
-  return { complete: false, total: jobs.length, jobs, issues, verification: { version: 2, policy: 'available', key: p.key, api: p.api, detailApi: p.detailApi, pages, issues } };
+  return { total: jobs.length, jobs, issues, verification: { key: p.key, api: p.api, detailApi: p.detailApi, pages, issues } };
 }
 async function run(args, options = {}) {
   if (!Array.isArray(args) || args.length !== 2 || typeof args[0] !== 'string' || !args[1]) throw new Error('Usage: mihoyo_portal.js <siteJSON> <outputFile>');
