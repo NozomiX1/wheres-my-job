@@ -4,7 +4,7 @@ const h=require('../crawler/lib/custom/huawei_portal'),xh=require('../crawler/li
 const {runCrawl,adapterCommand}=require('../crawler/crawl'),{publish,readPublished,validateSnapshot}=require('../crawler/publish');
 function envelope(site,id=1){
   if(site.adapter==='huawei-portal-v1')return h.collectAvailable(site,[{request:http.requests.page(site.key,1),httpStatus:200,response:{status:'SUCCESS',errors:null,data:{pageVO:{curPage:1,pageSize:10,totalRows:2},result:[{advertisementId:id,jobId:100+id,jobName:'真实标题',workPlace:'北京',categoryName:null,mainBusiness:'完整职责',jobRequire:'完整要求'}]}}}]);
-  return xh.collectAvailable([{request:{url:site.api,method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:site.body},httpStatus:200,response:{statusCode:200,alertMsg:'成功',data:{pageNum:1,pageSize:10,total:2,list:[{positionId:id,positionName:'真实标题',duty:'原文本 <T> &amp;',qualification:'完整要求',workplace:'北京',recruitStatus:'in_recruitment',jobType:'研发'}]}}}],site);
+  return xh.collectAvailable([{request:{url:site.api,method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:{...site.body,pageNum:1}},httpStatus:200,response:{statusCode:200,alertMsg:'成功',data:{pageNum:1,pageSize:site.body.pageSize,total:2,list:[{positionId:id,positionName:'真实标题',duty:'原文本 <T> &amp;',qualification:'完整要求',workplace:'北京',recruitStatus:'in_recruitment',jobType:'研发'}]}}}],site);
 }
 test('four newly qualified scopes use the sole chain: available only, incremental retention and failed input no clear',t=>{
   for(const site of [...h.PROFILES,...xh.PROFILES]){

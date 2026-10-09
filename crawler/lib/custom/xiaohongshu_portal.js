@@ -15,7 +15,12 @@ const PROFILES = freeze(['campus', 'social'].map(track => ({
   track, batch: track === 'campus' ? '2027校园招聘（regular项目）' : '社招', exclude: '(无)', origin: ORIGIN,
   url: ORIGIN + '/' + track + '/position', api: API, listJD: true,
   body: { positionName: '', pageNum: 1, pageSize: 10, recruitType: track, ...(track === 'campus' ? { jobProjects: ['campus_autumn_27'] } : {}) }
-})));
+})).concat([
+  // Same portal, separately observed campus entries (project codes and page sizes from the official tab requests).
+  { key: 'xiaohongshu_redstar', batch: 'REDstar顶尖校招（red_star_27项目）', body: { positionName: '', pageNum: 1, pageSize: 100, recruitType: 'campus', jobProjects: ['red_star_27'] } },
+  { key: 'xiaohongshu_ace', batch: 'Ace顶尖实习生（top_intern_program项目）', body: { positionName: '', pageNum: 1, pageSize: 100, recruitType: 'campus', jobProjects: ['top_intern_program'] } },
+  { key: 'xiaohongshu_intern', batch: '实习生入口（madang_trainee/other_project项目）', body: { positionName: '', pageNum: 1, pageSize: 10, recruitType: 'campus', jobProjects: ['madang_trainee', 'other_project'] } }
+].map(entry => ({ key: entry.key, company: '小红书', ats: 'custom', adapter: ADAPTER, track: 'campus', batch: entry.batch, exclude: '(无)', origin: ORIGIN, url: ORIGIN + '/campus/position', api: API, listJD: true, body: entry.body }))));
 const check = (ok, message) => { if (!ok) throw new Error('Xiaohongshu: ' + message); };
 function requiresVerification(site) {
   if (PROFILES.some(p => p.key === site?.key) || site?.adapter === ADAPTER) return true;
@@ -42,14 +47,15 @@ function validateJobs(jobs, site) {
   return true;
 }
 function pageData(page, site, index) {
+  const size = profile(site).body.pageSize;
   check(page && equal(page.request, requestFor(site, index)), 'native request URL/method/headers/body binding');
   check(page.httpStatus === 200, 'native HTTP ' + page.httpStatus);
   const j = page.response;
   check(j && !Array.isArray(j) && j.statusCode === 200 && j.alertMsg === '成功', 'native business refusal');
   for (const [key, value] of [['success', true], ['errorCode', 200], ['errorMsg', '成功']]) check(!Object.hasOwn(j, key) || j[key] === value, 'native business ' + key);
   const d = j.data;
-  check(d && !Array.isArray(d) && d.pageNum === index && d.pageSize === 10 && Number.isSafeInteger(d.total) && d.total >= 0 && Array.isArray(d.list), 'missing/invalid native list/page/total');
-  check(d.list.length <= 10 && [...d.list.keys()].every(i => Object.hasOwn(d.list, i)), 'invalid native list slots');
+  check(d && !Array.isArray(d) && d.pageNum === index && d.pageSize === size && Number.isSafeInteger(d.total) && d.total >= 0 && Array.isArray(d.list), 'missing/invalid native list/page/total');
+  check(d.list.length <= size && [...d.list.keys()].every(i => Object.hasOwn(d.list, i)), 'invalid native list slots');
   return d;
 }
 function availableResult(evidence, site) {
@@ -96,7 +102,11 @@ function normalizeRecord(job, site) {
 }
 function portalNotice(site) {
   if (!verifiedSource(site)) return '';
-  return (site.track === 'campus' ? '仅覆盖2027校园招聘regular项目，不含REDstar、Ace及独立实习入口；' : '仅覆盖默认无筛选社招入口；') + JD_NOTICE + '，完整性未验证，不代表公司全球全集；性质、人才计划和日期未知。';
+  const scope = site.key === 'xiaohongshu_redstar' ? '仅覆盖REDstar顶尖校招（red_star_27项目）公开列表；'
+    : site.key === 'xiaohongshu_ace' ? '仅覆盖Ace顶尖实习生（top_intern_program项目）公开列表；'
+    : site.key === 'xiaohongshu_intern' ? '仅覆盖实习生入口（madang_trainee/other_project项目）公开列表；'
+    : site.track === 'campus' ? '仅覆盖2027校园招聘regular项目；同单位另有REDstar、Ace及实习生来源；' : '仅覆盖默认无筛选社招入口；';
+  return scope + JD_NOTICE + '，完整性未验证，不代表公司全球全集；性质、人才计划和日期未知。';
 }
 async function fetchAvailable(site, options = {}) {
   profile(site);

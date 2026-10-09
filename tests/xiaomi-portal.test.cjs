@@ -69,3 +69,37 @@ test('Xiaomi necessary custom topic JD is complete but never a fourth score fiel
 test('Xiaomi real single chain validates publisher again and protects failed/raw/clock/non-target baselines', async t => {
   await checkChain(t, site, await candidate(), bad => bad.verification.scans[1].pages.pop(), 2400000);
 });
+test('Xiaomi intern entry (type=3) keeps its own project routes and native internship fact', async () => {
+  const internSite = structuredClone(x.INTERN_PROFILE);
+  const internJobs = [1, 2].map(id => ({ id, title: '  实习岗位' + id + '  ', cityZhNames: ['北京'], levelOneDeptName: '部门', description: '  List<T> &amp;\n实习职责' + id + '\n', requirement: '  实习要求' + id + '\n', expectedJobLevel: null, publishTime: '2026-07-01', larkJobCode: 'I' + id, type: 3, url: 'https://xiaomi.jobs.f.mioffice.cn/' + (id === 1 ? 'topintern' : 'internship') + '/position/' + (100 + id) + '/detail', jobId: String(200 + id), jobPostId: String(100 + id) }));
+  function internDetail(native) {
+    return { code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: { id: native.jobPostId, job_id: native.jobId, title: native.title, description: native.description, requirement: native.requirement, recruit_type: { name: '实习' }, publish_time: 0, channel_online_status: 1, city_list: [], city_info_list_for_delivery: [], tag_list: [], storefront_mode: 0, storefront_list: [], process_type: 1, job_post_info: { recruitment_type: {}, HighlightList: [], JobChannelPublishList: [], job_post_object_value_map: { '7595885661741271302': '课题正文' }, address_list: [], city_list: [], correlation_job_list: [], tag_list: [], storefront_list: [], target_major_list: [], job_post_process_time_list: [], job_level_id_list: [] } } } };
+  }
+  let calls = 0;
+  const raw = await x.fetchAll(internSite, { sleep: async () => {}, fetchImpl: async (url, options) => {
+    calls++; const u = new URL(url);
+    let json;
+    if (u.hostname === 'hr.xiaomi.com') { a.equal(u.searchParams.get('type'), '3'); json = { code: 0, message: '成功', data: { list: Number(u.searchParams.get('pageNum')) === 1 ? structuredClone(internJobs) : [], pageSize: 10, pageNum: Number(u.searchParams.get('pageNum')), pageTotal: 1, total: 2 }, traceId: null }; }
+    else { const native = internJobs.find(j => u.pathname.endsWith('/' + j.jobPostId)); a.equal(u.searchParams.get('portal_type'), '6'); json = internDetail(native); }
+    return { status: 200, json: async () => json };
+  } });
+  a.equal(calls, 8); a.equal(x.validateEvidence(raw.verification, raw.jobs, internSite), true); a.equal(raw.complete, true); a.equal(raw.verification.key, 'xiaomi_intern');
+  const j = normalizeJobs(raw.jobs, internSite)[0];
+  a.equal(j.id, 'xiaomi_intern:1'); a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'internship'); a.equal(j.talentPlan, null);
+  a.match(j.description, /课题名称及内容：\n课题正文/); a.equal(j.duty, internJobs[0].description); a.equal(j.jdComplete, true);
+  a.equal(x.verifiedSource(internSite), true); a.equal(x.verifiedSource({ ...internSite, body: { ...internSite.body, type: 2 } }), false);
+  a.equal(x.verifiedSource({ ...internSite, key: 'xiaomi' }), false); a.equal(x.verifiedSource({ ...internSite, url: internSite.url.replace('%E5%AE%9E%E4%B9%A0', '%E6%A0%A1%E6%8B%9B') }), false);
+  for (const bad of [{ ...internJobs[0], type: 2 }, { ...internJobs[0], url: 'https://xiaomi.jobs.f.mioffice.cn/campus/position/101/detail' }]) a.throws(() => x.normalizeRecord({ ...bad, detail: internDetail(internJobs[0]) }, internSite));
+  const swapped = structuredClone(raw); swapped.verification.scans[1].pages[0].request.url = swapped.verification.scans[1].pages[0].request.url.replace('type=3', 'type=2');
+  a.throws(() => x.validateEvidence(swapped.verification, swapped.jobs, internSite));
+  const borrowed = structuredClone(raw); borrowed.verification.key = 'xiaomi'; a.throws(() => x.validateEvidence(borrowed.verification, borrowed.jobs, internSite));
+  const goodTag = { id: '7353200358716555373', name: { name: '热招', en_name: '热招', i18n_name: '热招' }, style: '{}', scope_list: [{ id: '1', channel_id: '3', name: { name: '常规校招官网', en_name: 'Campus', i18n_name: '常规校招官网' } }] };
+  const tagged = { ...internJobs[0], detail: internDetail(internJobs[0]) }; tagged.detail.data.job_post_detail.tag_list = [goodTag];
+  a.equal(x.normalizeRecord(tagged, internSite).jdComplete, true);
+  const unknownTag = structuredClone(tagged); unknownTag.detail.data.job_post_detail.tag_list = [{ ...goodTag, id: '9', name: { name: '其它' } }];
+  a.throws(() => x.normalizeRecord(unknownTag, internSite));
+  const extraScope = structuredClone(tagged); extraScope.detail.data.job_post_detail.tag_list[0].scope_list[0].extra = 1;
+  a.throws(() => x.normalizeRecord(extraScope, internSite));
+  const campusTag = detailFor(jobs[0]); campusTag.data.job_post_detail.tag_list = [goodTag];
+  a.throws(() => x.normalizeRecord({ ...jobs[0], detail: campusTag }, site));
+});

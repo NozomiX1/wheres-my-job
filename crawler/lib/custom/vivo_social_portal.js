@@ -105,7 +105,7 @@ function normalizeRecord(job, site) {
     url: p.origin + '/job-detail?' + query, duty: '', requirements: '', description: htmlText(post.job_desc), jdComplete: false };
 }
 function portalNotice(site) {
-  return verifiedSource(site) ? '仅覆盖官网默认社招列表（company_id/group_id=1，组织范围未证全）；' + JD_NOTICE + '，完整性未验证；单字段全文不猜独立职责/要求，性质、人才计划、原状态和可靠日期未知，不继承校园系统资格。' : '';
+  return verifiedSource(site) ? '仅覆盖官网默认社招列表（company_id=1；有界诊断：0–10/20/50/100/200/999/1000/10000 仅1有岗，group_id 1–10 不改变结果，官网无组织筛选/字典）；' + JD_NOTICE + '，完整性未验证；单字段全文不猜独立职责/要求，性质、人才计划、原状态和可靠日期未知，不继承校园系统资格。' : '';
 }
 async function fetchAvailable(site, options = {}) {
   const p = profile(site);

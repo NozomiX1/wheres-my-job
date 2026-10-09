@@ -17,9 +17,9 @@ const PROFILES = freeze(['campus', 'social'].map(track => {
   const origin = 'https://' + (track === 'campus' ? 'campus' : 'zhaopin') + '.kuaishou.cn';
   const base = origin + (track === 'campus' ? '/recruit/campus/e/' : '/recruit/e/');
   return { key: track === 'campus' ? 'kuaishou' : 'kuaishou_social', company: '快手', ats: 'custom', adapter: ADAPTER,
-    track, batch: track === 'campus' ? '27届校园及留用实习（项目不限）' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
+    track, batch: track === 'campus' ? '官网校园字典全部项目（2020–2027届/实习生，含往届仍在列项目）' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
     url: base + (track === 'campus' ? '#/campus/jobs' : '#/official/social/'), api: base + 'api/v1/open/positions/simple', listJD: true,
-    body: track === 'campus' ? { recruitSubProjectCodes: ['20271779425607', '20271772783534'], pageSize: 10, pageNum: 1 } :
+    body: track === 'campus' ? { recruitSubProjectCodes: ['2020qiuzhao', '2020summerIntern', '2021qiuzhao', '2022campus', '2023campus', '20241687923507', '20251707035672', '20251718874803', '20261707035672', '20261749721165', '20271772783534', '20271779425607'], pageSize: 10, pageNum: 1 } :
       { pageNum: 1, pageSize: 10, positionNatureCode: 'C001', recruitProject: 'socialr' } };
 }));
 function requiresVerification(site) {
@@ -73,7 +73,9 @@ function dictionaryResult(dict, site) {
   for (const field of Object.keys(dict)) dictionaryNames(dict[field], field === 'positionCategoryFlatten' ? 'positionCategory' : field);
   if (p.track === 'campus') {
     const projects = dictionaryNames(dict.recruitSubProject, 'recruitSubProject');
-    check(projects.get(p.body.recruitSubProjectCodes[0]) === '2027应届生' && projects.get(p.body.recruitSubProjectCodes[1]) === '2027实习生', 'native current subproject scope binding');
+    check(projects.get('20271779425607') === '2027应届生' && projects.get('20271772783534') === '2027实习生', 'native current subproject name binding');
+    // The registered profile must cover exactly the current dictionary project set; a new/removed project requires explicit migration.
+    check(equal([...projects.keys()].sort(), [...p.body.recruitSubProjectCodes].sort()), 'native dictionary subproject coverage/source mismatch');
   }
   return dict;
 }
@@ -221,7 +223,7 @@ function normalizeRecord(job, site) {
 }
 function portalNotice(site) {
   if (!verifiedSource(site)) return '';
-  return (site.track === 'campus' ? '仅覆盖官网27届校园及留用实习两个当前子项目，未按快Star等项目标签、职能或性质删岗；' :
+  return (site.track === 'campus' ? '仅覆盖官网校园当前字典全部12个子项目（含往届仍在列项目），未按快Star等项目标签、职能或性质删岗；' :
     '采集目标为官网社会招聘默认入口（C001/socialr）；实际已取得范围以原生请求及缺口说明为准，官网自动默认国内分页不证明无城市/海外范围；日常实习为另入口，尚未核验，不冒全社招/实习范围；') +
     JD_NOTICE + '，完整性未验证，不代表公司全球全集或独立法律雇主；实习不推定校园渠道，社会入口性质、人才计划、原状态和可靠日期未知；兼职保留原码，不猜为全职/实习。';
 }

@@ -16,7 +16,7 @@ function dictPage(site) {
       workLocation: [node('workLocation', 'beijing', '北京'), node('workLocation', 'Guangzhou', '广州')],
       positionCategory: [node('positionCategory', 'parent', '工程类', [node('positionCategory', 'child', '服务端', null, false)])],
       ...(site.track === 'campus' ? { positionNature: [node('positionNature', 'fulltime', '全职'), node('positionNature', 'intern', '实习'), node('positionNature', 'parttime', '兼职', null, false)],
-        recruitSubProject: [node('recruitSubProject', campus.body.recruitSubProjectCodes[0], '2027应届生'), node('recruitSubProject', campus.body.recruitSubProjectCodes[1], '2027实习生')] } :
+        recruitSubProject: campus.body.recruitSubProjectCodes.map((code, index) => node('recruitSubProject', code, code === '20271779425607' ? '2027应届生' : code === '20271772783534' ? '2027实习生' : '往届项目' + index)) } :
         { positionExperience: [node('positionExperience', '4', '1-3年')] }) } } };
 }
 function row(site = campus, n = 1) {
@@ -163,9 +163,9 @@ test('Kuaishou exactly two deeply frozen current profiles: both campus subprojec
   a.deepEqual(b.PROFILES, ['campus', 'social'].map(track => {
     const origin = 'https://' + (track === 'campus' ? 'campus' : 'zhaopin') + '.kuaishou.cn', root = origin + (track === 'campus' ? '/recruit/campus/e/' : '/recruit/e/');
     return { key: track === 'campus' ? 'kuaishou' : 'kuaishou_social', company: '快手', ats: 'custom', adapter: 'kuaishou-portal-v1', track,
-      batch: track === 'campus' ? '27届校园及留用实习（项目不限）' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
+      batch: track === 'campus' ? '官网校园字典全部项目（2020–2027届/实习生，含往届仍在列项目）' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
       url: root + (track === 'campus' ? '#/campus/jobs' : '#/official/social/'), api: root + 'api/v1/open/positions/simple', listJD: true,
-      body: track === 'campus' ? { recruitSubProjectCodes: ['20271779425607', '20271772783534'], pageSize: 10, pageNum: 1 } : { pageNum: 1, pageSize: 10, positionNatureCode: 'C001', recruitProject: 'socialr' } };
+      body: track === 'campus' ? { recruitSubProjectCodes: ['2020qiuzhao', '2020summerIntern', '2021qiuzhao', '2022campus', '2023campus', '20241687923507', '20251707035672', '20251718874803', '20261707035672', '20261749721165', '20271772783534', '20271779425607'], pageSize: 10, pageNum: 1 } : { pageNum: 1, pageSize: 10, positionNatureCode: 'C001', recruitProject: 'socialr' } };
   }));
   a.ok(Object.isFrozen(b) && Object.isFrozen(b.PROFILES) && Object.isFrozen(campus.body.recruitSubProjectCodes));
   for (const site of b.PROFILES) {
@@ -181,7 +181,7 @@ test('Kuaishou exactly two deeply frozen current profiles: both campus subprojec
   for (const declaration of [{ api: 'POST ' + campus.api }, { url: 'https://CAMPUS.KUAISHOU.CN:443/' }, { origin: 'https://ZHAOPIN.KUAISHOU.CN./' },
     { apiOrigin: '%' }, { api: 'relative' }, { detailApi: null }]) a.equal(b.requiresVerification(declaration), true);
   a.equal(b.requiresVerification({ url: 'https://example.com' }), false); a.equal(b.portalNotice({}), '');
-  a.match(b.portalNotice(campus), /27届校园及留用实习.*快Star.*完整性未验证/); a.match(b.portalNotice(social), /C001\/socialr.*实际已取得范围.*国内分页不证明无城市\/海外.*日常实习.*尚未核验/);
+  a.match(b.portalNotice(campus), /字典全部12个子项目.*快Star.*完整性未验证/); a.match(b.portalNotice(social), /C001\/socialr.*实际已取得范围.*国内分页不证明无城市\/海外.*日常实习.*尚未核验/);
 });
 test('Kuaishou numeric id-only URLs, raw original TEXT/title/metadata, exact dictionary leaf names and independent dimensions', () => {
   for (const site of b.PROFILES) {
@@ -272,7 +272,7 @@ test('Kuaishou revalidation rejects source/header/query/body/business/PageInfo/m
   for (const mutate of [p => p.request.body = { ...social.body }, p => p.request.url += '&Sign=fake', p => p.request.url = p.request.url.replace('C001', 'C002')]) {
     const r = copy(sample(social)); mutate(r.verification.pages[0]); a.throws(() => b.validateEvidence(r.verification, r.jobs, social));
   }
-  for (const mutate of [d => d.response.result.recruitSubProject[0].name = '2026应届生', d => d.response.result.positionNature[0].code = null,
+  for (const mutate of [d => d.response.result.recruitSubProject.find(n => n.code === '20271779425607').name = '2026应届生', d => d.response.result.positionNature[0].code = null,
     d => d.response.result.positionCategory[0].children[0].name = {}, d => d.response.result.positionCategory.push(copy(d.response.result.positionCategory[0]))]) {
     const dictionary = dictPage(campus); mutate(dictionary); a.throws(() => b.collectAvailable([page(campus, 1, [row()])], campus, [dictionary]));
   }
@@ -420,7 +420,7 @@ test('Kuaishou offline current first-party renderers prove id routes and literal
   const campusJS = fs.readFileSync(scripts[0], 'utf8'), socialJS = fs.readFileSync(scripts[1], 'utf8');
   a.ok(campusJS.includes('return"/campus/job-info/"+e')); a.ok(campusJS.includes('e.push("/campus/job-info/"+t.id)'));
   a.ok(campusJS.includes('createElement("pre",{className:"value"},N)')); a.ok(campusJS.includes('createElement("pre",{className:"value"},O)'));
-  for (const code of campus.body.recruitSubProjectCodes) a.ok(campusJS.includes(code));
+  for (const code of ['20271779425607', '20271772783534']) a.ok(campusJS.includes(code));
   a.ok(socialJS.includes('location.origin+location.pathname+"#/official/"+(t.isSocial?"social":"trainee")+"/job-info/"+n'));
   a.ok(socialJS.includes('value:"description"')); a.ok(socialJS.includes('value:"positionDemand"')); a.ok(socialJS.includes('createElement("pre",{className:"job-info-des-item-value"},c[n])'));
   a.ok(socialJS.includes('dataIndex:"workLocationsCode"')); a.ok(socialJS.includes('SimpleTransform)(e,"workLocationsCode",t,"preview",void 0,"workLocationCode")'));

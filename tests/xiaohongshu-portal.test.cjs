@@ -12,7 +12,7 @@ function row(id = 1) {
 function page(site, n, list, total = 3) {
   return { request: { url: site.api, method: 'POST', headers: { ...headers }, body: { ...structuredClone(site.body), pageNum: n } }, httpStatus: 200,
     response: { statusCode: 200, alertMsg: '成功', timestamp: 'native', path: '/native', success: true, errorCode: 200, errorMsg: '成功',
-      data: { pageNum: n, pageSize: 10, total, totalPage: Math.ceil(total / 10), list } } };
+      data: { pageNum: n, pageSize: site.body.pageSize, total, totalPage: Math.ceil(total / site.body.pageSize), list } } };
 }
 function sample(site = campus) {
   const newer = { ...row(1), duty: '\n newer literal <b> &lt; \n', extraMetadata: { untouched: true } };
@@ -23,7 +23,7 @@ test('XHS fixed independent profiles cannot inherit aliases, altered scopes or g
     a.equal(x.verifiedSource(structuredClone(site)), true); a.equal(x.requiresVerification(site), true);
     a.equal(site.adapter, 'xiaohongshu-portal-v1'); a.equal(site.exclude, '(无)'); a.equal(site.listJD, true);
     for (const bad of [{ ...site, ats: 'moka' }, { ...site, adapter: undefined }, { ...site, company: 'alias' }, { ...site, key: 'alias' },
-      { ...site, body: { ...site.body, pageSize: 100 } }, { ...site, url: site.url + '?keyword=AI' }]) {
+      { ...site, body: { ...site.body, pageSize: 50 } }, { ...site, url: site.url + '?keyword=AI' }]) {
       a.equal(x.verifiedSource(bad), false); a.equal(x.requiresVerification(bad), true); a.throws(() => x.validateJobs([], bad));
     }
   }
@@ -120,4 +120,23 @@ test('XHS pagination ceiling is partial, while no usable result never overwrites
   a.equal(written.complete, false); a.equal(written.mode, 'custom'); a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written);
   a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
   await a.rejects(x.fetchAvailable(campus, { maxPages: 201, fetchImpl: async () => { throw new Error('must not request'); } }));
+});
+test('XHS REDstar/Ace/intern entries keep the observed project codes and page sizes, no alias fallback', () => {
+  const map = Object.fromEntries(x.PROFILES.map(p => [p.key, p]));
+  a.deepEqual(Object.keys(map), ['xiaohongshu', 'xiaohongshu_social', 'xiaohongshu_redstar', 'xiaohongshu_ace', 'xiaohongshu_intern']);
+  a.deepEqual(map.xiaohongshu_redstar.body.jobProjects, ['red_star_27']); a.equal(map.xiaohongshu_redstar.body.pageSize, 100);
+  a.deepEqual(map.xiaohongshu_ace.body.jobProjects, ['top_intern_program']); a.equal(map.xiaohongshu_ace.body.pageSize, 100);
+  a.deepEqual(map.xiaohongshu_intern.body.jobProjects, ['madang_trainee', 'other_project']); a.equal(map.xiaohongshu_intern.body.pageSize, 10);
+  for (const key of ['xiaohongshu_redstar', 'xiaohongshu_ace', 'xiaohongshu_intern']) {
+    const site = map[key];
+    a.equal(x.verifiedSource(structuredClone(site)), true); a.equal(x.requiresVerification(site), true);
+    a.equal(x.verifiedSource({ ...site, body: { ...site.body, pageSize: 50 } }), false);
+    a.equal(x.verifiedSource({ ...site, body: { ...site.body, jobProjects: [] } }), false);
+    a.equal(x.verifiedSource({ ...site, key: 'xiaohongshu' }), false); a.equal(x.verifiedSource({ ...site, ats: 'moka' }), false);
+    a.match(x.portalNotice(site), /(REDstar|Ace|实习生)/); a.match(x.portalNotice(site), /完整性未验证/);
+    const r = x.collectAvailable([page(site, 1, [row()], 1), page(site, 2, [], 1)], site);
+    a.equal(r.complete, false); a.equal(r.total, 1); a.equal(r.jobs[0].positionId, 1); a.deepEqual(x.normalizeRecord(r.jobs[0], site).channels, ['campus']);
+    a.equal(x.normalizeRecord(r.jobs[0], site).url, site.url + '/1'); a.equal(x.validateEvidence(r.verification, r.jobs, site).total, 1);
+    const bad = structuredClone(r); bad.verification.pages[0].request.body.jobProjects = ['campus_autumn_27']; a.throws(() => x.validateEvidence(bad.verification, bad.jobs, site));
+  }
 });

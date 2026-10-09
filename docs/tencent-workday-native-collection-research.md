@@ -66,3 +66,20 @@
 **19/19均返回HTTP403与原生六字段JSON：`errorCode:S22,httpStatus:403,locale:zh-CN,message:permission denied,messageParams:{}`。** 03:39:24.133–03:39:31.063Z共19请求，START最小296ms、正文重叠0。没有取得新JD；本次原目标“检查19条”已完成，Workday正文缺口仍校园3／社会20（21个独立URL），全部已在各自真实阶段观察到权限拒绝，具体原因仍未知，不推下架/必须登录/封IP/限频，也不推个人浏览器一定看不到。
 
 canonical/catalog及全部197个out SHA/纳秒mtime不变，没有采集成功钟、快照或发布更新，没有Git/部署操作。结果与保护收据在W `tencent-workday-check19-20261009T033711886Z/{targets,results,check}.json`及19个单请求记录；`tencent-workday-check19-current.json`指向该目录。旧“19未试”是§5交接当时事实，不倒改旧handoff或失败收据。
+
+## 7. 复查：21条缺口当前公开状态（2026-10-09，仅诊断）
+
+用户明确恢复处理腾讯后，只做合法侦察，未重试任何已拒URL。正常匿名重取两个官方列表：Workday公开列表（POST `/wday/cxs/tencent/Tencent_Careers/jobs`，空筛选、15请求、total288、无拒绝）与腾讯自家列表（校园 POST `searchPosition` 10页、data.count=993；社会 GET `post/Query` 23页、Data.Count=2288；均无拒绝）。
+
+- Workday当前288条postings中，21条缺口的完整slug命中 **0/21**；全部原URL在此前阶段均已观察403/S22（2条早期＋19条逐一），本轮未重试。
+- 腾讯自家列表：校园993条仅 **R108032仍在**（1/3）；社会2288条 **17/20仍在**（SourceID=4、IsValid=true，含R108032）。已不在任何当前列表：R107849（校）、R107662（校/社）、R108025-1（社）、R107748-2（社）。
+- 结论：21条全文在正常匿名协议下当前不可取得（Workday不再公开列出这些posting，S22与未列出状态一致）；17条仍被腾讯官网列出，按规则保旧、不判下架；4条不再列出也不据此删除。无新正文、无重试、无数据/快照/发布改动。
+- 附带现场核对：腾讯列表接口当前为嵌套 `data`/`Data` 结构（校园`data.count/data.positionList`、社会`Data.Count/Data.Posts`），`tencent_portal.business()` 已按该结构解析，契约未变；社会count由10-08的2254增至2288、校园995降至993，属未采集的列表面变化，未发布。
+
+证据 `/tmp/ande-tencent-recon-*.json`（本机临时、不入库）。
+
+### 7.1 内部API与渲染器复核（2026-10-09）
+
+- 腾讯社会`ByPostId`对SourceID=4仍返回HTTP200/Code200及`Data`：17条仍在列的岗位中，5条`Requirement`为真实文本（R105817-1 1225字、R105476-1 799、R104904 819、R104225 875、R103937 1232），12条为17字占位「岗位要求详情请见上方岗位职责内说明」；已不在列表的3条PostId（R108025-1/R107748-2/R107662）返回非200。
+- 正常匿名Chrome打开R103937官方详情页（`careers.tencent.com/jobdesc.html?postId=1828316532829085696`）：页面加载Workday嵌入（approot/sidebar 200、job GET 403/S22），DOM实际显示Workday「您搜索的页面不存在。」。内部`ByPostId`虽200，SourceID=4的详情页不渲染内部字段；故内部`Requirement`不是这些外部岗位当前公开展示的正文，按现行renderer契约不并入。若要使用须另行决定并同步SPEC。
+- 标题搜索命中的其它岗位不能按标题绑定；结论不变：21条Workday全文在正常匿名协议下不可取得，4条连腾讯列表本身也已移除，17条保旧、不判下架。

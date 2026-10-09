@@ -52,3 +52,67 @@ test('Xiaomi social runtime stops after first HTTP refusal and never retries; fi
   let calls=0;a.equal(x.verifiedSource(x.SOCIAL_PROFILE),true);await a.rejects(x.fetchAvailable(x.SOCIAL_PROFILE,{sleep:async()=>{},fetchImpl:async()=>{calls++;return {status:403};}}),/HTTP/);a.equal(calls,1);
   const rows=Array.from({length:10},(_,i)=>xJob(i+1));const r=await x.fetchAvailable(x.SOCIAL_PROFILE,{maxPages:2,sleep:async()=>{},fetchImpl:async()=>({status:200,json:async()=>xPage(rows,1,100).response})});a.equal(r.complete,false);a.equal(r.total,10);a.ok(r.issues.some(s=>s.includes('安全上限')));
 });
+function xInfo(patch = {}) {
+  return { recruitment_type: null, HighlightList: [], JobChannelPublishList: [], job_post_object_value_map: {}, address_list: [], city_list: [],
+    correlation_job_list: [], tag_list: [], storefront_list: [], target_major_list: [], job_post_process_time_list: [], job_level_id_list: [], ...patch };
+}
+function xDetail(job, patch = {}) {
+  return { code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: {
+    id: job.jobPostId, title: job.title, description: job.description, requirement: job.requirement, recruit_type: null,
+    publish_time: job.publishTime, channel_online_status: 0, code: job.larkJobCode, job_id: job.jobId,
+    city_list: job.cityZhNames.map(name => ({ name })), job_post_info: xInfo(), city_info_list_for_delivery: [], tag_list: [],
+    storefront_mode: 1, storefront_list: [], process_type: 1, ...patch } } };
+}
+test('Xiaomi social detail binds the official anonymous GET and the exact renderer fields; unknown JD rejects', () => {
+  const job = xJob(), request = x.socialDetailRequest(job);
+  a.deepEqual(request, { url: x.SOCIAL_PROFILE.detailApi + '/' + job.jobPostId + '?portal_type=6&with_recommend=false', method: 'GET', body: null,
+    headers: { Accept: 'application/json', 'website-path': 'index', 'accept-language': 'zh-CN', Referer: job.url } });
+  a.equal(x.validateSocialDetail(xDetail(job), job), true);
+  for (const mutate of [d => d.code = 1, d => d.message = 'okx', d => d.error = {}, d => d.data.recommend_job_post_List = [job],
+    d => delete d.data.job_post_detail.title, d => d.data.job_post_detail.extra = 'x', d => d.data.job_post_detail.id = xJob(2).jobPostId,
+    d => d.data.job_post_detail.job_id = xJob(2).jobId, d => d.data.job_post_detail.description = 'changed',
+    d => d.data.job_post_detail.code = '   ', d => d.data.job_post_detail.job_post_info.job_post_object_value_map = { 7595885661741271302: '课题' },
+    d => d.data.job_post_detail.job_post_info.HighlightList = ['亮点'], d => d.data.job_post_detail.job_post_info.correlation_job_list = ['关联'],
+    d => d.data.job_post_detail.tag_list = ['标签'], d => d.data.job_post_detail.storefront_list = ['门店'],
+    d => d.data.job_post_detail.job_post_info.unknown = 'x', d => delete d.data.job_post_detail.storefront_mode]) {
+    const bad = xDetail(job); mutate(bad); a.throws(() => x.validateSocialDetail(bad, job));
+  }
+});
+test('Xiaomi social detail enrichment validates all details then marks the two-column JD complete; refusal keeps list-only', async () => {
+  const first = xJob(1), second = xJob(2), base = x.collectAvailable([xPage([first, second], 1, 2)]);
+  a.equal(base.verification.version, 2); a.equal(base.jobs.some(j => Object.hasOwn(j, 'detail')), false);
+  const ok = await x.attachDetails(base, x.SOCIAL_PROFILE, { sleep: async () => {}, detailFetch: async (url, options) => {
+    const job = [first, second].find(j => url === x.socialDetailRequest(j).url);
+    a.ok(job); a.equal(options.method, 'GET'); a.deepEqual(options.headers, x.socialDetailRequest(job).headers);
+    return { status: 200, json: async () => xDetail(job) };
+  } });
+  a.equal(ok.verification.version, 3); a.equal(ok.verification.details.length, 2); a.ok(ok.jobs.every(j => Object.hasOwn(j, 'detail')));
+  a.match(ok.issues.join(';'), /已取得列表及全部详情/);
+  a.equal(x.validateEvidence(ok.verification, ok.jobs, x.SOCIAL_PROFILE).total, 2);
+  const jobs = normalizeJobs(ok.jobs, x.SOCIAL_PROFILE); a.ok(jobs.every(j => j.jdComplete)); a.equal(jobs[0].duty, first.description); a.equal(jobs[0].description, '');
+  for (const mutate of [v => v.details[0].request.url = x.SOCIAL_PROFILE.api, v => v.details[0].httpStatus = 500,
+    v => v.details[0].response.data.job_post_detail.id = xJob(3).jobPostId, v => v.details = [v.details[0]], v => v.version = 2]) {
+    const bad = structuredClone(ok); mutate(bad.verification); a.throws(() => x.validateEvidence(bad.verification, bad.jobs, x.SOCIAL_PROFILE));
+  }
+  for (const reply of [{ status: 403 }, { status: 200, json: async () => ({ code: 1 }) }, { status: 200, json: async () => { throw new SyntaxError('not JSON'); } }]) {
+    let calls = 0;
+    const failed = await x.attachDetails(base, x.SOCIAL_PROFILE, { sleep: async () => {}, detailFetch: async () => { calls++; return reply; } });
+    a.equal(calls, 1); a.equal(failed.verification.version, 2); a.equal(failed.jobs.some(j => Object.hasOwn(j, 'detail')), false);
+    a.match(failed.issues.join(';'), /详情请求停止/); a.equal(normalizeJobs(failed.jobs, x.SOCIAL_PROFILE)[0].jdComplete, false);
+    a.equal(x.validateEvidence(failed.verification, failed.jobs, x.SOCIAL_PROFILE).total, 2);
+  }
+});
+test('Xiaomi social production run enriches details by default and keeps list-only mode explicit', async () => {
+  const job = xJob(1), empty = { request: x.SOCIAL_PROFILE.api + '?keyword=&cityZhNames=&pageSize=10&pageNum=2&type=1', httpStatus: 200,
+    response: { code: 0, message: '成功', traceId: null, data: { list: [], pageSize: 10, pageNum: 2, pageTotal: 1, total: 1 } } };
+  const fetchImpl = async (url, options) => {
+    if (url.includes('/api/v1/job/posts/')) return { status: 200, json: async () => xDetail(job) };
+    const page = Number(new URL(url).searchParams.get('pageNum'));
+    return { status: 200, json: async () => page === 1 ? xPage([job], 1, 1).response : empty.response };
+  };
+  const enriched = await x.run(x.SOCIAL_PROFILE, { fetchImpl, sleep: async () => {} });
+  a.equal(enriched.verification.version, 3); a.equal(enriched.verification.details.length, 1);
+  a.equal(normalizeJobs(enriched.jobs, x.SOCIAL_PROFILE)[0].jdComplete, true);
+  const listOnly = await x.run(x.SOCIAL_PROFILE, { fetchImpl, sleep: async () => {}, withDetails: false });
+  a.equal(listOnly.verification.version, 2); a.equal(normalizeJobs(listOnly.jobs, x.SOCIAL_PROFILE)[0].jdComplete, false);
+});

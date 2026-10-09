@@ -33,7 +33,7 @@ function assertProtected(data,f) {
 }
 
 test('Registry preserves eight independent sources: seven complete profiles and Cloud available only', () => {
-  const registry=api.loadSites();a.equal(registry.length,66);
+  const registry=api.loadSites();a.equal(registry.length,70);
   for(const profile of ali.PROFILES){const site=registry.find(s=>s.key===profile.key);a.equal(site.company,profile.company);a.equal(site.ats,'custom');a.equal(ali.verifiedSource(site),profile.qualified);a.equal(ali.availableSource(site),profile.key==='aliyun_social');const command=crawl.adapterCommand(site,'/tmp/not-written');a.ok(command);a.match(command.script,/ali_social_common\.js$/);a.deepEqual(JSON.parse(command.args[0]),site);}
 });
 

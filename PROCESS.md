@@ -455,3 +455,56 @@ canonical117,191,579字节，SHA `77d4f62c52fe0b1cc3835900f846550c15895714d29a65
 用户接受“爬取接入与可用采集阶段完成，存量瑕疵后续处理”，随后要求“先提交吧”。本次仅保存第三批/阿里云源码、测试、文档、公开canonical/catalog及当前150活动片所需新文件；raw/out、外部work材料及未被当前catalog引用的中间片不纳入提交，仍保留本地，不清理或丢岗位/JD。
 
 复用已有614pass/8旧skip回归及数据/HTTP验收，本次只检查Git范围、当前数据hash、活动片依赖及diff；不重采或重跑全套。提交标识以Git历史为准；未push/部署，阿里云补缺等挂起状态不变。canonical117,191,579字节超过GitHub普通Git100MiB，本地提交不受此限制，但该提交暂不能直接推送；无损处理或调整未推送历史需后续明确决定，本次不改LFS/存储/部署架构。
+
+## 35. B1 五源重新完整采集（2026-10-09，仅本地）
+
+用户选择处理 B1「列表复用旧材料/未重采」的 5 个 available 来源。逐源经唯一 update→crawl→snapshot→publish 链正常匿名采集（美团/小米/华为 Node，百川隔离 Chrome 原生翻页），真实成功钟 07:16:50–07:37:19Z，无拒绝、无重试；非目标 45,641 岗零变化，增量保旧保留本轮未观察旧岗（美团49、小米26、华为社3）。
+
+- `meituan_social` 2459→2539（新列表2490/官方total2491/重复1；六片完整JD，2539全部jdComplete）
+- `xiaomi_social` 1909→1941（新列表1915/官方total1916/重复1；列表职责/要求，详情待补）
+- `huawei` 101→102；`huawei_social` 423→456（新列表453/官方total454，1条身份无效记录未应用；列表＋详情）
+- `baichuan` 18→18（Chrome原生翻页未变）
+
+全站 50,551→50,697；66来源仍 37 ready＋29 available（五源未升ready）。canonical 117,636,929字节 SHA `3d1a7158dc67a03c8bddf53ae1f965ad7710cee50935c52cb9c0b3a917f95f21`；catalog `541af12a5d2df0452cfb31a87e2f57ece920f5fb1710c86d809a229bc387c7ff`；151活动片求和=50,697，无重复ID/非法链接/空标题。622测试596 pass/0 fail/26旧回放skip，`git diff --check`通过。本地HTTP＋无头Chrome smoke：50单位首屏、华为558/美团3110查询、JD与官网链接（career.huawei.com / zhaopin.meituan.com）通过。仍仅本地，未commit/push/部署；`data/jobs.js`/`data/catalog.js`已修改，13个新分片未跟踪。
+
+## 36. 腾讯缺口复查：21条全文当前不可得（2026-10-09，仅诊断）
+
+用户恢复处理腾讯后只做合法侦察，未重试任何已拒URL：Workday公开列表288条（15请求、无拒绝）中21条缺口slug命中0；腾讯自家校园993条仅1/3仍在、社会2288条17/20仍在（SourceID=4、IsValid=true），R107849/R107662/R108025-1/R107748-2已不在任何当前列表。全部21条在近期阶段均已被403/S22拒绝，本轮未再请求；结论为正常匿名协议下当前不可取得，17条仍被官网列出故保旧、不判下架。另核：社会ByPostId对SourceID=4仍返回200，其中5条有真实Requirement（799–1232字）、12条为占位句，但官方详情页实际加载Workday嵌入（job GET 403）并显示「您搜索的页面不存在。」，内部字段并非这些外部岗位当前展示的正文，按renderer契约不并入。无数据/快照/发布改动，canonical仍50,697岗／`3d1a7158…`。社会count 2254→2288、校园995→993为未采集的列表面变化（刷新另行决定）。详见[Workday复查§7](docs/tencent-workday-native-collection-research.md#7-复查21条缺口当前公开状态2026-10-09仅诊断)。
+
+## 37. 小米社招与百川详情补收（2026-10-09，仅本地）
+
+用户确认腾讯5段内部Requirement不采用后，继续处理小米社招/百川详情缺口。先第一方观察官方详情页（隔离Chrome）：两源均为飞书ATS门户，详情页调用同一官方详情接口`/api/v1/job/posts/<id>?portal_type=6&with_recommend=false`；百川renderer另渲染「职位信息·部门」，小米社招详情无额外正文。普通匿名Node（不含页面signature/CSRF）实测可取得全部详情。
+
+- **小米社招**：全量扫描1,941/1,941详情与列表`description/requirement`0差异、无topic/额外JD（仅880条`city_info`元数据）；模块新增`socialDetailRequest/validateSocialDetail`与v3 available证据，生产run默认补收全部详情并`jdComplete:true`；单轮1,937唯一岗（官方total1,938）经唯一链发布，真实钟2026-10-09T09:14:46.821Z；旧列表未观察25岗保旧（jdComplete:false）。
+- **百川**：18/18详情列表文本逐字一致，详情新增`department_info`；模块v3证据＋按renderer组合「职位描述/职位要求/职位信息·部门」，18岗`jdComplete:true`。
+- 详情拒绝即停并保留列表-only；两源仍available（范围完整性未验证）。
+- 全站50,697→**50,718**；canonical117,699,492字节SHA`d759f77da6a5775837e45332575eaa064c9ec9cfab0e75d5e4dc0215f0f602e2`，catalog`ec51804d018a721ea36dfaddbb82ea5225c1c866dbbfc4d37e15664655e164f0`；151活动片求和=50,718，无重复ID/非法链接/空标题。628测试602 pass/0 fail/26旧回放skip，`git diff --check`通过。本地HTTP＋无头Chrome smoke：小米3,021/百川18查询、JD无完整性警示、百川显示岗位正文、官网链接通过。证据`/tmp/ande-xiaomi-social-fullscan-*.json`、`/tmp/ande-feishu-detail-probe-*.json`及两源生产snapshot；仍仅本地，未commit/push/部署。
+
+## 38. 小红书三入口、网易社会刷新与百度/蚂蚁详情抽样（2026-10-09，仅本地）
+
+用户确认执行 1/2/3 后：
+
+- **小红书三入口**：隔离Chrome真实点击校园页 REDstar/Ace/实习生标签，取得官方请求体（jobProjects `red_star_27`／`top_intern_program`／`[madang_trainee,other_project]`，页长100/100/10）。按独立入口注册 `xiaohongshu_redstar`(55)、`xiaohongshu_ace`(41)、`xiaohongshu_intern`(180)，各自available、与校园regular及彼此0重叠；三源pageData按各自页长绑定，新增276岗；小红书展示单位含社招841共1,287。
+- **网易互娱日常入口**：该入口156个原生ID中155个已在`netease_social`；唯一缺的79178为新增岗位且已在社招广列表首屏。刷新`netease_social`（2657→2693唯一），79178已收录；无需新入口或复制岗位。
+- **百度/蚂蚁详情抽样**：百度详情页SSR `detailData.postInfo` 的`workContent/serviceCondition`与列表逐字一致（校20＋社20，0差异、无额外JD字段）；蚂蚁列表`showTeamDescription`守卫命中0行，未被跳记录。两源属「详情认证未做」而非「已知缺文字」。
+
+全站 50,718→**51,027**（+276 XHS、+33 网易刷新）；69来源37 ready＋32 available；canonical118,273,156字节SHA`353b14f9aeff944e03b8dd427f4667e09f0675ef49226bf07bdfa5ee0f59d26c`，catalog`9c26151edd514382eed9cc1ca0f05e2f5d777724e28d6378e8a98c127b80e0b7`；154活动片求和=51,027，无重复ID/非法链接/空标题。证据`/tmp/observe-xhs*`、`/tmp/ande-xhs-tabs.json`、`/tmp/ande-baidu-detail-sample-*.json`及新源snapshot；仍仅本地，未commit/push/部署。
+
+## 39. 小米实习、快手校园全项目与 vivo 组织诊断（2026-10-09，仅本地）
+
+用户确认继续三项可选入口：
+
+- **小米实习（type=3）**：live `jobs.js` 的 `PROJECT_TYPE_MAP` 证 实习=3；新增 `xiaomi_intern` 独立 key，复用校园严格路径（双完整扫描＋全部570详情），URL 限 topintern|internship、原生 type=3；详情允许已证「热招/简历急缺」徽标（未知徽标拒），原生 `recruit_type=实习` 标 employment=internship；列表571/发布570，`complete:true → ready`。`type=4` 探测172条全部被 type2（161 toptalent）＋type3（11 topintern）覆盖，不单独注册。
+- **快手校园**：官网字典 `recruitSubProject` 共12项目（2020–2027届/实习生），旧项目仍有在招（2026应届205、2024应届2、2025实习1）；校园 profile 由两个当前项目扩为字典全部12项，字典绑定升级为 code 集合相等＋两个2027名称绑定；经 `extendCoverage` 保旧扩增发布 506→714（+208），普通 update 仍拒覆盖变化。
+- **vivo 社招组织范围**：官网默认 company_id=1/group_id=1；有界探测 company_id 0–10/20/50/100/200/999/1000/10000 仅1有岗，group_id 1–10 不改变 total=119，官网无组织筛选/字典；更新说明并按新说明重采119。
+
+全站 51,027→**51,805**；70来源38 ready＋32 available；canonical119,385,190字节SHA`aabd775be952336eb64097a28b05e4d6f33fe36b02bb47a03113578864b3ce0c`，catalog`69ac416f74b8d5160da9b99275c9e7c721003374cbcce0d07187b5ffc79da892`；156活动片求和=51,805，无重复ID/非法链接/空标题。629测试603 pass/0 fail/26旧回放skip；证据`/tmp/ande-xhs-tabs.json`、`/tmp/observe-vivo.json`及小米/快手/新源snapshot；仍仅本地，未commit/push/部署。
+
+## 40. 代码提交与推送：数据不入库（2026-10-09）
+
+用户要求“把爬取的代码提交并push，数据不提交”。原未推送本地提交7ec4e1c含117,191,579字节`data/jobs.js`，超过GitHub普通Git单文件100MiB，未push前重写为两个代码-only提交（不包含任何`data/`路径）：
+
+- 第三批来源＋阿里云社招的代码/测试/文档；
+- 本轮 B1 五源重采、小米/百川详情、小红书三入口、网易刷新、百度/蚂蚁抽样、小米实习、快手全项目、vivo 诊断的代码/测试/文档。
+
+`data/jobs.js`（119,385,190字节）及catalog/parts仍仅本地、未部署；线上Pages若由main自动构建将得到新代码＋仓库内旧数据（90,013,303字节版）。旧提交备份为本地标签`backup-local-7ec4e1c`（未推送）。推送范围/结果以Git历史为准；服务器/存储方案另项决定。

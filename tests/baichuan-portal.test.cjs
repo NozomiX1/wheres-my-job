@@ -233,3 +233,71 @@ test('Baichuan CLI atomically writes available envelope; failed/empty candidates
   a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
   a.equal(Object.hasOwn(written, 'finishedAt'), false); await a.rejects(b.run([JSON.stringify(site)]), /Usage/);
 });
+function infoObject(patch = {}) {
+  return { recruitment_type: null, HighlightList: [], JobChannelPublishList: [], job_post_object_value_map: {}, address_list: [], city_list: [],
+    correlation_job_list: [], tag_list: [], storefront_list: [], target_major_list: [], job_post_process_time_list: [], job_level_id_list: [], ...patch };
+}
+function detailPost(n = 1) { return row(n, { job_function: { id: '7273445734858852662', name: '算法', i18n_name: '算法' } }); }
+function detailJson(post, patch = {}, dataPatch = {}) {
+  return { code: 0, message: 'ok', error: null, data: { recommend_job_post_List: [], job_post_detail: {
+    id: post.id, title: post.title, description: post.description, requirement: post.requirement, recruit_type: structuredClone(post.recruit_type),
+    publish_time: post.publish_time, channel_online_status: post.channel_online_status, job_function: structuredClone(post.job_function), job_id: '7000000000000000001',
+    city_list: structuredClone(post.city_list), job_post_info: infoObject(), department_info: { name: '模型算法部', en_name: '模型算法部', i18n_name: '模型算法部' },
+    city_info_list_for_delivery: [{ name: '北京' }], tag_list: [], storefront_mode: null, storefront_list: [], process_type: null, ...patch }, ...dataPatch } };
+}
+test('Baichuan detail request/response binds the official anonymous GET without signature and only the proved renderer text', () => {
+  const post = detailPost(), request = b.detailRequest(post);
+  a.deepEqual(request, { url: site.api.replace('/search/job/posts', '/job/posts/' + post.id) + '?portal_type=6&with_recommend=false',
+    method: 'GET', headers: { Accept: 'application/json', 'website-path': '646926', 'accept-language': 'zh-CN', Referer: site.url + '/position/' + post.id + '/detail' }, body: null });
+  a.equal(b.validateDetail(detailJson(post), post), '模型算法部');
+  for (const mutate of [
+    d => d.code = 1, d => d.message = 'okx', d => d.error = {}, d => d.data.recommend_job_post_List = [post],
+    d => delete d.data.job_post_detail.title, d => d.data.job_post_detail.extra = 'x', d => d.data.job_post_detail.id = row(2).id,
+    d => d.data.job_post_detail.description = 'changed', d => d.data.job_post_detail.job_id = '0', d => d.data.job_post_detail.job_id = 7,
+    d => d.data.job_post_detail.department_info.name = '   ', d => d.data.job_post_detail.department_info = { name: 'x' },
+    d => d.data.job_post_detail.job_function.id = 'other', d => d.data.job_post_detail.job_function.name = '',
+    d => d.data.job_post_detail.job_post_info.job_post_object_value_map = { custom: '额外JD' },
+    d => d.data.job_post_detail.job_post_info.HighlightList = ['亮点'],
+    d => d.data.job_post_detail.job_post_info.correlation_job_list = ['关联'],
+    d => d.data.job_post_detail.tag_list = ['标签'], d => d.data.job_post_detail.storefront_list = ['门店'],
+    d => delete d.data.job_post_detail.city_info_list_for_delivery
+  ]) { const bad = detailJson(post); mutate(bad); a.throws(() => b.validateDetail(bad, post)); }
+});
+test('Baichuan detail enrichment validates every detail then publishes the renderer sections; refusal keeps list-only', async () => {
+  const post = detailPost(), base = b.collectAvailable([page(0, [post])], site);
+  const ok = await b.attachDetails(base, site, { sleep: async () => {}, detailFetch: async (url, options) => {
+    a.equal(url, b.detailRequest(post).url); a.equal(options.method, 'GET'); a.deepEqual(options.headers, b.detailRequest(post).headers);
+    return { status: 200, json: async () => detailJson(post) };
+  } });
+  a.equal(ok.verification.version, 3); a.deepEqual(ok.verification.details.map(d => d.request), [b.detailRequest(post)]);
+  a.equal(ok.jobs[0].detail.response.data.job_post_detail.department_info.name, '模型算法部');
+  const normalized = b.normalizeRecord(ok.jobs[0], site);
+  a.equal(normalized.description, '职位描述\n' + post.description + '\n\n职位要求\n' + post.requirement + '\n\n职位信息\n部门：模型算法部');
+  a.equal(normalized.jdComplete, true); a.equal(normalized.duty, post.description); a.equal(normalized.requirements, post.requirement);
+  a.equal(normalized.city, '北京/上海'); a.equal(normalized.category, '算法');
+  a.match(ok.issues.join(';'), /已收录列表及详情正文/);
+  a.deepEqual(b.validateEvidence(ok.verification, ok.jobs, site).jobs, ok.jobs);
+  for (const mutate of [v => v.details[0].request.url = site.api, v => v.details[0].httpStatus = 500, v => v.details[0].response.data.job_post_detail.id = row(2).id,
+    v => v.details = [v.details[0], v.details[0]], v => v.version = 2]) { const bad = JSON.parse(JSON.stringify(ok)); mutate(bad.verification); a.throws(() => b.validateEvidence(bad.verification, bad.jobs, site)); }
+  for (const reply of [{ status: 403 }, { status: 200, json: async () => ({ code: 1 }) }, { status: 200, json: async () => { throw new SyntaxError('not JSON'); } }]) {
+    let calls = 0;
+    const failed = await b.attachDetails(base, site, { sleep: async () => {}, detailFetch: async () => { calls++; return reply; } });
+    a.equal(calls, 1); a.equal(failed.verification.version, 2); a.equal(failed.jobs.some(j => Object.hasOwn(j, 'detail')), false);
+    a.match(failed.issues.join(';'), /详情请求停止/); a.equal(b.normalizeRecord(failed.jobs[0], site).jdComplete, false);
+    a.equal(b.validateEvidence(failed.verification, failed.jobs, site).total, 1);
+  }
+});
+test('Baichuan production run enriches details by default and writes the v3 envelope atomically', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-baichuan-detail-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'candidate.json'), post = detailPost(); let gets = 0;
+  const fetchImpl = async (url, options) => {
+    if (url === site.url) return { status: 200, text: async () => 'normal public entry' };
+    if (options.method === 'POST') return { status: 200, json: async () => page(0, [post]).response };
+    gets++; return { status: 200, json: async () => detailJson(post) };
+  };
+  const written = await b.run([JSON.stringify(site), file], { fetchImpl, sleep: async () => {} });
+  a.equal(gets, 1); a.equal(written.verification.version, 3); a.equal(written.jobs[0].detail.response.data.job_post_detail.department_info.name, '模型算法部');
+  a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
+  const listOnly = await b.run([JSON.stringify(site), file], { fetchImpl, sleep: async () => {}, withDetails: false });
+  a.equal(listOnly.verification.version, 2); a.equal(JSON.parse(fs.readFileSync(file, 'utf8')).verification.version, 2);
+});

@@ -61,7 +61,7 @@ test('vivo exact frozen social scope rejects campus qualification, removed adapt
   a.equal(b.requiresVerification({ key: 'vivo', ats: 'beisen', url: 'https://hr-campus.vivo.com/jobs' }), false);
   a.equal(b.verifiedSource({ key: 'vivo', ats: 'beisen', url: 'https://hr-campus.vivo.com/jobs' }), false);
   for (const bad of [{ url: 'https://HR.VIVO.COM:443/jobs' }, { api: 'POST ' + site.api }, { origin: '%' }, { detailApi: null }]) a.equal(b.requiresVerification(bad), true);
-  a.equal(b.portalNotice({}), ''); a.match(b.portalNotice(site), /组织范围未证全.*完整性未验证.*不继承校园/);
+  a.equal(b.portalNotice({}), ''); a.match(b.portalNotice(site), /company_id=1.*有界诊断.*完整性未验证.*不继承校园/);
 });
 test('vivo entire HTML single body converts once without guessed section splitting, title code suffix or truncated city order', () => {
   const post = { ...row(), job_title: '  岗位原标题  ', job_desc: '<p>岗位职责 &amp; &lt;List&lt;T&gt;&gt;</p><p>任职要求<br>全量结尾</p><script>hidden()</script>',
