@@ -7,11 +7,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { readPublished } = require('../crawler/publish');
+const vm = require('node:vm');
 const createRank = require('../assets/rank.js');
+const { createIndex } = require('./search');
 
 const ROOT = path.join(__dirname, '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
-const LIMITS = { body: 16384, words: 30, wordLength: 60, selected: 1000, page: 100, offset: 200000, requests: 120, windowMs: 10000 };
+const LIMITS = { body: 65536, words: 300, wordLength: 100, selected: 1000, page: 100, offset: 200000, requests: 120, windowMs: 10000 };
 const RECRUITMENT = new Set(['all', 'social', 'campus', 'internship', 'talent']);
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
@@ -25,7 +27,7 @@ function load(dataFile) {
     Object.defineProperty(job, '__unit', { value: rank.unitName(job), enumerable: false });
     byId.set(job.id, job);
   }
-  return { rank, jobs: data.jobs, byId, sources: data.sources.length, loadedAt: new Date().toISOString(), loadMs: Date.now() - started, mtime: fs.statSync(dataFile).mtimeMs };
+  return { rank, index: createIndex(data.jobs, rank), jobs: data.jobs, byId, sources: data.sources.length, loadedAt: new Date().toISOString(), loadMs: Date.now() - started, mtime: fs.statSync(dataFile).mtimeMs };
 }
 
 function parseQuery(body) {
@@ -43,21 +45,29 @@ function parseQuery(body) {
 }
 
 function search(state, body) {
-  const q = parseQuery(body), { rank } = state, rows = rank.collect(state.jobs, q, q.selected);
-  const items = rows.slice(q.offset, q.offset + q.limit).map(r => {
+  const q = parseQuery(body), { rank } = state, result = state.index.query(q);
+  const items = result.rows.map(r => {
     const j = r.job;
     return { id: j.id, sourceKey: j.sourceKey, company: j.company, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan,
       date: j.date, dateKind: j.dateKind, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, url: j.url, value: r.value, matched: r.matched, downranked: r.downranked,
       matchedText: r.matched.map(w => rank.hitText(j, w)), downrankedText: r.downranked.map(w => rank.hitText(j, w)) };
   });
-  return { total: rows.length, matched: rows.filter(r => r.matched.length).length, penalized: rows.filter(r => r.downranked.length).length, offset: q.offset, items };
+  return { total: result.total, matched: result.matched, penalized: result.penalized, offset: q.offset, items };
 }
 
-function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'data', 'catalog.js'), log = () => {}, reloadMs = 30000 } = {}) {
+// 示例词表（页面「填入示例」用）是最常见的查询，启动和重载后先把它们的命中缓存算好。
+function exampleTerms() {
+  const sandbox = {}; vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'assets', 'example-words.js'), 'utf8'), sandbox);
+  return [...(sandbox.ANDE_EXAMPLES?.keywords || []), ...(sandbox.ANDE_EXAMPLES?.downrank || [])];
+}
+
+function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'data', 'catalog.js'), log = () => {}, reloadMs = 30000, warm = true } = {}) {
   let state = load(dataFile);
+  const warmUp = () => { if (warm) { const started = Date.now(), current = state; current.index.warm(exampleTerms()).then(() => log('warmed', current.index.size(), 'terms in', Date.now() - started, 'ms')).catch(error => log('warm failed:', error.message)); } };
+  warmUp();
   const files = new Map(), hits = new Map();
   const reload = () => {
-    try { if (fs.statSync(dataFile).mtimeMs !== state.mtime) { state = load(dataFile); log('reloaded', state.jobs.length, 'jobs in', state.loadMs, 'ms'); } }
+    try { if (fs.statSync(dataFile).mtimeMs !== state.mtime) { state = load(dataFile); log('reloaded', state.jobs.length, 'jobs in', state.loadMs, 'ms'); warmUp(); } }
     catch (error) { log('reload failed, keeping previous data:', error.message); }
   };
   const timer = reloadMs ? setInterval(reload, reloadMs) : null;

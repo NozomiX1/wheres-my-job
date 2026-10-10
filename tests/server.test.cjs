@@ -6,7 +6,7 @@ const createRank = require('../assets/rank.js');
 
 const dataFile = path.join(__dirname, '..', 'data', 'catalog.js');
 let app, base;
-test.before(async () => { app = createApp({ dataFile, reloadMs: 0 }); await new Promise(r => app.server.listen(0, '127.0.0.1', r)); base = 'http://127.0.0.1:' + app.server.address().port; });
+test.before(async () => { app = createApp({ dataFile, reloadMs: 0, warm: false }); await new Promise(r => app.server.listen(0, '127.0.0.1', r)); base = 'http://127.0.0.1:' + app.server.address().port; });
 test.after(() => app.server.close());
 const post = (body, raw) => fetch(base + '/api/search', { method: 'POST', body: raw ?? JSON.stringify(body) });
 
@@ -47,6 +47,30 @@ test('static: page, assets and catalog are served; shards, source files and trav
 });
 
 test('per-IP rate limit answers 429 and the service survives', async () => {
-  const last = []; for (let i = 0; i < LIMITS.requests + 5; i++) last.push((await fetch(base + '/api/health')).status);
-  a.ok(last.includes(429));
+  const own = createApp({ dataFile, reloadMs: 0, warm: false }); await new Promise(r => own.server.listen(0, '127.0.0.1', r));
+  try {
+    const url = 'http://127.0.0.1:' + own.server.address().port + '/api/health', codes = [];
+    for (let i = 0; i < LIMITS.requests + 5; i++) codes.push((await fetch(url)).status);
+    a.ok(codes.includes(429)); a.equal(codes[0], 200);
+  } finally { own.server.close(); }
+});
+
+test('the cached index ranks exactly like the reference rank.collect: order, values, hit words, counts, deep pages', async () => {
+  const { jobs, rank } = app.state();
+  const queries = [{ words: ['算法', 'python', '大模型'], lowered: ['销售'] }, { words: ['Agent', 'C++', '实习'] }, { lowered: ['测试'] }, { words: ['算法', '算法'], lowered: ['算法'] },
+    { words: ['财务'], selected: ['字节跳动'], recruitment: 'campus' }, { words: ['  前端'], lowered: ['后端 '] }, {}];
+  for (const q of queries) {
+    const query = { words: [], lowered: [], selected: [], recruitment: 'all', ...q }, ref = rank.collect(jobs, query, new Set(query.selected));
+    for (const offset of [0, 1500]) {
+      const got = await (await post({ ...query, offset, limit: 100 })).json();
+      a.equal(got.total, ref.length); a.equal(got.matched, ref.filter(r => r.matched.length).length); a.equal(got.penalized, ref.filter(r => r.downranked.length).length);
+      a.deepEqual(got.items.map(i => [i.id, i.value, i.matched, i.downranked]), ref.slice(offset, offset + 100).map(r => [r.job.id, r.value, r.matched, r.downranked]), JSON.stringify(q));
+    }
+  }
+});
+
+test('a large word list (the example set) is accepted and answers quickly once its terms are cached', async () => {
+  const words = Array.from({ length: 120 }, (_, i) => '词' + i), body = { words: words.slice(0, 85), lowered: words.slice(85), limit: 50 };
+  a.equal((await post(body)).status, 200);
+  const started = Date.now(); a.equal((await post(body)).status, 200); a.ok(Date.now() - started < 1500, 'cached query took ' + (Date.now() - started) + 'ms');
 });
