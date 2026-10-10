@@ -49,7 +49,7 @@ function normalizeRecord(job, site) {
     duty: text(job.description), requirements: text(job.jobRequire), channels: [p.track],
     employment: job.jobNature === '全职' ? 'full-time' : job.jobNature === '实习' ? 'internship' : null,
     talentPlan: null, date: null, dateKind: null, sourceStatus: job.status == null ? null : String(job.status),
-    jdComplete: SECTIONS.some(([k]) => /[\p{L}\p{N}]/u.test(text(job[k]))), url: p.url + '/' + job.id
+    jdComplete: job.detailReused !== true && SECTIONS.some(([k]) => /[\p{L}\p{N}]/u.test(text(job[k]))), url: p.url + '/' + job.id
   };
 }
 
@@ -77,7 +77,7 @@ async function fetchAll(site, options = {}) {
   if (withDetails) {
     let got = 0, streak = 0, reused = 0;
     for (let i = 0; i < jobs.length; i++) {
-      if (known.has(jobs[i].id)) { reused++; continue; } // 增量：已发布且有详情，沿用
+      if (known.has(jobs[i].id)) { reused++; jobs[i] = { ...jobs[i], detailReused: true }; continue; } // 增量：已发布且有详情，沿用（列表自带部分分段文本，所以要明确标记，发布时才会沿用旧的完整正文）
       try {
         const data = await post(p.detailApi, { id: jobs[i].id, channelDetailIds: [1], hireType: p.body.hireType });
         if (!data || data.id !== jobs[i].id) throw new Error('Mihoyo: detail identity mismatch');

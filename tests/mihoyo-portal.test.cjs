@@ -59,4 +59,6 @@ test('incremental: known ids skip the detail request, new ids still get details'
   a.equal(raw.total, 2);
   a.deepEqual(f.calls.filter(c => c.startsWith('info')), ['info:2']);
   a.deepEqual(raw.issues, []);
+  const [reused, fresh] = normalizeJobs(raw.jobs, campus);
+  a.equal(reused.jdComplete, false, 'reused job must not claim a complete JD, so publish keeps the published full text'); a.equal(fresh.jdComplete, true);
 });
