@@ -572,3 +572,14 @@ test('update: same host crawls serially, different hosts overlap, Chrome sources
   const result = await runUpdate([], { sites, runner, publisher: () => ({ code: 0, written: false }) });
   assert.equal(result.code, 0); assert.equal(result.attempts.length, 5); assert.ok(peak > 1, 'different groups run in parallel');
 });
+
+test('update with logDir writes a per-run log (child output included) and one runs.jsonl line per source', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-log-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sites = [{ key: 'a', url: 'https://a.example.com/' }, { key: 'b', url: 'https://b.example.org/' }];
+  const runner = async (_c, args, opts) => { opts.onLine('[' + args[1] + '] hello'); return { status: args[1] === 'a' ? 0 : 1 }; };
+  const result = await runUpdate([], { sites, runner, logDir: dir, publisher: () => ({ code: 0, written: false, updated: [] }) });
+  const text = fs.readFileSync(result.logFile, 'utf8');
+  assert.match(text, /\[a\] hello/); assert.match(text, /\[b\] hello/); assert.match(text, /update done: ok=1 failed=b/);
+  const runs = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.deepEqual(runs.map(r => [r.key, r.exit]).sort(), [['a', 0], ['b', 1]]);
+});

@@ -77,3 +77,42 @@ test('source gate: only registered keys with their own type run; others are not 
   a.equal(x.verifiedSource({ ...x.PROFILE, key: 'alias' }), false);
   a.equal(adapterCommand({ ...x.PROFILE, body: { ...x.PROFILE.body, type: 9 } }, '/tmp/raw.json'), null);
 });
+
+test('incremental: known ids skip the detail request; the published job keeps its detail-derived fields; new ids still get details', async t => {
+  const { knownIds } = require('../crawler/publish');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-xiaomi-inc-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'jobs.js');
+  fs.writeFileSync(file, 'globalThis.ANDE_DATA = ' + JSON.stringify({ version: 1, legacy: false, notices: [], companies: [], sources: [], jobs: [] }) + ';\n');
+  const cycle = async (rows, details, at, known, profile = x.INTERN_PROFILE) => {
+    const f = fakeFetch(rows, details), raw = await x.run(profile, { fetchImpl: f, known, sleep: async () => {} });
+    const crawled = runCrawl(profile, { outDir: dir, dataFile: file, now: () => at, runner: (_, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(raw)); return { status: 0 }; } });
+    a.equal(crawled.code, 0); a.equal(publish({ outDir: dir, dataFile: file, sites: [profile], keys: [profile.key] }).code, 0);
+    return f.calls.length;
+  };
+  const rows = [job(1, 3, 'internship')];
+  a.equal(await cycle(rows, { 101: detail(rows[0], { recruit_type: { name: '实习' } }) }, '2026-01-01T00:00:00.000Z', new Set()), 2);
+  a.deepEqual(knownIds('xiaomi_intern', file), ['1']);
+  // 第二轮：已知岗位只扫列表（1 次请求），新岗位 2 仍取详情（共 3 次请求，2 页以内）
+  const rows2 = [job(1, 3, 'internship'), job(2, 3, 'internship')];
+  a.equal(await cycle(rows2, { 102: detail(rows2[1], { recruit_type: { name: '实习' } }) }, '2026-01-02T00:00:00.000Z', new Set(knownIds('xiaomi_intern', file))), 2);
+  const jobs = readPublished(file).jobs;
+  a.deepEqual(jobs.map(j => [j.id, j.jdComplete, j.employment]).sort(), [['xiaomi_intern:1', true, 'internship'], ['xiaomi_intern:2', true, 'internship']]);
+  // 下架：第三轮列表只剩岗位 2，岗位 1 被整源替换掉
+  await cycle([rows2[1]], {}, '2026-01-03T00:00:00.000Z', new Set(knownIds('xiaomi_intern', file)));
+  a.deepEqual(readPublished(file).jobs.map(j => j.id), ['xiaomi_intern:2']);
+});
+
+test('incremental: a source with nothing else to restore (social) still keeps jdComplete when the detail is skipped', async t => {
+  const { knownIds } = require('../crawler/publish');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-xiaomi-inc2-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'jobs.js');
+  fs.writeFileSync(file, 'globalThis.ANDE_DATA = ' + JSON.stringify({ version: 1, legacy: false, notices: [], companies: [], sources: [], jobs: [] }) + ';\n');
+  const rows = [job(1, 1, 'index')], P = x.SOCIAL_PROFILE;
+  for (const [at, known] of [['2026-01-01T00:00:00.000Z', new Set()], ['2026-01-02T00:00:00.000Z', null]]) {
+    const f = fakeFetch(rows, { 101: detail(rows[0]) }), raw = await x.run(P, { fetchImpl: f, known: known ?? new Set(knownIds(P.key, file)), sleep: async () => {} });
+    a.equal(f.calls.length, known ? 2 : 1);
+    a.equal(runCrawl(P, { outDir: dir, dataFile: file, now: () => at, runner: (_, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(raw)); return { status: 0 }; } }).code, 0);
+    a.equal(publish({ outDir: dir, dataFile: file, sites: [P], keys: [P.key] }).code, 0);
+    a.equal(readPublished(file).jobs[0].jdComplete, true);
+  }
+});

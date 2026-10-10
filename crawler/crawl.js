@@ -4,7 +4,7 @@
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const { loadSites, coverageFor, atomicWrite, normalizeJobs, validTimestamp } = require('./publish');
+const { loadSites, coverageFor, atomicWrite, normalizeJobs, validTimestamp, knownIds } = require('./publish');
 const moka = require('./lib/moka');
 const portals = require('./lib/portals');
 const RETRY_PRELOAD = path.join(__dirname, 'lib', 'retry-preload.js');
@@ -42,7 +42,7 @@ function validateEnvelope(raw) {
   return raw.jobs;
 }
 
-function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSync, now = () => new Date().toISOString(), log = () => {} } = {}) {
+function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSync, now = () => new Date().toISOString(), log = () => {}, full = false, dataFile } = {}) {
   if (!site || !/^[a-z0-9_]+$/.test(site.key) || typeof site.company !== 'string' || !site.company) throw new Error('Invalid registry source');
   const lastAttempt = now();
   if (!validTimestamp(lastAttempt)) throw new Error('Invalid attempt timestamp');
@@ -72,7 +72,10 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
   if (!command) return saveStatus('unverified', '此来源身份或正常采集协议尚未复验；未运行，保留已发布基线');
   try {
     if (oldRaw !== null) fs.unlinkSync(rawFile);
-    const env = { ...process.env, NODE_OPTIONS: [process.env.NODE_OPTIONS, '--require=' + RETRY_PRELOAD].filter(Boolean).join(' ') };
+    // 增量：已发布且 JD 完整的岗位不再取详情；full 时给空集合，全部重新取。
+    const knownFile = path.join(outDir, site.key + '_known.json');
+    atomicWrite(knownFile, JSON.stringify(full ? [] : knownIds(site.key, dataFile)));
+    const env = { ...process.env, ANDE_KNOWN_IDS: knownFile, NODE_OPTIONS: [process.env.NODE_OPTIONS, '--require=' + RETRY_PRELOAD].filter(Boolean).join(' ') };
     const child = runner(process.execPath, [command.script, ...command.args], { encoding: 'utf8', timeout: command.timeout, env });
     if (child?.stdout) log(child.stdout.trim());
     if (child?.stderr) log(child.stderr.trim());
@@ -110,7 +113,7 @@ if (require.main === module) {
     const sites = loadSites();
     const site = sites.find(item => item.key === key);
     if (!site) throw new Error('Usage: node crawl.js <siteKey>; keys: ' + sites.map(item => item.key).join(', '));
-    const result = runCrawl(site, { log: console.log });
+    const result = runCrawl(site, { log: console.log, full: process.argv.includes('--full') });
     console.log(key + ': ' + result.status + ' — ' + result.message);
     process.exitCode = result.code;
   } catch (error) {
