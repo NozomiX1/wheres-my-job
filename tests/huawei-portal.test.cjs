@@ -55,3 +55,20 @@ test('Huawei serial normal session stops after refusal, publishing earlier usabl
   }};
   const result=await h.fetchAvailable(campus,options);assert.equal(calls,3);assert.equal(result.total,1);assert.ok(result.issues.some(x=>x.includes('请求停止')));assert.equal(result.jobs[0].detail,null);
 });
+
+test('a posting with several 岗位意向 is split into one record per intention; 0 or 1 intention keep the official id', () => {
+  const l = list(), intention = (id, name, extra = {}) => ({ jobId: l.jobId, positionIntentionId: id, positionIntention: ' ' + name + ' ', jobPlaceName: '', jobResponsibilities: name + '职责', jobDemand: name + '要求', ...extra });
+  const many = { listed: l, detail: null, intentions: [intention(1, '算法', { jobPlaceName: '深圳/杭州' }), intention(2, '数据'), intention(3, '系统')] };
+  const records = h.expand([many]).map(row => h.normalizeRecord(row, campus));
+  assert.deepEqual(records.map(r => r.id), [l.advertisementId + '-1', l.advertisementId + '-2', l.advertisementId + '-3']);
+  assert.deepEqual(records.map(r => r.title), ['官网岗位（算法）', '官网岗位（数据）', '官网岗位（系统）']);
+  assert.deepEqual(records.map(r => [r.duty, r.requirements]), [['算法职责', '算法要求'], ['数据职责', '数据要求'], ['系统职责', '系统要求']]);
+  assert.equal(records[0].city, '深圳/杭州'); assert.equal(records[1].city, l.workPlace, 'no own place → the posting place');
+  assert.ok(records[1].description.includes('数据') && !records[1].description.includes('算法'), 'each record carries only its own intention');
+  assert.equal(new Set(records.map(r => r.url)).size, 1, 'all point at the one official posting page');
+  for (const intentions of [null, [], [intention(7, '唯一')]]) {
+    const row = { listed: l, detail: null, intentions }, out = h.expand([row]);
+    assert.equal(out.length, 1); assert.equal(h.normalizeRecord(out[0], campus).id, String(l.advertisementId));
+    assert.equal(h.normalizeRecord(out[0], campus).title, '官网岗位');
+  }
+});

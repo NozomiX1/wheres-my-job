@@ -119,6 +119,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
   const portal = portals.requiring(site);
   if (portal && !portal.qualifies(site)) throw new Error(portal.unverified);
   if (portal) portal.mod.validateJobs(rawJobs, site);
+  if (portal?.mod.expand) rawJobs = portal.mod.expand(rawJobs, site); // 一个官网岗位含多条记录时（如华为的岗位意向）在此展开
   const newDirectJD = portal?.directJD(site);
   const newMokaPortal = moka.requiresVerification(site);
   if (newMokaPortal && !moka.verifiedSource(site)) throw new Error('Moka portal identity/scope/mode has not been verified');

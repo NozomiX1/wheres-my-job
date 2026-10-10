@@ -90,7 +90,8 @@ function normalizeRecord(row,site){
     if(!requirements.trim()&&fallbackRequirements){requirements=fallbackRequirements;description+='\n\n岗位要求\n'+fallbackRequirements;}
   }
   // A full source is never inferred from finished requests. Keep unknown metadata/extra sections honest.
-  return {id:String(l.advertisementId),title:d?d.jobname:l.jobName,city:(d?d.jobCity:l.workPlace)||'',category:(d?d.categoryName:l.categoryName)||'',
+  const part=row.split?row.intentions[0]:null; // 拆分后的单个岗位意向：标题带意向名，地点用该意向自己的，ID 加意向号
+  return {id:part?l.advertisementId+'-'+part.positionIntentionId:String(l.advertisementId),title:(d?d.jobname:l.jobName)+(part?'（'+part.positionIntention.trim()+'）':''),city:(part&&string(part.jobPlaceName)&&part.jobPlaceName.trim())||(d?d.jobCity:l.workPlace)||'',category:(d?d.categoryName:l.categoryName)||'',
     channels:[p.track],employment:null,talentPlan:null,date:null,dateKind:null,sourceStatus:null,
     url:http.ORIGIN+'/cn/job-details?advertisementId='+l.advertisementId,duty,requirements,description,
     jdComplete:false};
@@ -131,7 +132,10 @@ async function run(args,options={}){
   const result=await fetchAvailable(site,options),temp=args[1]+'.'+process.pid+'.tmp';
   try{fs.writeFileSync(temp,JSON.stringify(result,null,2)+'\n','utf8');fs.renameSync(temp,args[1]);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}return result;
 }
+// 官网一个岗位可含多个“岗位意向”（候选人先选意向才看到对应职责要求），拆成每个意向一条，
+// 否则正文是所有意向的拼接，既超长又让匹配分失真。发布前（normalizeJobs）才展开，原始快照与证据校验不变。
+const expand=jobs=>jobs.flatMap(row=>row.intentions&&row.intentions.length>1?row.intentions.map(i=>({...row,intentions:[i],split:true})):[row]);
 // 增量：详情文本与列表一致，校园另有岗位意向（description）；以“校园有 description／社招有 requirements”作为已取得详情的标志。
 const hasDetail=job=>job.channels.includes('campus')?job.description.trim()!=='':job.requirements.trim()!=='';
-module.exports={hasDetail,PROFILES,requiresVerification,verifiedSource,validateJobs,validateEvidence,normalizeRecord,portalNotice,collectAvailable,fetchAvailable,run};
+module.exports={expand,hasDetail,PROFILES,requiresVerification,verifiedSource,validateJobs,validateEvidence,normalizeRecord,portalNotice,collectAvailable,fetchAvailable,run};
 if(require.main===module)run(process.argv.slice(2)).catch(error=>{console.error(error.message);process.exitCode=1;});
