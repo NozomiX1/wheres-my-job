@@ -583,3 +583,12 @@ test('update with logDir writes a per-run log (child output included) and one ru
   const runs = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   assert.deepEqual(runs.map(r => [r.key, r.exit]).sort(), [['a', 0], ['b', 1]]);
 });
+
+test('old portals declare their own "has detail" marker (their jdComplete is always false), used by incremental known ids and the publish merge', () => {
+  const tencent = require('../crawler/lib/custom/tencent_portal'), huawei = require('../crawler/lib/custom/huawei_portal');
+  const job = (extra) => ({ channels: ['social'], duty: '', requirements: '', description: '', ...extra });
+  assert.equal(tencent.hasDetail(job({ description: '' })), false); assert.equal(tencent.hasDetail(job({ description: '正文' })), true);
+  assert.equal(huawei.hasDetail(job({ channels: ['campus'], requirements: '列表要求' })), false); // 校园：只有岗位意向 description 才算详情
+  assert.equal(huawei.hasDetail(job({ channels: ['campus'], description: '意向' })), true);
+  assert.equal(huawei.hasDetail(job({ requirements: '要求' })), true); // 社招：详情与列表同文，有要求即可
+});

@@ -97,7 +97,7 @@ function normalizeRecord(row,site){
 }
 function portalNotice(site){if(!verifiedSource(site))return '';return '华为仅覆盖登记官网默认'+(site.track==='campus'?'校招CR':'社招SR')+'列表，不按项目或职位方向删岗；非集团全球所有渠道。已取得详情及岗位意向正文按原顺序保留；额外正文完整性未核验，日期/性质/人才计划未知，不以接口列出证明实际可投。';}
 async function fetchAvailable(site,options={}){
-  const p=profile(site),maxPages=options.maxPages??MAX_PAGES;check(Number.isSafeInteger(maxPages)&&maxPages>1&&maxPages<=MAX_PAGES,'invalid page safety limit');
+  const p=profile(site),maxPages=options.maxPages??MAX_PAGES,known=options.known??require('../known').knownIds();check(Number.isSafeInteger(maxPages)&&maxPages>1&&maxPages<=MAX_PAGES,'invalid page safety limit');
   const pages=options.listPages??[],details=[],intentionPages=[],issues=[];let stopped=false;
   if(pages.length){collectAvailable(p,pages);issues.push('复用已取得列表，仅续取详情/岗位意向；本次未重采列表');}
   const page=await http.open(p.key,options);
@@ -109,12 +109,14 @@ async function fetchAvailable(site,options={}){
     }catch(error){if(!pages.length)throw error;issues.push('请求停止：'+error.message);stopped=true;break;}
   }
   const jobs=collectAvailable(p,pages).jobs,seen=new Set();
-  if(!stopped)for(const row of jobs){try{
+  let reused=0;
+  if(!stopped)for(const row of jobs){if(known.has(String(row.listed.advertisementId))){reused++;continue;}try{ // 增量：已发布且有详情，沿用
     const response=await page.detail(row.listed.advertisementId);details.push({request:http.requests.detail(row.listed.advertisementId),httpStatus:200,response});
     // Request only intentions of the same listed/detail identity; malformed details do not authorize another ID.
     detailed(response.data,row.listed,p);
     if(!seen.has(row.listed.jobId)){seen.add(row.listed.jobId);intentionPages.push({request:http.requests.intentions(row.listed.jobId),httpStatus:200,response:await page.intentions(row.listed.jobId)});}
   }catch(error){issues.push('请求停止，剩余详情/意向待补：'+error.message);break;}}
+  if(reused)console.log('增量：沿用已发布详情 '+reused+' 个，新取详情 '+details.length+' 个');
   return collectAvailable(p,pages,details,intentionPages,issues);
 }
 async function run(args,options={}){
@@ -129,5 +131,7 @@ async function run(args,options={}){
   const result=await fetchAvailable(site,options),temp=args[1]+'.'+process.pid+'.tmp';
   try{fs.writeFileSync(temp,JSON.stringify(result,null,2)+'\n','utf8');fs.renameSync(temp,args[1]);}finally{if(fs.existsSync(temp))fs.unlinkSync(temp);}return result;
 }
-module.exports={PROFILES,requiresVerification,verifiedSource,validateJobs,validateEvidence,normalizeRecord,portalNotice,collectAvailable,fetchAvailable,run};
+// 增量：详情文本与列表一致，校园另有岗位意向（description）；以“校园有 description／社招有 requirements”作为已取得详情的标志。
+const hasDetail=job=>job.channels.includes('campus')?job.description.trim()!=='':job.requirements.trim()!=='';
+module.exports={hasDetail,PROFILES,requiresVerification,verifiedSource,validateJobs,validateEvidence,normalizeRecord,portalNotice,collectAvailable,fetchAvailable,run};
 if(require.main===module)run(process.argv.slice(2)).catch(error=>{console.error(error.message);process.exitCode=1;});

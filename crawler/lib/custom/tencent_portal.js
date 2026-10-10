@@ -249,7 +249,7 @@ function normalizeRecord(row, site) {
 function portalNotice(site) { return verifiedSource(site) ? (site.track === 'campus' ? '仅覆盖官网默认五项目校园广列表，包含实习、青云及官网链接的Workday岗位；' : '仅覆盖官网默认area=cn无职业筛选广列表，含官网链接的外部入口；') +
   '完整性未验证，不代表公司全球全集；原生PostId字符串是身份，内部详情与外部链接分开；已取得当前正文及额外描述保留，缺详情诚实提示；' + (site.track === 'campus' ? '按官网直接可见原标签标实习及青云计划，应届毕业生不推全职，无计划标签不推非人才计划；' : '性质、人才计划未知；') + '日期及原状态语义未证明，不推定实际可投。' : ''; }
 async function fetchSupplemented(site, base, options = {}) {
-  const p = profile(site), { fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now, seed = [], baseCompletedAt = null } = options;
+  const p = profile(site), { fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now, seed = [], baseCompletedAt = null, known = require('../known').knownIds() } = options;
   check(typeof fetchImpl === 'function' && typeof sleep === 'function' && typeof now === 'function' && Array.isArray(seed), 'invalid supplemental request limits');
   let result = collectSupplemented(base, p, seed, [], null, baseCompletedAt), lastStart = null, stopped = null;
   const deadline = options.deadline ?? now() + PROCESS_MS, supplements = [...seed], issues = [];
@@ -260,7 +260,7 @@ async function fetchSupplemented(site, base, options = {}) {
     const request = raw.request, response = await fetchImpl(request.url, { method: request.method, headers: request.headers, redirect: 'error', signal: AbortSignal.timeout(Math.min(15000, Math.ceil(remaining))) });
     raw.httpStatus = response?.status ?? null; if (raw.httpStatus === 200) raw.response = await response.json(); return raw;
   }
-  for (const row of supplementRows(result.jobs, p)) {
+  for (const row of supplementRows(result.jobs, p).filter(r => !known.has(identity(r.post, p)))) { // 增量：已发布且有补充正文的沿用
     if (now() + 200 >= deadline) { issues.push('达到进程安全时限，补充待补'); break; }
     let raw;
     try { raw = { postId: identity(row.post, p), kind: needsDetail(p, row.post) ? 'internal' : 'workday', request: supplementRequestFor(p, row.post, now()), httpStatus: null, response: null }; }
@@ -271,7 +271,7 @@ async function fetchSupplemented(site, base, options = {}) {
   return collectSupplemented(base, p, supplements, issues, stopped, baseCompletedAt);
 }
 async function fetchAvailable(site, options = {}) {
-  const p = profile(site), { fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now, maxPages = MAX_PAGES, listPages = [] } = options;
+  const p = profile(site), { fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now, maxPages = MAX_PAGES, listPages = [], known = require('../known').knownIds() } = options;
   check(typeof fetchImpl === 'function' && typeof sleep === 'function' && typeof now === 'function' && Number.isSafeInteger(maxPages) && maxPages > 0 && maxPages <= MAX_PAGES && Array.isArray(listPages), 'invalid request limits');
   const pages = structuredClone(listPages), details = [], issues = [], deadline = now() + PROCESS_MS; let lastStart = null, stopped = null;
   if (pages.length) collectAvailable(pages, p);
@@ -289,7 +289,7 @@ async function fetchAvailable(site, options = {}) {
     catch (error) { if (!pages.length) throw error; stopped = { ...raw, stage: 'page', error: String(error?.message || error) }; break; }
   }
   if (!ended && !stopped) issues.push('达到分页/时间安全上限，覆盖待补'); const rows = collectAvailable(pages, p).jobs;
-  if (!stopped) for (const row of rows.filter(r => needsDetail(p, r.post))) {
+  if (!stopped) for (const row of rows.filter(r => needsDetail(p, r.post) && !known.has(identity(r.post, p)))) { // 增量：已发布且有详情的沿用
     if (now() + 200 >= deadline) { issues.push('达到进程安全时限，详情待补'); break; }
     let raw = { request: detailRequestFor(p, row.post, now()), httpStatus: null, response: null };
     try { raw = await send(raw); detailData(raw, p, row.post); details.push(raw); }
@@ -305,5 +305,7 @@ async function run(args, options = {}) {
   try { const fd = fs.openSync(temp, 'wx'); created = true; try { fs.writeFileSync(fd, JSON.stringify(envelope, null, 2) + '\n', 'utf8'); } finally { fs.closeSync(fd); } fs.renameSync(temp, file); }
   finally { if (created && fs.existsSync(temp)) fs.unlinkSync(temp); } return envelope;
 }
-module.exports = { PROFILES, requiresVerification, verifiedSource, requestFor, detailRequestFor, needsDetail, pageData, atEnd, validateJobs, normalizeRecord, portalNotice, collectAvailable, collectSupplemented, collectResumed, supplementRequestFor, validateEvidence, fetchSupplemented, fetchAvailable, run };
+// 增量：旧门户不声称 JD 完整（jdComplete 恒为 false），以“已有补充/详情正文”作为已取得详情的标志。
+const hasDetail = job => job.description.trim() !== '';
+module.exports = { hasDetail, PROFILES, requiresVerification, verifiedSource, requestFor, detailRequestFor, needsDetail, pageData, atEnd, validateJobs, normalizeRecord, portalNotice, collectAvailable, collectSupplemented, collectResumed, supplementRequestFor, validateEvidence, fetchSupplemented, fetchAvailable, run };
 if (require.main === module) run(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });

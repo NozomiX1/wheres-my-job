@@ -206,7 +206,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
 }
 
 // 增量采集用：该来源已发布且 JD 完整的官网岗位 ID（只读该来源的分片）。适配器据此跳过已有详情的岗位。
-function knownIds(key, file = DATA_FILE) {
+function knownIds(key, file = DATA_FILE, hasDetail = job => job.jdComplete) {
   if (!fs.existsSync(file)) return [];
   const match = fs.readFileSync(file, 'utf8').match(/^\s*globalThis\.ANDE_DATA\s*=\s*([\s\S]*?);?\s*$/);
   const parts = match ? JSON.parse(match[1]).parts : null;
@@ -214,7 +214,7 @@ function knownIds(key, file = DATA_FILE) {
   const prefix = key + ':', ids = [];
   for (const part of parts.filter(part => part.sourceKey === key)) {
     const text = fs.readFileSync(path.join(path.dirname(file), part.file), 'utf8');
-    for (const job of JSON.parse(text.slice(text.indexOf('] = ') + 4).replace(/;\s*$/, ''))) if (job.jdComplete && job.id.startsWith(prefix)) ids.push(job.id.slice(prefix.length));
+    for (const job of JSON.parse(text.slice(text.indexOf('] = ') + 4).replace(/;\s*$/, ''))) if (hasDetail(job) && job.id.startsWith(prefix)) ids.push(job.id.slice(prefix.length));
   }
   return ids;
 }
@@ -346,14 +346,16 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       let jobs = validateSnapshot(snapshot, status, site);
       // 整源替换：这次取到的就是该来源现在的全部岗位。新内容里为空的正文字段不抹掉旧的非空正文（详情没取到时）。
       const old = new Map(baseline.jobs.filter(j => j.sourceKey === site.key).map(j => [j.id, j]));
+      const hasDetail = portals.qualified(site)?.mod.hasDetail ?? (job => job.jdComplete); // 与增量采集共用“已有详情”的判断
       jobs = jobs.map(job => {
         const o = old.get(job.id);
         if (!o) return job;
-        // 详情这次没取（增量跳过或失败）而旧版 JD 完整：整段正文、性质/计划与 jdComplete 都沿用旧值（详情通常比列表更全）；否则只在新内容为空时不抹掉旧正文。
-        const detailMissing = o.jdComplete && !job.jdComplete;
-        const restored = ['duty', 'requirements', 'description'].filter(field => o[field].trim() && (detailMissing || !job[field].trim()));
-        const kept = detailMissing ? ['employment', 'talentPlan'].filter(field => job[field] == null && o[field] != null) : [];
-        return restored.length || kept.length || detailMissing ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
+        // 旧版 JD 完整而这次不完整（增量跳过或详情没取到）：整段正文沿用旧值（详情通常比列表更全）；
+        // 否则只在新内容某字段为空时补上旧的非空值。两种情况下，详情带出的性质/计划/分类也沿用旧值。
+        const jd = ['duty', 'requirements', 'description'], jdLost = hasDetail(o) && !hasDetail(job);
+        const restored = jd.filter(field => o[field].trim() && (jdLost || !job[field].trim()));
+        const kept = jdLost || restored.length ? ['employment', 'talentPlan', 'category'].filter(field => (job[field] == null || job[field] === '') && o[field] != null && o[field] !== '') : [];
+        return restored.length || kept.length || jdLost ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
       });
       // 防护：新结果少于旧数据一半，多半是被截断，拒绝替换（确属下架需显式 acceptShrink）。
       if (old.size && jobs.length < old.size / 2 && !acceptShrink.includes(site.key)) throw new Error('New result has ' + jobs.length + ' jobs, fewer than half of the ' + old.size + ' published; keeping published data');

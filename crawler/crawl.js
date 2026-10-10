@@ -74,7 +74,7 @@ function runCrawl(site, { outDir = path.join(__dirname, 'out'), runner = spawnSy
     if (oldRaw !== null) fs.unlinkSync(rawFile);
     // 增量：已发布且 JD 完整的岗位不再取详情；full 时给空集合，全部重新取。
     const knownFile = path.join(outDir, site.key + '_known.json');
-    atomicWrite(knownFile, JSON.stringify(full ? [] : knownIds(site.key, dataFile)));
+    atomicWrite(knownFile, JSON.stringify(full ? [] : knownIds(site.key, dataFile, portals.qualified(site)?.mod.hasDetail)));
     const env = { ...process.env, ANDE_KNOWN_IDS: knownFile, NODE_OPTIONS: [process.env.NODE_OPTIONS, '--require=' + RETRY_PRELOAD].filter(Boolean).join(' ') };
     const child = runner(process.execPath, [command.script, ...command.args], { encoding: 'utf8', timeout: command.timeout, env });
     if (child?.stdout) log(child.stdout.trim());
