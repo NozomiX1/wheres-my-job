@@ -58,7 +58,7 @@
 
 ## 7. 常驻与定时采集（2026-10-10）
 
-`deploy/`：`ande-server.service`（用户 `ande`，崩溃 3 秒后自动重启，OOM 时最后被杀，上限 900M，热加载关闭）、`ande-crawl.service/timer`（每天 06:30 增量）、`ande-crawl-full.service/timer`（周日 03:00 `--full`），采集用 `deploy/crawl.sh`（flock 防重叠、先备份 data 保留 7 份），结束后无论成败重启服务；采集整体 MemoryMax 1000M、并发 2。`install.sh`、`deploy.sh` 见 README。`/api/health` 增加数据更新时间与最近一次采集结果。
+`deploy/`：`ande-server.service`（用户 `ande`，崩溃 3 秒后自动重启，OOM 时最后被杀，上限 900M，热加载关闭）、`ande-crawl.service/timer`（每天 06:30 增量）、`ande-crawl-full.service/timer`（周日 03:00 `--full`），采集用 `deploy/crawl.sh`（flock 防重叠、先备份 data 保留 7 份），结束后由 `deploy/reload.sh` 判断：已发布数据比服务启动时新才重启服务（失败的来源保留上次数据，发布是原子的；整轮什么都没发布则不重启）；采集整体 MemoryMax 1000M、并发 2。`install.sh`、`deploy.sh` 见 README。`/api/health` 增加数据更新时间与最近一次采集结果。
 
 **演练**：手动触发一轮全部 70 个来源，约 15 分钟，未见 OOM（峰值受页缓存影响会顶到 1000M 上限，未用到 swap）。演练暴露三个问题并已修复：
 - 字节两个来源：采集成功后删除临时 Chrome 目录遇 `ENOTEMPTY`（普通用户下 Chrome 退出稍慢），清理错误把成功变成失败 → 清理改为重试且失败不再影响结果；页面内请求报错没带细节，重试分类认不出超时 → 错误信息带上异常描述。

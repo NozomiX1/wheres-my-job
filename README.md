@@ -42,7 +42,7 @@ node crawler/update.js stepfun stepfun_social
 
 ## 服务器部署
 
-`deploy/` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束自动重启服务加载新数据；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。
+`deploy/` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束后若数据有更新就自动重启服务加载（`deploy/reload.sh`；失败的来源保留上次数据，整轮没发布则不重启）；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。
 
 ## 文档与代码入口
 
