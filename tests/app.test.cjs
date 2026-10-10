@@ -3,6 +3,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/app.js'),'utf8');
+const rankScript=fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
 const examplesScript=fs.readFileSync(path.join(root,'assets/example-words.js'),'utf8');
 const dataset=require('../crawler/publish').readPublished(path.join(root,'data/catalog.js'));
 const base={id:'unit-base',sourceKey:'unit',company:'字节跳动',city:'北京',title:'',duty:'',requirements:'',description:'',channels:['campus'],employment:'full-time',talentPlan:false,date:'2026-09-10',dateKind:'published',url:'https://example.test/job',jdComplete:true,category:''};
@@ -12,7 +13,7 @@ function load(saved,inputJobs=jobs,inputParts){
  if(saved!==undefined)storage.set('ande.preferences.v1',JSON.stringify(saved));
  const element=key=>{if(!elements.has(key))elements.set(key,{value:'',innerHTML:'',textContent:'',hidden:false,setAttribute(){},focus(){},select(){}});return elements.get(key);};
  const ctx=vm.createContext({URL,ANDE_DATA:{...dataset,jobs:inputJobs,...(inputParts?{parts:inputParts}:{})},document:{addEventListener(){},querySelectorAll(){return []},getElementById:element,querySelector:element},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{writes++;storage.set(k,v);}}});
- vm.runInContext(examplesScript,ctx);
+ vm.runInContext(examplesScript,ctx);vm.runInContext(rankScript,ctx);
  vm.runInContext(script.replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'')+'\nglobalThis.api={score,scoreText,collect,fillExample,restorePreferences,persistPreferences,matchesRecruitment,recruitmentLabels,wordEditor,reliableDate,dateHTML,applyHTML,detailHTML,rowHTML,hitText,sourceStatusHTML,jdNotice,unitName,COMPANIES,renderDirectory,renderSelection,companyEditor,footer,state,JOBS,EXAMPLE_KEYWORDS,EXAMPLE_DOWNRANK,RECRUITMENT_TYPES,message:()=>preferencesMessage};',ctx);
  return {...ctx.api,storage,element,writes:()=>writes};
 }

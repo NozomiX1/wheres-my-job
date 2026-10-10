@@ -3,21 +3,10 @@
 // Native search UI. Data is published separately; keyword preferences never remove jobs.
 const DATA=globalThis.ANDE_DATA||{version:1,companies:[],sources:[],jobs:[],notices:['岗位数据暂不可用，请稍后再试。']};
 const JOBS=DATA.jobs;
+const {ALIBABA_UNITS,UNIT_ALIASES,unitNames,unitName,matchFields,hitText,score,matchesRecruitment,reliableDate,compare,selects}=globalThis.ANDE_RANK(DATA); // 打分与单位归属见 rank.js，服务端共用
 // Display units only: keep source identity, raw company and all job facts untouched.
-const ALIBABA_UNITS=['阿里巴巴控股'];
 const RETIRED_ALIBABA_SELECTION='旧阿里招聘范围（已退出）';
-const UNIT_ALIASES={'阿里巴巴控股集团':'阿里巴巴控股','阿里国际数字商业集团':'阿里国际'};
 const GROUP_INITIALS={'千问事业部':'Q','千问办公':'Q','平头哥':'P','淘宝闪购':'T','灵犀互娱':'L','盒马':'H','虎鲸文娱集团':'H','阿里健康':'A','飞猪':'F','高德地图':'G','阿里校园招聘入口':'A'};
-function unitNames(item){
-  const key=item.sourceKey||item.key;
-  if(key==='alibaba'){
-    const names=item.unitCounts?Object.keys(item.unitCounts):item.id?DATA.unitMemberships?.[item.id]:null;
-    if(names?.length)return [...new Set(names.map(name=>UNIT_ALIASES[name]||name))];
-  }
-  if(item.company!=='阿里巴巴')return [item.company];
-  return [key==='alibaba_social'?ALIBABA_UNITS[0]:key==='alibaba'?'阿里校园招聘入口':item.company];
-}
-function unitName(item){return unitNames(item).join(' / ');}
 function partsFor(selected){return DATA.parts.filter(part=>!selected.size||unitNames(part).some(name=>selected.has(name)));}
 const COMPANIES=(()=>{
   const units=DATA.companies.map(c=>({...c,name:c.name==='阿里巴巴'?ALIBABA_UNITS[0]:c.name})),known=new Set(units.map(c=>c.name));
@@ -119,31 +108,6 @@ function clearSettings(){
   try{localStorage.removeItem(PREFERENCES_KEY);preferencesMessage='';}catch{preferencesMessage='本页面已清空，但浏览器不允许清除本机保存的设置。';}
   render();window.scrollTo({top:0,behavior:'auto'});$('keywords').focus();
 }
-function matchFields(job){return [job.title||'',job.duty||job.description||'',job.requirements||''].map(text=>text.toLowerCase());}
-// Display actual literal occurrences only when rendering; scoring still counts each field once.
-function hitText(job,word){
-  const term=word.toLowerCase();
-  const count=matchFields(job).reduce((total,field)=>total+(term?field.split(term).length-1:0),0);
-  return word+(count>1?' × '+count:'');
-}
-function score(job,query){
-  const fields=matchFields(job);
-  // Downranking temporarily mirrors positive weights for this demo; final strength is not settled.
-  // Integer hundredths keep equal contributions exactly cancelled, including tie ordering.
-  const hits=words=>words.map(word=>({word,points:fields.reduce((sum,field,i)=>sum+(field.includes(word.toLowerCase())?[300,100,35][i]:0),0)})).filter(hit=>hit.points);
-  const positiveHits=hits(query.words||[]),negativeHits=hits(query.lowered||[]);
-  const sum=hits=>hits.reduce((total,hit)=>total+hit.points,0);
-  const positive=sum(positiveHits),penalty=sum(negativeHits);
-  return {job,value:(positive-penalty)/100,positive:positive/100,penalty:penalty/100,matched:positiveHits.map(hit=>hit.word),downranked:negativeHits.map(hit=>hit.word)};
-}
-// Unknown dimensions stay in the relevant scopes; scopes are not exclusive categories.
-function matchesRecruitment(job,type){
-  if(type==='all')return true;
-  if(type==='campus'||type==='social')return !job.channels?.length||job.channels.includes(type);
-  if(type==='internship')return job.employment==null||job.employment==='internship';
-  if(type==='talent')return job.talentPlan!==false;
-  return false;
-}
 function recruitmentLabels(job){
   const labels=(job.channels||[]).map(type=>type==='campus'?'校招':'社招');
   if(job.employment==='internship')labels.push('实习');
@@ -155,10 +119,8 @@ function recruitmentLabels(job){
 }
 function scoreText(value){return state.active?.words.length||state.active?.lowered?.length?value.toFixed(2):'—';}
 function collect(query,selected){
-  return JOBS.filter(j=>(!selected.size||unitNames(j).some(name=>selected.has(name)))&&matchesRecruitment(j,query.recruitment||'all'))
-    .map(j=>score(j,query)).sort((a,b)=>b.value-a.value||reliableDate(b.job).localeCompare(reliableDate(a.job))||unitName(a.job).localeCompare(unitName(b.job),'zh')||a.job.id.localeCompare(b.job.id));
+  return JOBS.filter(j=>selects(j,selected)&&matchesRecruitment(j,query.recruitment||'all')).map(j=>score(j,query)).sort(compare);
 }
-function reliableDate(job){const d=job.date;return ['published','updated'].includes(job.dateKind)&&/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&!Number.isNaN(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d?d:'';}
 function dateHTML(job){const date=reliableDate(job);return date?`${job.dateKind==='published'?'发布':'官网更新'} <time datetime="${esc(date)}">${esc(date)}</time>`:'官网日期未明确';}
 function safeUrl(url){try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}}
 function applyHTML(job){const url=safeUrl(job.url);return url?`<a class="apply-link" data-role="apply" href="${esc(url)}" target="_blank" rel="noopener noreferrer">前往官网 ↗</a>`:'<button type="button" class="apply-link" data-role="apply" disabled title="官方链接暂不可用">官网暂不可用</button>';}

@@ -5,7 +5,7 @@ function fixture(){
  const elements=new Map(),requests=[],data={version:1,companies:[{name:'甲',initial:'A',aliases:[]}],sources:[],notices:[],jobs:[],parts:[{company:'甲',sourceKey:'a',count:1}]};
  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,style:{},setAttribute(){},focus(){},select(){}});return elements.get(id);};
  const ctx=vm.createContext({URL,ANDE_DATA:data,ANDE_EXAMPLES:{keywords:[],downrank:[]},document:{addEventListener(){},querySelectorAll(){return []},querySelector:element,getElementById:element},window:{scrollTo(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}},ANDE_LOAD_PARTS:(parts,progress)=>new Promise((resolve,reject)=>requests.push({parts,progress,resolve,reject}))});
- vm.runInContext(script+'\nglobalThis.api={state,search,clearSettings,render,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
+ vm.runInContext(fs.readFileSync(require.resolve('../assets/rank.js'),'utf8'),ctx);vm.runInContext(script+'\nglobalThis.api={state,search,clearSettings,render,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
 }
 const job={id:'a:1',sourceKey:'a',company:'甲',title:'财务',city:'',channels:['social'],employment:null,talentPlan:null,date:null,dateKind:null,duty:'财务职责',requirements:'',description:'',jdComplete:true,url:'https://example.test/job'};
 test('Pending/failed lazy query keeps prior results and JD snapshot; only complete success commits captured conditions',async()=>{
