@@ -197,6 +197,8 @@ async function fetchWithChrome(site, options = {}) {
       const response = normalRequests.get(p.requestId);
       if (!response) return;
       response.status = p.response.status;
+      // 页面首个列表请求尚无 CSRF 令牌时官网返回 405，页面自己取到令牌后会重发；这一次不算拒绝，以重发的请求为准（重发仍未成功则本轮超时失败）。
+      if (response.status === 405) { normalRequests.delete(p.requestId); headers = null; return; }
       if (response.status !== 200) normalError = new Error('Official initial list was rejected: HTTP ' + response.status + '; stopped');
     });
     page.on('Network.loadingFinished', p => {
@@ -230,7 +232,7 @@ async function fetchWithChrome(site, options = {}) {
         return page.evaluate(`(async()=>{const body=${JSON.stringify(body)},headers=${JSON.stringify(headers)},query=new URLSearchParams(Object.entries(body).map(([k,v])=>[k,Array.isArray(v)?v.join(','):String(v)]));const r=await fetch('/api/v1/search/job/posts?'+query,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});return {status:r.status,body:await r.text()}})()`);
       };
       // 页面内请求同样只对临时性错误（XHR 网络错误／超时、5xx）重试；被拒绝或被中断不重试。
-      const request = body => withRetry(() => send(body), { retryable: error => /XHR network failure|XHR timeout|fetch failed|timed? ?out/i.test(error.message), onRetry: (n, why) => console.error('[retry] ' + new URL(site.url).host + ' ' + why + '（第' + n + '次重试）') });
+      const request = body => withRetry(() => send(body), { retryable: error => /XHR network failure|XHR timeout|fetch failed|failed to fetch|timed? ?out/i.test(error.message), onRetry: (n, why) => console.error('[retry] ' + new URL(site.url).host + ' ' + why + '（第' + n + '次重试）') });
       return isClassified(site) ? fetchClassified(site, { ...options, request }) : fetchAll(scope, { ...options, request });
     };
     return envelope(site, await (site.portalPaths ? fetchPortals(site, { collect }) : collect(site)));
