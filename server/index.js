@@ -99,8 +99,9 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
     // 只提供首页、assets/ 与目录 catalog.js；分片（data/parts）不对外。
     const allowed = rel === 'index.html' || rel === 'data/catalog.js' || /^assets\/[^/]+$/.test(rel);
     const file = path.join(ROOT, rel);
-    if (!allowed || !file.startsWith(ROOT + path.sep) || !fs.existsSync(file)) throw new HttpError(404, '未找到');
-    if (rel === 'data/catalog.js') return send(req, res, 200, MIME['.js'], fs.readFileSync(dataFile));
+    if (!allowed || !file.startsWith(ROOT + path.sep)) throw new HttpError(404, '未找到');
+    if (rel === 'data/catalog.js') return send(req, res, 200, MIME['.js'], fs.readFileSync(dataFile)); // 目录取自实际使用的数据文件（可由 ANDE_DATA_FILE 指定）
+    if (!fs.existsSync(file)) throw new HttpError(404, '未找到');
     return send(req, res, 200, MIME[path.extname(file)] || 'application/octet-stream', fs.readFileSync(file));
   }
 
