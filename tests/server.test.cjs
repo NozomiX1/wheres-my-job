@@ -34,6 +34,10 @@ test('invalid input is rejected with 4xx, never 500', async () => {
   a.equal((await post(null, JSON.stringify({ words: ['a'.repeat(LIMITS.body)] }))).status, 413);
 });
 
+test('starting without a data file fails with a clear instruction, not a raw stack', () => {
+  a.throws(() => createApp({ dataFile: path.join(__dirname, 'no-such-dir', 'catalog.js'), reloadMs: 0, warm: false }), /找不到数据文件.*先采集/);
+});
+
 test('health reports data freshness and the last crawl result', async () => {
   const h = await (await fetch(base + '/api/health')).json();
   a.ok(h.jobs > 0 && /^\d{4}-\d\d-\d\dT/.test(h.dataUpdatedAt)); a.ok('lastRun' in h);

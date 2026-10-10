@@ -63,6 +63,7 @@ function exampleTerms() {
 }
 
 function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'data', 'catalog.js'), log = () => {}, reloadMs = 30000, warm = true } = {}) {
+  if (!fs.existsSync(dataFile)) throw new Error('找不到数据文件 ' + dataFile + '。请先采集生成数据（node crawler/update.js <来源key>，见 README），再启动服务。');
   let state = load(dataFile);
   const warmUp = () => { if (warm) { const started = Date.now(), current = state; current.index.warm(exampleTerms()).then(() => log('warmed', current.index.size(), 'terms in', Date.now() - started, 'ms')).catch(error => log('warm failed:', error.message)); } };
   warmUp();
@@ -137,7 +138,9 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
 module.exports = { createApp, parseQuery, search, load, LIMITS };
 if (require.main === module) {
   // 生产由采集结束后重启服务来加载新数据（ANDE_RELOAD_MS=0 关闭热加载，避免新旧数据同时在内存里）。
-  const app = createApp({ log: (...args) => console.log(new Date().toISOString(), ...args), reloadMs: Number(process.env.ANDE_RELOAD_MS ?? 30000) });
+  let app;
+  try { app = createApp({ log: (...args) => console.log(new Date().toISOString(), ...args), reloadMs: Number(process.env.ANDE_RELOAD_MS ?? 30000) }); }
+  catch (error) { console.error(error.message); process.exit(1); }
   const port = Number(process.env.PORT) || 8000, host = process.env.HOST || '0.0.0.0';
   app.server.listen(port, host, () => console.log(new Date().toISOString(), `listening on ${host}:${port}; ${app.state().jobs.length} jobs loaded in ${app.state().loadMs}ms`));
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => app.server.close(() => process.exit(0)));

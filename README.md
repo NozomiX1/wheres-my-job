@@ -19,6 +19,16 @@
 
 数据为 `data/catalog.js` ＋ `data/parts/`（单文件≤1MB），采集成功即整源替换、不保存历史。**数据不在仓库里**（已被 Git 忽略）：自行部署时先用下文的 `node crawler/update.js <来源key>` 采集生成，再启动服务；线上服务器按「服务器部署」一节每天自动增量采集。测试用的抽样小数据在 `tests/fixtures/data/`。
 
+## 自行部署（快速开始）
+
+仓库只有代码，**不含岗位数据**；自己部署分三步：
+
+1. 安装 **Node.js 22+**。涉及飞书系、快手、百川的来源还需要 Chrome（用 `CHROME_PATH` 指定；Linux 下以 root 或在 Ubuntu 24.04 普通用户运行时需 `--no-sandbox`，可参考 `deploy/install.sh` 里的包装脚本）。
+2. 采集你要的来源（来源 key 见 `crawler/sites.json`，**只填明确要采的 key**），首次是全量，之后同样命令即增量：`node crawler/update.js vivo baidu stepfun`。
+3. 启动服务并打开 `http://localhost:8000`：`PORT=8000 node server/index.js`。
+
+要长期运行并每天自动更新，用下文「服务器部署」里的 systemd 配置。
+
 ## 本地查看与检查
 
 页面由搜索服务提供：先有数据（`data/`），再运行 `PORT=8000 node server/index.js`，浏览器打开 `http://localhost:8000`。页面无框架、无构建/运行依赖；服务、采集工具与离线检查需 **Node.js 22+**。
