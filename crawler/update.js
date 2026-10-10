@@ -34,13 +34,14 @@ function spawnPrefixed(command, args, { onLine = () => {} } = {}) {
 function openLog(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'update-' + new Date().toISOString().replace(/[:.]/g, '-') + '.log');
-  return { file, line: text => fs.appendFileSync(file, new Date().toISOString() + ' ' + text + '\n'), run: entry => fs.appendFileSync(path.join(dir, 'runs.jsonl'), JSON.stringify(entry) + '\n') };
+  return { file, line: text => fs.appendFileSync(file, new Date().toISOString() + ' ' + text + '\n'), run: entry => fs.appendFileSync(path.join(dir, 'runs.jsonl'), JSON.stringify(entry) + '\n'), last: entry => fs.writeFileSync(path.join(dir, 'last-run.json'), JSON.stringify(entry, null, 2) + '\n') };
 }
 
-async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixed, publisher = publish, outDir, dataFile, log = () => {}, concurrency = 4, logDir, full = false } = {}) {
+async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixed, publisher = publish, outDir, dataFile, log = () => {}, concurrency = Number(process.env.ANDE_CONCURRENCY) || 4, logDir, full = false } = {}) {
   const file = logDir ? openLog(logDir) : null;
   const say = text => { log(text); file?.line(text); };
-  say('update start: ' + keys.join(' ') + (keys.length ? '' : '(all)'));
+  const startedAt = new Date().toISOString();
+  say('update start: ' + keys.join(' ') + (keys.length ? '' : '(all)') + (full ? ' --full' : ''));
   const selected = [...new Set(keys.length ? keys.flatMap(key => key.split(',').filter(Boolean)) : sites.map(site => site.key))];
   for (const key of selected) if (!sites.some(site => site.key === key)) throw new Error('Unknown source key: ' + key);
   const groups = new Map();
@@ -73,6 +74,8 @@ async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixe
   catch (error) { publication = { code: 1, written: false, updated: [], errors: [error.message] }; }
   const code = attempts.some(attempt => attempt.code) || publication.code ? 1 : 0;
   say('update done: ok=' + attempts.filter(a => !a.code).length + ' failed=' + attempts.filter(a => a.code).map(a => a.key).join(',') + ' published=' + (publication.updated || []).length + (publication.errors?.length ? ' publish-errors=' + publication.errors.join(' | ') : ''));
+  // 给 /api/health 看的最近一次结果：不用登录服务器就能知道数据新不新、哪些来源失败。
+  file?.last({ startedAt, finishedAt: new Date().toISOString(), full, sources: attempts.length, failed: attempts.filter(a => a.code).map(a => a.key), published: (publication.updated || []).length, publishErrors: publication.errors || [], log: path.basename(file.file) });
   return { code, attempts, publication, logFile: file?.file };
 }
 

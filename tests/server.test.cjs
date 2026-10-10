@@ -34,6 +34,11 @@ test('invalid input is rejected with 4xx, never 500', async () => {
   a.equal((await post(null, JSON.stringify({ words: ['a'.repeat(LIMITS.body)] }))).status, 413);
 });
 
+test('health reports data freshness and the last crawl result', async () => {
+  const h = await (await fetch(base + '/api/health')).json();
+  a.ok(h.jobs > 0 && /^\d{4}-\d\d-\d\dT/.test(h.dataUpdatedAt)); a.ok('lastRun' in h);
+});
+
 test('job detail returns the full job without internal fields; unknown ids are 404', async () => {
   const id = app.state().jobs[0].id, job = await (await fetch(base + '/api/job/' + encodeURIComponent(id))).json();
   a.equal(job.id, id); a.ok('duty' in job && !('__lc' in job));

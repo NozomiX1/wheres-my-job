@@ -1,0 +1,16 @@
+[Unit]
+Description=Ande daily incremental crawl
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ande
+WorkingDirectory=/opt/ande
+ExecStart=/opt/ande/deploy/crawl.sh
+# 无论成败都重启服务，让它加载新数据（前面带 + 表示以 root 身份执行）。
+ExecStopPost=+/bin/systemctl restart ande-server.service
+# 采集（含 Chrome）整体限制在 1000M 内，超了只杀采集；并发 2 以适应 1.6G 内存。
+MemoryMax=1000M
+OOMScoreAdjust=500
+Environment=ANDE_CONCURRENCY=2 CHROME_PATH=/usr/local/bin/chrome-ns
+TimeoutStartSec=4h

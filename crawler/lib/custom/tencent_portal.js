@@ -152,11 +152,13 @@ function availableResult(evidence, site) {
     ended = atEnd(d, i + 1);
   });
   const eligible = [...rows.values()].filter(r => needsDetail(p, r.post)); check(evidence.details.length <= eligible.length, 'extra detail requests');
-  evidence.details.forEach((raw, i) => { detailData(raw, p, eligible[i].post); eligible[i].detail = raw; });
+  // 详情按官方 PostId 绑定到岗位（增量采集会跳过已知岗位，不能再按位置一一对应）。
+  const byId = new Map(eligible.map(r => [identity(r.post, p), r])), detailPostId = raw => { try { return new URL(raw.request.url).searchParams.get('postId'); } catch { return null; } };
+  evidence.details.forEach(raw => { const row = byId.get(detailPostId(raw)); check(row && !row.detail, 'detail not bound to a listed job'); detailData(raw, p, row.post); row.detail = raw; });
   if (evidence.stopped !== null) {
     const s = evidence.stopped; check(object(s) && equal(Object.keys(s).sort(), ['error', 'httpStatus', 'request', 'response', 'stage']) && string(s.error) && s.error, 'stopped evidence'); let failed = false;
     if (s.stage === 'page') { check(!ended && evidence.details.length === 0 && evidence.pages.length < MAX_PAGES, 'stopped page order'); check(equal(s.request, requestFor(p, evidence.pages.length + 1, requestTime(s))), 'stopped page request binding'); try { pageData(s, p, evidence.pages.length + 1); } catch { failed = true; }
-    } else { check(s.stage === 'detail' && evidence.details.length < eligible.length, 'stopped detail order'); const post = eligible[evidence.details.length].post;
+    } else { check(s.stage === 'detail' && evidence.details.length < eligible.length, 'stopped detail order'); const stoppedRow = byId.get(detailPostId(s)); check(stoppedRow && !stoppedRow.detail, 'stopped detail not bound to a listed job'); const post = stoppedRow.post;
       check(equal(s.request, detailRequestFor(p, post, requestTime(s))), 'stopped detail request binding'); try { detailData(s, p, post); } catch { failed = true; }
       // Keep the actual v1 receipt of the old PostId-only guard; do not rewrite it as a website refusal.
       if (!failed && s.error === 'Tencent: detail PostId identity' && templateIdentity(business(s, p), post, p)) failed = true; }

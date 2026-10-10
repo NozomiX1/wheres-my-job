@@ -34,7 +34,7 @@ async function openChrome() {
     for (let i = 0; i < 30 && chrome.exitCode === null && !spawnError; i++) await sleep(100);
     if (chrome.exitCode === null && !spawnError) { chrome.kill('SIGTERM'); for (let i = 0; i < 30 && chrome.exitCode === null; i++) await sleep(100); }
     if (chrome.exitCode === null && !spawnError) { chrome.kill('SIGKILL'); await sleep(500); }
-    fs.rmSync(profile, { recursive: true, force: true });
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
     process.removeListener('SIGTERM', stop); process.removeListener('SIGINT', stop);
   })();
   const stop = () => { interrupted = true; try { page?.close(); } catch {} void close(); };

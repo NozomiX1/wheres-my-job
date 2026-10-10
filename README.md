@@ -21,7 +21,7 @@
 
 ## 本地查看与检查
 
-直接打开 `index.html`，或用静态服务器提供仓库根目录。页面无框架、无构建/运行依赖；执行采集工具与离线检查需 **Node.js 22+**。
+页面由搜索服务提供：先有数据（`data/`），再运行 `PORT=8000 node server/index.js`，浏览器打开 `http://localhost:8000`。页面无框架、无构建/运行依赖；服务、采集工具与离线检查需 **Node.js 22+**。
 
 ```sh
 node --test tests/*.test.cjs
@@ -38,7 +38,11 @@ node crawler/update.js stepfun stepfun_social
 
 它沿唯一采集/验证/发布链更新 `data/catalog.js` 与 `data/parts/`，不重建HTML。无参数update会遍历全部登记来源，勿作为日常检查；部分失败返回非零；失败的来源保留上次数据，采集成功的来源整源替换。
 
-适配器资格、Chrome环境、快照与分步命令见 [crawler/README.md](crawler/README.md)。本机 `crawler/out/` 被Git忽略，尚不等于定时任务的持久存储；定时采集与上线收尾尚未完成。
+适配器资格、Chrome环境、快照与分步命令见 [crawler/README.md](crawler/README.md)。
+
+## 服务器部署
+
+`deploy/` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束自动重启服务加载新数据；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。
 
 ## 文档与代码入口
 

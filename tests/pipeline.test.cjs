@@ -582,6 +582,8 @@ test('update with logDir writes a per-run log (child output included) and one ru
   assert.match(text, /\[a\] hello/); assert.match(text, /\[b\] hello/); assert.match(text, /update done: ok=1 failed=b/);
   const runs = fs.readFileSync(path.join(dir, 'runs.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   assert.deepEqual(runs.map(r => [r.key, r.exit]).sort(), [['a', 0], ['b', 1]]);
+  const last = JSON.parse(fs.readFileSync(path.join(dir, 'last-run.json'), 'utf8'));
+  assert.deepEqual([last.sources, last.failed, last.full], [2, ['b'], false]); assert.ok(last.finishedAt >= last.startedAt && last.log.startsWith('update-'));
 });
 
 test('old portals declare their own "has detail" marker (their jdComplete is always false), used by incremental known ids and the publish merge', () => {

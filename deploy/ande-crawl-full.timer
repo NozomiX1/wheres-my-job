@@ -1,0 +1,9 @@
+[Unit]
+Description=Run Ande full crawl every Sunday at 03:00 (Beijing)
+
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00 Asia/Shanghai
+Persistent=true
+
+[Install]
+WantedBy=timers.target

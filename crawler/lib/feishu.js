@@ -146,7 +146,7 @@ class CDP {
   on(method, f) { this.handlers.set(method, [...(this.handlers.get(method) || []), f]); }
   async evaluate(expression) {
     const r = await this.call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, 25000);
-    if (r.exceptionDetails) throw new Error('Official page request failed: ' + r.exceptionDetails.text);
+    if (r.exceptionDetails) throw new Error('Official page request failed: ' + (r.exceptionDetails.exception?.description || r.exceptionDetails.text));
     return r.result.value;
   }
   close() { this.ws.close(); }
@@ -244,7 +244,7 @@ async function fetchWithChrome(site, options = {}) {
     for (let i = 0; i < 30 && chrome.exitCode === null && !spawnError; i++) await sleep(100);
     if (chrome.exitCode === null && !spawnError) { chrome.kill('SIGTERM'); for (let i = 0; i < 30 && chrome.exitCode === null; i++) await sleep(100); }
     if (chrome.exitCode === null && !spawnError) { chrome.kill('SIGKILL'); await sleep(500); }
-    fs.rmSync(profile, { recursive: true, force: true });
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch {}
     process.removeListener('SIGTERM', stop); process.removeListener('SIGINT', stop);
   }
 }

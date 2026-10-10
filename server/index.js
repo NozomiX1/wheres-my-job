@@ -27,7 +27,8 @@ function load(dataFile) {
     Object.defineProperty(job, '__unit', { value: rank.unitName(job), enumerable: false });
     byId.set(job.id, job);
   }
-  return { rank, index: createIndex(data.jobs, rank), jobs: data.jobs, byId, sources: data.sources.length, loadedAt: new Date().toISOString(), loadMs: Date.now() - started, mtime: fs.statSync(dataFile).mtimeMs };
+  const updated = data.sources.map(s => s.lastSuccess).filter(Boolean).sort().at(-1) ?? null; // 各来源最近成功时间里最新的
+  return { rank, index: createIndex(data.jobs, rank), jobs: data.jobs, byId, sources: data.sources.length, dataUpdatedAt: updated, loadedAt: new Date().toISOString(), loadMs: Date.now() - started, mtime: fs.statSync(dataFile).mtimeMs };
 }
 
 function parseQuery(body) {
@@ -114,7 +115,8 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
           log('search', Date.now() - started + 'ms', 'total', result.total, 'page', result.items.length); // 不记录搜索词
           return json(req, res, 200, result);
         }
-        if (req.method === 'GET' && url.pathname === '/api/health') { const m = process.memoryUsage(); return json(req, res, 200, { jobs: state.jobs.length, sources: state.sources, loadedAt: state.loadedAt, loadMs: state.loadMs, rssMB: Math.round(m.rss / 1048576), heapMB: Math.round(m.heapUsed / 1048576) }); }
+        if (req.method === 'GET' && url.pathname === '/api/health') { const m = process.memoryUsage(); let lastRun = null; try { lastRun = JSON.parse(fs.readFileSync(path.join(ROOT, 'crawler', 'out', 'logs', 'last-run.json'), 'utf8')); } catch {}
+          return json(req, res, 200, { jobs: state.jobs.length, sources: state.sources, dataUpdatedAt: state.dataUpdatedAt, lastRun, loadedAt: state.loadedAt, loadMs: state.loadMs, rssMB: Math.round(m.rss / 1048576), heapMB: Math.round(m.heapUsed / 1048576) }); }
         const m = req.method === 'GET' && /^\/api\/job\/(.+)$/.exec(url.pathname);
         if (m) { const job = state.byId.get(decodeURIComponent(m[1])); if (!job) throw new HttpError(404, '岗位不存在'); return json(req, res, 200, job); }
         throw new HttpError(404, '未找到');
@@ -133,7 +135,8 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
 
 module.exports = { createApp, parseQuery, search, load, LIMITS };
 if (require.main === module) {
-  const app = createApp({ log: (...args) => console.log(new Date().toISOString(), ...args) });
+  // 生产由采集结束后重启服务来加载新数据（ANDE_RELOAD_MS=0 关闭热加载，避免新旧数据同时在内存里）。
+  const app = createApp({ log: (...args) => console.log(new Date().toISOString(), ...args), reloadMs: Number(process.env.ANDE_RELOAD_MS ?? 30000) });
   const port = Number(process.env.PORT) || 8000, host = process.env.HOST || '0.0.0.0';
   app.server.listen(port, host, () => console.log(new Date().toISOString(), `listening on ${host}:${port}; ${app.state().jobs.length} jobs loaded in ${app.state().loadMs}ms`));
   for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => app.server.close(() => process.exit(0)));

@@ -176,3 +176,12 @@ for (const [site, count, internal] of [[campus, 995, 905], [social, 2254, 1948]]
     if (site.track === 'campus') a.equal(r.jobs.filter(j => j.post.postId.startsWith('-')).length, 5);
   });
 }
+
+test('Tencent details bind to their official PostId, so a skipped (incrementally known) job never shifts the pairing', () => {
+  const known = row(social, '1111111111111111111'), fresh = row(social, '2222222222222222222');
+  const r = b.collectAvailable([page(social, 1, [known, fresh])], social, [detail(social, fresh)]);
+  const detailOf = id => r.jobs.find(j => j.post.PostId === id).detail;
+  a.equal(detailOf(fresh.PostId) !== null, true); a.equal(detailOf(known.PostId), null);
+  a.deepEqual(b.validateEvidence(r.verification, r.jobs, social).jobs, r.jobs);
+  a.throws(() => b.collectAvailable([page(social, 1, [known, fresh])], social, [detail(social, fresh), detail(social, fresh)]), /not bound/);
+});

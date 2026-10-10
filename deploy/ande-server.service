@@ -1,0 +1,19 @@
+[Unit]
+Description=Ande search service
+After=network.target
+
+[Service]
+User=ande
+WorkingDirectory=/opt/ande
+Environment=PORT=8000 ANDE_RELOAD_MS=0
+ExecStart=/usr/local/bin/node server/index.js
+Restart=always
+RestartSec=3
+# 内存紧张时先杀采集，不杀服务；服务本身设上限防泄漏。
+OOMScoreAdjust=-800
+MemoryMax=900M
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
