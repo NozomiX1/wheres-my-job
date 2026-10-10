@@ -8,6 +8,7 @@ const { randomUUID } = require('node:crypto');
 
 const ORIGIN = 'https://zhaopin.meituan.com';
 const LIST_API = ORIGIN + '/api/official/job/getJobList';
+const { knownIds } = require('../known');
 const DETAIL_API = ORIGIN + '/api/official/job/getJobDetail';
 const HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json' };
 const MAX_PAGES = 1000, PAGE_SIZE = 10;
@@ -72,9 +73,10 @@ const paginate = (get, makeRequest, rows, issues, { maxPages = MAX_PAGES, label 
   return { rows: Array.isArray(data?.list) ? data.list : [], total: data?.page?.totalCount };
 }, { maxPages, idOf: job => job.jobUnionId, usable, issues, rows, label });
 // 详情尽力而为：拒绝(403/412/429)立即停止，其它单条失败跳过，连续5次失败也停止。
-async function fetchDetails(get, rows, issues) {
-  let got = 0, streak = 0;
+async function fetchDetails(get, rows, issues, known = knownIds()) {
+  let got = 0, streak = 0, reused = 0;
   for (const [id, row] of rows) {
+    if (known.has(id)) { reused++; continue; } // 增量：已发布且有详情，沿用
     try {
       const detail = await get(detailRequest(id));
       if (detail?.jobUnionId !== id) throw new Error('Meituan: detail identity mismatch');
@@ -84,7 +86,8 @@ async function fetchDetails(get, rows, issues) {
       if ([403, 412, 429].includes(error.http) || streak >= 5) { issues.push('详情请求停止：' + error.message); break; }
     }
   }
-  if (got < rows.size) issues.push('详情取得 ' + got + '/' + rows.size + '，其余仅有列表正文');
+  if (reused) console.log('增量：沿用已发布详情 ' + reused + ' 个，新取详情 ' + got + ' 个');
+  if (got + reused < rows.size) issues.push('详情取得 ' + (got + reused) + '/' + rows.size + '（含沿用 ' + reused + '），其余仅有列表正文');
   return got;
 }
 function envelope(site, rows, issues, extra) {
@@ -98,7 +101,7 @@ async function fetchAvailable(site, options = {}) {
   const get = client(options), rows = new Map(), issues = [];
   const { total, pages } = await paginate(get, n => listRequest(n), rows, issues, { maxPages: options.maxPages });
   if (total !== null && total !== rows.size) issues.push('官方total ' + total + '；实际唯一岗位 ' + rows.size);
-  if (options.withDetails !== false) await fetchDetails(get, rows, issues);
+  if (options.withDetails !== false) await fetchDetails(get, rows, issues, options.known);
   return envelope(site, rows, issues, { pages });
 }
 

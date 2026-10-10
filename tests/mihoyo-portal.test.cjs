@@ -51,3 +51,12 @@ test('source gate: registered key+adapter+hireType only', () => {
   a.equal(m.verifiedSource(swapped), false); a.equal(adapterCommand(swapped, '/tmp/raw.json'), null);
   a.equal(adapterCommand({ ...campus, key: 'alias' }, '/tmp/raw.json'), null);
 });
+
+test('incremental: known ids skip the detail request, new ids still get details', async () => {
+  const rows = [list(1), list(2)];
+  const f = fakeFetch(rows, { details: { 2: detailOf(2) } });
+  const raw = await m.fetchAll(campus, { ...opts(f), known: new Set(['1']) });
+  a.equal(raw.total, 2);
+  a.deepEqual(f.calls.filter(c => c.startsWith('info')), ['info:2']);
+  a.deepEqual(raw.issues, []);
+});

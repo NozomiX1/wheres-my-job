@@ -40,7 +40,7 @@ async function fetchAll(site, options = {}) {
     pages += part.pages;
   }
   if (options.withDetails !== false) {
-    await fetchDetails(get, rows, issues);
+    await fetchDetails(get, rows, issues, options.known);
     for (const [id, row] of rows) if (!row.detailFetched) rows.set(id, { ...row, detailFetched: false });
   }
   return envelope(site, rows, issues, { pages });

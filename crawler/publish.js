@@ -349,9 +349,10 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       jobs = jobs.map(job => {
         const o = old.get(job.id);
         if (!o) return job;
-        const restored = ['duty', 'requirements', 'description'].filter(field => o[field].trim() && !job[field].trim());
-        // 详情这次没取（增量跳过或失败）而旧版有：详情带出的性质/计划与 jdComplete 也沿用旧值。
-        const detailMissing = o.jdComplete && !job.jdComplete, kept = detailMissing ? ['employment', 'talentPlan'].filter(field => job[field] == null && o[field] != null) : [];
+        // 详情这次没取（增量跳过或失败）而旧版 JD 完整：整段正文、性质/计划与 jdComplete 都沿用旧值（详情通常比列表更全）；否则只在新内容为空时不抹掉旧正文。
+        const detailMissing = o.jdComplete && !job.jdComplete;
+        const restored = ['duty', 'requirements', 'description'].filter(field => o[field].trim() && (detailMissing || !job[field].trim()));
+        const kept = detailMissing ? ['employment', 'talentPlan'].filter(field => job[field] == null && o[field] != null) : [];
         return restored.length || kept.length || detailMissing ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
       });
       // 防护：新结果少于旧数据一半，多半是被截断，拒绝替换（确属下架需显式 acceptShrink）。

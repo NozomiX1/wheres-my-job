@@ -55,7 +55,7 @@ function normalizeRecord(job, site) {
 
 async function fetchAll(site, options = {}) {
   const p = profile(site);
-  const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), maxPages = MAX_PAGES, withDetails = true } = options;
+  const { fetchImpl = globalThis.fetch, sleep = ms => new Promise(resolve => setTimeout(resolve, ms)), maxPages = MAX_PAGES, withDetails = true, known = require('../known').knownIds() } = options;
   async function post(url, body) {
     await sleep(200);
     const r = await fetchImpl(url, { method: 'POST', headers: { ...p.headers }, body: JSON.stringify(body), redirect: 'manual', signal: AbortSignal.timeout(15000) });
@@ -75,8 +75,9 @@ async function fetchAll(site, options = {}) {
 
   // 详情尽力而为：官网拒绝(403/412/429)立即停止详情；其它单条失败跳过，连续5次失败也停止。
   if (withDetails) {
-    let got = 0, streak = 0;
+    let got = 0, streak = 0, reused = 0;
     for (let i = 0; i < jobs.length; i++) {
+      if (known.has(jobs[i].id)) { reused++; continue; } // 增量：已发布且有详情，沿用
       try {
         const data = await post(p.detailApi, { id: jobs[i].id, channelDetailIds: [1], hireType: p.body.hireType });
         if (!data || data.id !== jobs[i].id) throw new Error('Mihoyo: detail identity mismatch');
@@ -86,7 +87,8 @@ async function fetchAll(site, options = {}) {
         if ([403, 412, 429].includes(error.http) || streak >= 5) { issues.push('详情请求停止：' + error.message); break; }
       }
     }
-    if (got < jobs.length) issues.push('详情取得 ' + got + '/' + jobs.length + '，其余仅有列表字段');
+    if (reused) console.log('增量：沿用已发布详情 ' + reused + ' 个，新取详情 ' + got + ' 个');
+    if (got + reused < jobs.length) issues.push('详情取得 ' + (got + reused) + '/' + jobs.length + '（含沿用 ' + reused + '），其余仅有列表字段');
   }
   return { total: jobs.length, jobs, issues, verification: { key: p.key, api: p.api, detailApi: p.detailApi, pages, issues } };
 }

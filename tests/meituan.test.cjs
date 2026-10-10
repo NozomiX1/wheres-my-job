@@ -111,3 +111,10 @@ test('the shrink guard refuses a result with fewer than half of the published jo
   a.equal(accepted.code, 0); a.equal(readPublished(f.dataFile).jobs.length, 2);
   a.equal(f.apply(raw([row(1), row(2), row(3)])).data.jobs.length, 3);
 });
+
+test('incremental: known ids skip the detail request, new ids still get details', async () => {
+  const { fetchDetails } = require('../crawler/lib/custom/meituan_portal').shared;
+  const rows = new Map([['1', { jobUnionId: '1' }], ['2', { jobUnionId: '2' }]]), asked = [], issues = [];
+  await fetchDetails(async req => { asked.push(req.body.jobUnionId); return { jobUnionId: req.body.jobUnionId, jobDuty: '职责' }; }, rows, issues, new Set(['1']));
+  a.deepEqual(asked, ['2']); a.equal(rows.get('2').detailFetched, true); a.equal(rows.get('1').detailFetched, undefined); a.deepEqual(issues, []);
+});
