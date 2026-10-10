@@ -216,7 +216,7 @@ async function fetchWithChrome(site, options = {}) {
       const nav = await page.call('Page.navigate', { url: scope.url });
       if (nav.errorText) throw new Error('Official page navigation failed');
       const complete = () => normalRequests.size && Date.now() - lastSend > 1500 && [...normalRequests.values()].every(r => r.body !== undefined);
-      for (let i = 0; !complete() && !normalError && i < 100; i++) { if (interrupted) throw new Error('Chrome interrupted'); await sleep(200); }
+      for (let i = 0; !complete() && !normalError && i < 300; i++) { if (interrupted) throw new Error('Chrome interrupted'); await sleep(200); }
       if (normalError) throw normalError;
       if (!headers || !complete()) throw new Error('Official normal successful list request/scope was not observed');
       const visible = await page.evaluate('({url:location.href,text:document.body.innerText})');
