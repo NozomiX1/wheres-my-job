@@ -15,6 +15,7 @@ sites.json（唯一来源登记）
 
 ```sh
 node crawler/update.js papegames vivo         # 采集并发布；仅明确授权的 keys，部分失败返回非零
+node crawler/update.js --full xiaomi_social   # 强制全量重取详情（默认增量，见下）
 node crawler/crawl.js papegames               # 仅采集，不发布
 node crawler/publish.js papegames             # 仅发布该来源的新快照
 node crawler/publish.js --reproject huawei    # 用已有快照在同一采集时刻重新投影
@@ -31,6 +32,12 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 - 采集成功即**整源替换**，没取到的岗位下架，不保存历史；新结果少于已发布一半时拒绝，确属下架用 `--accept-shrink=<key>`。新结果某个 JD 字段为空时不抹掉旧的非空 JD。
 - 失败的来源保留上次数据和真实采集时间；整体命令仍返回非零。文件用临时文件＋rename 写入；同一来源不要同时跑多个更新。
 - `out/` 只是本机快照，不是 Actions runner 的持久存储。
+
+## 增量与日志
+
+- **增量**：`crawl.js` 把该来源已发布且 JD 完整的官网 ID 写进 `out/<key>_known.json`，经环境变量 `ANDE_KNOWN_IDS` 交给适配器（`lib/known.js`）；适配器对这些 ID 跳过详情请求，列表仍完整扫描，所以新增和下架照常识别。详情没取到的岗位发布时沿用旧 JD、性质与计划。目前小米三个来源已接入（社招 33 分钟→约 1 分钟）；其它要逐岗取详情的来源（美团、华为、米哈游、腾讯、Moka 详情模式）按同样方式接入。定期用 `--full` 刷新一次，避免岗位正文改了却一直沿用旧的。
+- **日志**：`update.js` 每次运行写 `out/logs/update-<时间>.log`（含全部子进程输出，每行带 `[来源]` 前缀），并在 `out/logs/runs.jsonl` 为每个来源追加一行（起始时间、秒数、退出码）。采集有问题先看这里，再看 `crawl-issues.jsonl`。
+- **并发**：同一官网（取主机名最后两段）串行，不同官网最多 4 路并行，开 Chrome 的来源同时只跑 1 个。
 
 ## 适配器
 
