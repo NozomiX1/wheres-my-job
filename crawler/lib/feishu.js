@@ -160,7 +160,7 @@ async function fetchWithChrome(site, options = {}) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-feishu-'));
   const chrome = spawn(executable, ['--headless=new', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--user-data-dir=' + profile, '--no-first-run', '--no-default-browser-check', '--disable-background-networking', 'about:blank'], { stdio: 'ignore' });
   const origin = new URL(site.url).origin;
-  let spawnError, browser, page, headers, activeSite, normalError, capturing = false, interrupted = false;
+  let spawnError, browser, page, headers, activeSite, normalError, capturing = false, interrupted = false, lastSend = 0;
   const normalRequests = new Map();
   chrome.on('error', error => { spawnError = error; });
   const stop = () => { interrupted = true; page?.close(); };
@@ -191,14 +191,16 @@ async function fetchWithChrome(site, options = {}) {
       // The current official client supplies this anonymous CSRF header normally.
       // Keep it only in memory; never log/store cookies, token or signatures.
       normalRequests.set(p.requestId, {});
-      if (!headers) headers = Object.fromEntries(Object.entries(normal).filter(([k]) => ['x-csrf-token', 'website-path', 'portal-channel', 'portal-platform', 'env', 'content-type', 'accept-language', 'accept'].includes(k)));
+      // 页面可能连发多个请求并多次刷新令牌，后发的令牌才有效，所以以最后一个为准。
+      lastSend = Date.now();
+      headers = Object.fromEntries(Object.entries(normal).filter(([k]) => ['x-csrf-token', 'website-path', 'portal-channel', 'portal-platform', 'env', 'content-type', 'accept-language', 'accept'].includes(k)));
     });
     page.on('Network.responseReceived', p => {
       const response = normalRequests.get(p.requestId);
       if (!response) return;
       response.status = p.response.status;
       // 页面首个列表请求尚无 CSRF 令牌时官网返回 405，页面自己取到令牌后会重发；这一次不算拒绝，以重发的请求为准（重发仍未成功则本轮超时失败）。
-      if (response.status === 405) { normalRequests.delete(p.requestId); headers = null; return; }
+      if (response.status === 405) { normalRequests.delete(p.requestId); return; }
       if (response.status !== 200) normalError = new Error('Official initial list was rejected: HTTP ' + response.status + '; stopped');
     });
     page.on('Network.loadingFinished', p => {
@@ -213,7 +215,7 @@ async function fetchWithChrome(site, options = {}) {
       activeSite = scope; headers = null; normalError = null; normalRequests.clear(); capturing = true;
       const nav = await page.call('Page.navigate', { url: scope.url });
       if (nav.errorText) throw new Error('Official page navigation failed');
-      const complete = () => normalRequests.size && [...normalRequests.values()].every(r => r.body !== undefined);
+      const complete = () => normalRequests.size && Date.now() - lastSend > 1500 && [...normalRequests.values()].every(r => r.body !== undefined);
       for (let i = 0; !complete() && !normalError && i < 100; i++) { if (interrupted) throw new Error('Chrome interrupted'); await sleep(200); }
       if (normalError) throw normalError;
       if (!headers || !complete()) throw new Error('Official normal successful list request/scope was not observed');

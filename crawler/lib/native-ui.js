@@ -201,6 +201,8 @@ async function collect(site, { open = openChrome, maxPages = 200, now = Date.now
       if (failure || closed) return;
       const record = requests.get(e.requestId); if (!record) return;
       record.status = e.response.status;
+      // 令牌未就绪时页面首个请求会得 405，页面自己取令牌后重发；这一次不算拒绝，以重发为准。
+      if (record.status === 405) { requests.delete(e.requestId); return; }
       if (record.status !== 200) fail('necessary HTTP ' + (Number.isInteger(record.status) ? record.status : 'failure') + '; stopped');
       notify();
     });

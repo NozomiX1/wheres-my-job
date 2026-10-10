@@ -191,9 +191,15 @@ test('HTTP !=200, business refusals, network/JSON/tool errors latch stop: no fur
     a.equal(f.reads.length, ['HTTP', 'network'].includes(kind) ? 1 : 2); a.match(r.issues.join(';'), /请求停止.*覆盖待补/); secretsAbsent(r);
     if (kind === 'HTTP') a.match(r.issues.join(';'), /HTTP 302/);
   }
-  const first = list(bai, 1); first.status = 405;
-  const f = fake(bai, { startup: [first] }); await a.rejects(ui.collect(bai, f.options), /HTTP 405/);
+  const first = list(bai, 1); first.status = 403;
+  const f = fake(bai, { startup: [first] }); await a.rejects(ui.collect(bai, f.options), /HTTP 403/);
   a.equal(f.clicks.length, 0); a.equal(f.evaluations.length, 0); a.equal(f.reads.length, 0); a.equal(f.closed, 1);
+});
+
+test('a 405 on the page\'s first request (CSRF token not ready) is not a refusal: the page\'s own successful resend counts', async () => {
+  const first = list(bai, 1, 1); first.status = 405;
+  const f = fake(bai, { startup: [first, list(bai, 1, 1)] }), r = await ui.collect(bai, f.options);
+  a.equal(r.pages.length, 1); a.equal(f.clicks.length, 0); a.equal(f.closed, 1);
 });
 
 test('a startup dictionary refusal stops before clicks and cancels later queued body reads; broad errors cannot be ignored', async () => {
