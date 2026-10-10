@@ -72,3 +72,25 @@ test('a posting with several 岗位意向 is split into one record per intention
     assert.equal(h.normalizeRecord(out[0], campus).title, '官网岗位');
   }
 });
+
+test('if a later run cannot fetch the intentions, the previously split records are kept instead of being replaced by a body-less posting', t => {
+  const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+  const { runCrawl } = require('../crawler/crawl'), { publish, readPublished } = require('../crawler/publish');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-huawei-split-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'jobs.js');
+  fs.writeFileSync(file, 'globalThis.ANDE_DATA = ' + JSON.stringify({ version: 1, legacy: false, notices: [], companies: [], sources: [], jobs: [] }) + ';\n');
+  const cycle = (envelope, at) => {
+    assert.equal(runCrawl(campus, { outDir: dir, dataFile: file, now: () => at, runner: (_, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(envelope)); return { status: 0 }; } }).code, 0);
+    assert.equal(publish({ outDir: dir, dataFile: file, sites: [campus], keys: [campus.key] }).code, 0);
+    return readPublished(file).jobs.map(j => j.id).sort();
+  };
+  const full = proof(), pages = full.verification.pages;
+  const ids = cycle(full, '2026-01-01T00:00:00.000Z');
+  assert.deepEqual(ids, ['huawei:36384-1', 'huawei:36384-2']);
+  // 第二轮：列表照常，但详情与岗位意向都没取到（例如请求被中断）
+  const partial = h.collectAvailable(campus, pages, [], []);
+  assert.deepEqual(cycle(partial, '2026-01-02T00:00:00.000Z'), ids, 'the split records survive');
+  const kept = readPublished(file).jobs[0]; assert.ok(kept.description.includes('方向'), 'with their own text');
+  // 第三轮：意向又取到了，仍是拆分记录
+  assert.deepEqual(cycle(proof(), '2026-01-03T00:00:00.000Z'), ids);
+});

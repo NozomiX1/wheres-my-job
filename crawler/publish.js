@@ -358,6 +358,13 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         const kept = jdLost || restored.length ? ['employment', 'talentPlan', 'category'].filter(field => (job[field] == null || job[field] === '') && o[field] != null && o[field] !== '') : [];
         return restored.length || kept.length || jdLost ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
       });
+      // 门户把一个官网岗位展开成多条（如华为岗位意向）时：这次没取到详情的岗位，保留它旧的展开记录，
+      // 不让一条没有正文的岗位级记录顶替它们（旧展开记录的 ID 是 `岗位ID-N`）。
+      if (portals.qualified(site)?.mod.expand) jobs = jobs.flatMap(job => {
+        if (hasDetail(job)) return [job];
+        const kept = [...old.values()].filter(o => o.id.startsWith(job.id + '-'));
+        return kept.length ? kept : [job];
+      });
       // 防护：新结果少于旧数据一半，多半是被截断，拒绝替换（确属下架需显式 acceptShrink）。
       if (old.size && jobs.length < old.size / 2 && !acceptShrink.includes(site.key)) throw new Error('New result has ' + jobs.length + ' jobs, fewer than half of the ' + old.size + ' published; keeping published data');
       if (previous?.company && previous.company !== site.company) throw new Error('Source company changed; explicit migration required');
