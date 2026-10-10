@@ -165,7 +165,7 @@ test('Tencent atomic run preserves prior candidate on failure; valid external-on
   const result = await b.run([JSON.stringify(campus), file], { fetchImpl: async () => { calls++; return { status: 200, json: async () => page(campus, 1, [external]).response }; } });
   a.equal(calls, 1); a.equal(result.mode, 'custom'); a.equal(result.complete, false); a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), result); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
 });
-const proofRoot = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z';
+const proofRoot = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';
 for (const [site, count, internal] of [[campus, 995, 905], [social, 2254, 1948]]) {
   const fs = require('node:fs'), file = proofRoot + '/collections/' + site.key + '.json';
   test('Tencent offline first-party captured list ' + site.key + ': all native IDs and external links retained, independent source proof', { skip: !fs.existsSync(file) }, () => {

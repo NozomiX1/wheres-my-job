@@ -289,7 +289,7 @@ test('NetEase atomic run writes only available envelopes and preserves an old ca
   a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
 });
 
-const retainedCapture = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/completion-20261008T133155216Z/';
+const retainedCapture = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/completion-20261008T133155216Z/';
 test('NetEase retained v2 offline capture replays 2657 unchanged new jobs plus exactly three old full-time facts, never complete',
   { skip: !fs.existsSync(retainedCapture + 'netease_social-available.json') || !fs.existsSync(retainedCapture + 'before-out/netease_social_snapshot.json') }, () => {
     const base = JSON.parse(fs.readFileSync(retainedCapture + 'netease_social-available.json', 'utf8'));
@@ -310,7 +310,7 @@ test('NetEase retained v2 offline capture replays 2657 unchanged new jobs plus e
     a.deepEqual([JSON.stringify(base), JSON.stringify(prior)], before);
   });
 
-const socialScripts = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/observe-netease-social/scripts/';
+const socialScripts = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/observe-netease-social/scripts/';
 test('NetEase offline current first-party renderer proves strict workType labels and the geek badge display chain without executing scripts',
   { skip: !fs.existsSync(socialScripts + '003.js') || !fs.existsSync(socialScripts + '009.js') }, () => {
     const commons = fs.readFileSync(socialScripts + '003.js', 'utf8'), list = fs.readFileSync(socialScripts + '009.js', 'utf8');
@@ -330,7 +330,7 @@ test('NetEase offline current first-party renderer proves strict workType labels
     a.ok(badge.includes('alt:"\\u6781\\u5ba2\\u8ba1\\u5212"'));
   });
 
-const observedFile = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/netease_social.json';
+const observedFile = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/netease_social.json';
 test('NetEase offline parent normal Node 100-row capture binds actual plain wire body/headers and preserves all native records', { skip: !fs.existsSync(observedFile) }, () => {
   const raw = JSON.parse(fs.readFileSync(observedFile, 'utf8'));
   a.equal(raw.httpStatus, 200); a.deepEqual(raw.request.body, { currentPage: 1, pageSize: 100 });
@@ -456,7 +456,7 @@ test('Huyu request/body abort shares <=15s/900s budget; project/source caps pres
   a.equal(calls, 2); a.match(sourceCapped.issues.join(';'), /未完成项目 104/); a.equal(sourceCapped.complete, false);
 });
 
-const huyuObserved = [102, 75, 104].map(id => '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/netease_huyu-' + id + '.json');
+const huyuObserved = [102, 75, 104].map(id => '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/netease_huyu-' + id + '.json');
 test('Huyu offline three actual Node100 pages retain every native response/record and current id/project links without campus/social inheritance', { skip: huyuObserved.some(f => !fs.existsSync(f)) }, () => {
   const raw = huyuObserved.map(f => JSON.parse(fs.readFileSync(f, 'utf8')));
   a.deepEqual(raw.map(p => [p.projectId, p.response.data.total, p.response.data.list.length]), [[102, 42, 42], [75, 5, 5], [104, 42, 42]]);
@@ -470,7 +470,7 @@ test('Huyu offline three actual Node100 pages retain every native response/recor
     a.deepEqual([j.date, j.dateKind, j.talentPlan, j.sourceStatus], [null, null, null, null]);
   }
 });
-const huyuContract = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/contracts/huyu/huyu-mf-25.js';
+const huyuContract = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/contracts/huyu/huyu-mf-25.js';
 test('Huyu current officially loaded MF renderer proves React TEXT sections and id/project detail route', { skip: !fs.existsSync(huyuContract) }, () => {
   const source = fs.readFileSync(huyuContract, 'utf8');
   a.ok(source.includes('className:"desc"},t||"\\u65e0\\u63cf\\u8ff0"')); a.ok(source.includes('className:"desc"},n||"\\u65e0\\u8981\\u6c42"'));

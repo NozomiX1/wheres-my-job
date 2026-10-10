@@ -92,7 +92,7 @@ test('JD native Node serial starts/body completion, partial refusals/no retries,
     a.equal(url, social.api); a.equal(o.body, 'pageIndex=1&pageSize=100&workCityJson=%5B%5D&jobTypeJson=%5B%5D&jobSearch=&depTypeJson=%5B%5D'); return { status: 200, json: async () => [row(social)] };
   } }); a.equal(saved.mode, 'custom'); a.equal(saved.complete, false); a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), saved); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
 });
-const proofBase = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z';
+const proofBase = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';
 for (const p of b.PROFILES) test('JD offline current captured list pages ' + p.key, { skip: !fs.existsSync(proofBase + '/collections/' + p.key + '.json') }, () => {
   const raw = JSON.parse(fs.readFileSync(proofBase + '/collections/' + p.key + '.json', 'utf8'));
   const r = b.collectAvailable(raw.pages, p, raw.issues, raw.stopped); a.ok(r.total > 0); a.equal(r.complete, false);

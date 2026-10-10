@@ -157,7 +157,7 @@ test('vivo atomic run writes only available envelopes and preserves an old candi
   a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
 });
 
-const observedFile = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/vivo_social.json';
+const observedFile = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/node-first/vivo_social.json';
 test('vivo offline parent normal Node 100-row capture binds actual plain wire body/headers and preserves all M ids/full raw metadata', { skip: !fs.existsSync(observedFile) }, () => {
   const raw = JSON.parse(fs.readFileSync(observedFile, 'utf8'));
   a.equal(raw.httpStatus, 200); a.deepEqual(raw.request.body, site.body);

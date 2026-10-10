@@ -105,7 +105,7 @@ test('TME atomic available envelope preserves old output on initial refusal/zero
   a.equal(written.mode, 'custom'); a.equal(written.complete, false); a.equal(b.normalizeRecord(written.jobs[0], social).requirements, '  List<T> &amp; 同文  要求\n');
   a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), written); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
 });
-const proofRoot = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z';
+const proofRoot = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';
 for (const [site, count] of [[campus, 146], [social, 124]]) {
   const fs = require('node:fs'), file = proofRoot + '/collections/' + site.key + '.json';
   test('TME offline current first-party broad list ' + site.key + ' retains all unique native records', { skip: !fs.existsSync(file) }, () => {

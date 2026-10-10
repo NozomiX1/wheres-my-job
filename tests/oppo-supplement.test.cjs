@@ -127,7 +127,7 @@ test('OPPO complete offline seeds re-run atomically without requests or refreshi
   a.equal(jobs.length, 2); a.deepEqual(Object.keys(jobs[1]).sort(), ['category','channels','city','company','date','dateKind','description','duty','employment','id','jdComplete','requirements','sourceKey','sourceStatus','talentPlan','title','url']);
   a.equal(jobs[1].sourceKey, 'oppo_social'); a.equal(jobs[1].company, 'OPPO'); a.equal(jobs[1].id, 'oppo_social:1989260677351657473'); a.deepEqual(jobs[1].channels, []); a.equal(jobs[1].employment, 'internship');
 });
-const proofBase = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z';
+const proofBase = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';
 const nativeDailyFile = proofBase + '/completion-20261008T133155216Z/oppo-daily-native.json';
 test('OPPO current acquired Node OFFEN plus independent JOB-TYPE extends all 155 SOC records and retains all eight direction details', { skip: !fs.existsSync(nativeDailyFile) }, () => {
   const read = file => JSON.parse(fs.readFileSync(proofBase + file, 'utf8'));

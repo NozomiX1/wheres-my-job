@@ -55,7 +55,7 @@ test('Tencent sparse already-obtained material is bound without requesting inter
   a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
   a.throws(() => b.collectSupplemented(base.verification, site, [wd(e), wd(e)]), /duplicate/);
 });
-const fs = require('node:fs'), captureFile = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z/followup-20261008T112757164Z/tencent-available.json';
+const fs = require('node:fs'), captureFile = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z/followup-20261008T112757164Z/tencent-available.json';
 test('Tencent offline captured 905 internal campus details retain all 1277 displayed department groups and 11 parent directions with native v2 evidence unchanged', { skip: !fs.existsSync(captureFile) }, () => {
   const capture = JSON.parse(fs.readFileSync(captureFile, 'utf8')), original = structuredClone(capture);
   const r = b.validateEvidence(capture.verification, capture.jobs, site);

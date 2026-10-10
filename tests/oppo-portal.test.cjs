@@ -94,7 +94,7 @@ test('OPPO native list POST and supplements are body-read serial, capped partial
   const saved = await b.run([JSON.stringify(social), file], { fetchImpl: async () => ({ status: 200, json: async () => page(social, 1, [noDirections]).response }) });
   a.equal(saved.complete, false); a.equal(saved.mode, 'custom'); a.equal(JSON.stringify(saved).includes('real-sensitive-secret'), false); a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), saved);
 });
-const proofBase = '/Users/nozomi/lab/wheres-my-job-work/third-batch-20261008T071347946Z';
+const proofBase = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';
 for (const p of [campus, social]) test('OPPO offline current list plus normal Node culture/direction proof ' + p.key, { skip: !fs.existsSync(proofBase + '/node-first/oppo-culture-first.json') }, () => {
   const read = file => JSON.parse(fs.readFileSync(proofBase + file, 'utf8')), raw = read('/collections/' + p.key + '.json'), seed = read('/node-first/' + (p.track === 'campus' ? 'oppo-culture-first' : 'oppo-direction-first') + '.json');
   const { request, httpStatus, response } = seed, extra = p.track === 'campus' ? { dictionaryResponses: [{ request, httpStatus, response }] } : { details: [{ request, httpStatus, response }] };
