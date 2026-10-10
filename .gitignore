@@ -17,3 +17,7 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
+
+# ---- 数据：由采集生成，只存在于服务器/本机，不入库（测试抽样数据在 tests/fixtures/data/）----
+/data/
+/backups/

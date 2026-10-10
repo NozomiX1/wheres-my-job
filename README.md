@@ -5,7 +5,7 @@
 
 免费、源码公开的公司官网岗位收集器，面向所有职业。按自己的关键词排序，查看招聘方提供的完整JD，再前往官网申请；不替用户判断岗位质量或录取概率。
 
-[在线页面](https://nozomix1.github.io/wheres-my-job/) · [GitHub](https://github.com/NozomiX1/wheres-my-job)
+[GitHub](https://github.com/NozomiX1/wheres-my-job)（在线服务内测中，GitHub Pages 静态版已下线；可按下文自行部署）
 
 ## 使用
 
@@ -17,7 +17,7 @@
 
 **覆盖尚未完善：**只代表各登记官网入口的公开列表，不是公司全球招聘全集；官网没有提供的字段、空正文如实留空。每个招聘单位旁显示岗位数和数据更新日期（多个来源取最早的一天），页脚显示全站最近更新日期。阶段结果与待办见 [PROCESS.md](PROCESS.md)。
 
-数据为 `data/catalog.js` ＋ `data/parts/`（单文件≤1MB），采集成功即整源替换、不保存历史。目前数据由本机手动采集后提交；定时自动采集尚未接入（见 PROCESS.md 第 4 节）。
+数据为 `data/catalog.js` ＋ `data/parts/`（单文件≤1MB），采集成功即整源替换、不保存历史。**数据不在仓库里**（已被 Git 忽略）：自行部署时先用下文的 `node crawler/update.js <来源key>` 采集生成，再启动服务；线上服务器按「服务器部署」一节每天自动增量采集。测试用的抽样小数据在 `tests/fixtures/data/`。
 
 ## 本地查看与检查
 

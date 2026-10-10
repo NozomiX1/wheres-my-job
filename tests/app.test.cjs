@@ -5,7 +5,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/app.js'),'utf8');
 const rankScript=fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
 const examplesScript=fs.readFileSync(path.join(root,'assets/example-words.js'),'utf8');
-const dataset=require('../crawler/publish').readPublished(path.join(root,'data/catalog.js'));
+const dataset=require('../crawler/publish').readPublished(path.join(root,'tests/fixtures/data/catalog.js'));
 const base={id:'unit-base',sourceKey:'unit',company:'字节跳动',city:'北京',title:'',duty:'',requirements:'',description:'',channels:['campus'],employment:'full-time',talentPlan:false,date:'2026-09-10',dateKind:'published',url:'https://example.test/job',jdComplete:true,category:''};
 const jobs=[{...base,id:'unit-finance',title:'财务',duty:'财务',requirements:'财务'}, {...base,id:'unit-sales',title:'销售',duty:'销售',requirements:'销售',channels:['social']}, {...base,id:'unit-unknown',description:'PYTHON 完整未分段正文',channels:[],employment:null,talentPlan:null,date:null,dateKind:null,jdComplete:false}];
 function load(saved,inputJobs=jobs,inputParts){

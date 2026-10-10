@@ -96,4 +96,4 @@ D07 之后，GPT 写的适配器仍保留双轮扫描、逐字段形状校验和
 4. **对外访问**：备案前用 IP＋端口（HTTP，安全组只放行测试者 IP）自测；备案后换域名＋HTTPS。
 5. 取代 D11：采集和服务同机，不再需要自托管 runner 与 Pages 产物部署。
 
-状态：1、2、3 已实现并在服务器上常驻运行（systemd 托管服务与定时采集）；4（备案、HTTPS）与停止 Pages 尚未做，见 [PROCESS.md](PROCESS.md)。
+状态：1、2、3 已实现并在服务器上常驻运行（systemd 托管服务与定时采集）；GitHub Pages 已下线、`data/` 移出 Git；4（备案、HTTPS）尚未做，见 [PROCESS.md](PROCESS.md)。

@@ -4,7 +4,7 @@ const test = require('node:test'), a = require('node:assert/strict'), path = req
 const { createApp, LIMITS } = require('../server/index');
 const createRank = require('../assets/rank.js');
 
-const dataFile = path.join(__dirname, '..', 'data', 'catalog.js');
+const dataFile = path.join(__dirname, 'fixtures', 'data', 'catalog.js'); // 从真实数据抽样的小数据集（每来源 30 条、正文截短）
 let app, base;
 test.before(async () => { app = createApp({ dataFile, reloadMs: 0, warm: false }); await new Promise(r => app.server.listen(0, '127.0.0.1', r)); base = 'http://127.0.0.1:' + app.server.address().port; });
 test.after(() => app.server.close());
