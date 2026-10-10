@@ -2,12 +2,12 @@
 'use strict';
 // Native search UI. Data is published separately; keyword preferences never remove jobs.
 const DATA=globalThis.ANDE_DATA||{version:1,companies:[],sources:[],jobs:[],notices:['岗位数据暂不可用，请稍后再试。']};
-const JOBS=DATA.jobs;
-const {ALIBABA_UNITS,UNIT_ALIASES,unitNames,unitName,matchFields,hitText,score,matchesRecruitment,reliableDate,compare,selects}=globalThis.ANDE_RANK(DATA); // 打分与单位归属见 rank.js，服务端共用
+const JOBS=DATA.jobs; // 线上目录不带岗位；只有测试或旧格式目录会带
+const jobCache=new Map(JOBS.map(j=>[j.id,j])); // 点开过的岗位完整内容
+const {ALIBABA_UNITS,UNIT_ALIASES,unitNames,unitName,matchFields,hitText,score,matchesRecruitment,reliableDate,collect:rankJobs}=globalThis.ANDE_RANK(DATA); // 打分与单位归属见 rank.js，服务端共用
 // Display units only: keep source identity, raw company and all job facts untouched.
 const RETIRED_ALIBABA_SELECTION='旧阿里招聘范围（已退出）';
 const GROUP_INITIALS={'千问事业部':'Q','千问办公':'Q','平头哥':'P','淘宝闪购':'T','灵犀互娱':'L','盒马':'H','虎鲸文娱集团':'H','阿里健康':'A','飞猪':'F','高德地图':'G','阿里校园招聘入口':'A'};
-function partsFor(selected){return DATA.parts.filter(part=>!selected.size||unitNames(part).some(name=>selected.has(name)));}
 const COMPANIES=(()=>{
   const units=DATA.companies.map(c=>({...c,name:c.name==='阿里巴巴'?ALIBABA_UNITS[0]:c.name})),known=new Set(units.map(c=>c.name));
   for(const name of new Set((DATA.parts||JOBS).flatMap(unitNames)))if(!known.has(name)){
@@ -21,7 +21,7 @@ const PREFERENCES_KEY='ande.preferences.v1';
 const WORD_KINDS=['keywords','downrank'];
 const EXAMPLE_KEYWORDS=globalThis.ANDE_EXAMPLES?.keywords||[];
 const EXAMPLE_DOWNRANK=globalThis.ANDE_EXAMPLES?.downrank||[];
-const state={keywords:[],downrank:[],drafts:{keywords:'',downrank:''},editing:{keywords:null,downrank:null},feedback:{keywords:'',downrank:''},selected:new Set(),recruitment:'all',searched:false,active:null,results:[],visible:50,focused:null};
+const state={keywords:[],downrank:[],drafts:{keywords:'',downrank:''},editing:{keywords:null,downrank:null},feedback:{keywords:'',downrank:''},selected:new Set(),recruitment:'all',searched:false,active:null,results:[],total:0,matched:0,penalized:0,focused:null};
 let preferencesMessage='';
 let queryGeneration=0,loadMessage=globalThis.ANDE_DATA?'':'岗位目录加载失败，请刷新页面后再试。';
 function updateLoadStatus(message){loadMessage=message;if($('dataLoadNotice')){$('dataLoadNotice').textContent=message;$('dataLoadNotice').hidden=!message;}}
@@ -104,7 +104,7 @@ function fillExample(){
 function clearSettings(){
   queryGeneration++;loadMessage='';
   for(const kind of WORD_KINDS){state[kind]=[];state.drafts[kind]='';state.editing[kind]=null;state.feedback[kind]='';}
-  state.selected.clear();state.recruitment='all';directory.query='';directory.letter='';state.searched=false;state.active=null;state.results=[];state.focused=null;state.visible=50;
+  state.selected.clear();state.recruitment='all';directory.query='';directory.letter='';state.searched=false;state.active=null;state.results=[];state.total=0;state.matched=0;state.penalized=0;state.focused=null;
   try{localStorage.removeItem(PREFERENCES_KEY);preferencesMessage='';}catch{preferencesMessage='本页面已清空，但浏览器不允许清除本机保存的设置。';}
   render();window.scrollTo({top:0,behavior:'auto'});$('keywords').focus();
 }
@@ -118,9 +118,7 @@ function recruitmentLabels(job){
   return labels;
 }
 function scoreText(value){return state.active?.words.length||state.active?.lowered?.length?value.toFixed(2):'—';}
-function collect(query,selected){
-  return JOBS.filter(j=>selects(j,selected)&&matchesRecruitment(j,query.recruitment||'all')).map(j=>score(j,query)).sort(compare);
-}
+const collect=(query,selected)=>rankJobs(JOBS,query,selected); // 测试用；线上排序在服务端
 function dateHTML(job){const date=reliableDate(job);return date?`${job.dateKind==='published'?'发布':'官网更新'} <time datetime="${esc(date)}">${esc(date)}</time>`:'官网日期未明确';}
 function safeUrl(url){try{const u=new URL(url);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}}
 function applyHTML(job){const url=safeUrl(job.url);return url?`<a class="apply-link" data-role="apply" href="${esc(url)}" target="_blank" rel="noopener noreferrer">前往官网 ↗</a>`:'<button type="button" class="apply-link" data-role="apply" disabled title="官方链接暂不可用">官网暂不可用</button>';}
@@ -137,23 +135,34 @@ function companyEditor(){return `<section class="company-editor" aria-labelledby
 function recruitmentEditor(){return `<section class="recruitment-editor" aria-labelledby="recruitmentLabel"><div class="word-heading"><span class="label" id="recruitmentLabel">招聘类型</span></div><div class="recruitment-filters" id="recruitmentFilters" role="group" aria-labelledby="recruitmentLabel">${RECRUITMENT_TYPES.map(([type,label])=>`<button type="button" class="recruitment-choice" data-recruitment="${type}" aria-pressed="${state.recruitment===type}">${label}</button>`).join('')}</div></section>`;}
 function commonForm(){return `<form class="keyword-form" data-search-form>${wordEditor('keywords')}${wordEditor('downrank')}${recruitmentEditor()}${companyEditor()}<div class="search-actions"><div class="condition-actions"><button type="button" class="text-button" data-action="clear-settings">重置筛选和关键词</button><button type="button" class="text-button" data-action="fill-example">填入示例</button></div><button class="primary" type="submit">${icon('search')} 查找岗位</button></div><p class="word-feedback" id="preferencesNotice" role="status" hidden></p><p class="query-notice" id="dataLoadNotice" role="status" ${loadMessage?'':'hidden'}>${esc(loadMessage)}</p><p class="query-notice" id="queryNotice" role="status" hidden>条件已更改，查找后更新；下面仍是上次结果。</p></form>`;}
 function homeHTML(){return `<div class="wrap ${state.searched?'searched':''}">${header()}<main class="hero-a apple-home"><h1>安得岗位千万件，<br><span>大庇天下寒士俱欢颜。</span></h1><div class="search-card">${commonForm()}</div></main>${state.searched?resultsShell():''}${footer()}</div>`;}
-function resultsShell(){const matches=state.results.filter(r=>r.matched.length).length,penalized=state.results.filter(r=>r.downranked.length).length;const hasWords=state.active.words.length||state.active.lowered.length;return `<section class="results" id="results"><div class="results-heading"><div><h2>岗位 <span class="muted count" style="font-weight:450;font-size:12px">${state.results.length} 个</span></h2><p>${hasWords?`${matches} 个优先词命中 · ${penalized} 个降权 · 当前范围全部保留`:'可靠官网日期优先 · 未明确日期放后'}</p></div><span class="result-order">${hasWords?'匹配分优先':'日期优先'} ↓</span></div>${state.results.some(r=>!r.job.jdComplete)?'<p class="ranking-note">部分岗位尚未同步或核验完整 JD；匹配分仅基于当前可用文字，请以官网为准。</p>':''}${state.active.words.length&&!matches&&state.results.length?'<p class="ranking-note">暂无优先词命中，岗位仍全部保留。</p>':''}<div id="workListScroll"><div class="job-list" id="jobList"></div><div class="scroll-sentinel" id="scrollSentinel"></div></div></section>`;}
-function rowHTML(r){const j=r.job;return `<article class="job-row ${state.focused===j.id?'active':''}" data-job-row="${esc(j.id)}"><div class="job-score ${r.value===0?'is-zero':''}" title="关键词匹配分，不是岗位质量或录取概率"><strong data-match-score>${scoreText(r.value)}</strong><span>匹配分</span></div><div class="job-body"><div class="job-title-line"><button class="job-title" type="button" data-job="${esc(j.id)}">${esc(j.title)}</button>${recruitmentLabels(j).map(label=>`<span class="job-track">${esc(label)}</span>`).join('')}${sourceStatusHTML(j)}</div><div class="job-meta"><span>${esc(unitName(j))}</span><span>·</span>${j.category?`<span class="job-category">${esc(j.category)}</span><span>·</span>`:''}<span>${esc(j.city)}</span><span>·</span>${dateHTML(j)}</div>${state.active.words.length||state.active.lowered.length?`<div class="job-signals">${state.active.words.length?`<span class="match-label">${r.matched.length?'优先命中':'未命中优先词'}</span>${r.matched.map(w=>`<span class="word-tag">${esc(hitText(j,w))}</span>`).join('')}`:''}${r.downranked.length?`<span class="match-label">降权</span>${r.downranked.map(w=>`<span class="word-tag">${esc(hitText(j,w))}</span>`).join('')}`:''}</div>`:''}</div><div class="job-tail"><button type="button" class="secondary" data-job="${esc(j.id)}">查看 JD</button>${applyHTML(j)}</div></article>`;}
+function resultsShell(){const matches=state.matched,penalized=state.penalized;const hasWords=state.active.words.length||state.active.lowered.length;return `<section class="results" id="results"><div class="results-heading"><div><h2>岗位 <span class="muted count" style="font-weight:450;font-size:12px">${state.total} 个</span></h2><p>${hasWords?`${matches} 个优先词命中 · ${penalized} 个降权 · 当前范围全部保留`:'可靠官网日期优先 · 未明确日期放后'}</p></div><span class="result-order">${hasWords?'匹配分优先':'日期优先'} ↓</span></div>${state.results.some(r=>!r.job.jdComplete)?'<p class="ranking-note">部分岗位尚未同步或核验完整 JD；匹配分仅基于当前可用文字，请以官网为准。</p>':''}${state.active.words.length&&!matches&&state.total?'<p class="ranking-note">暂无优先词命中，岗位仍全部保留。</p>':''}<div id="workListScroll"><div class="job-list" id="jobList"></div><div class="scroll-sentinel" id="scrollSentinel"></div></div></section>`;}
+function rowHTML(r){const j=r.job;return `<article class="job-row ${state.focused===j.id?'active':''}" data-job-row="${esc(j.id)}"><div class="job-score ${r.value===0?'is-zero':''}" title="关键词匹配分，不是岗位质量或录取概率"><strong data-match-score>${scoreText(r.value)}</strong><span>匹配分</span></div><div class="job-body"><div class="job-title-line"><button class="job-title" type="button" data-job="${esc(j.id)}">${esc(j.title)}</button>${recruitmentLabels(j).map(label=>`<span class="job-track">${esc(label)}</span>`).join('')}${sourceStatusHTML(j)}</div><div class="job-meta"><span>${esc(unitName(j))}</span><span>·</span>${j.category?`<span class="job-category">${esc(j.category)}</span><span>·</span>`:''}<span>${esc(j.city)}</span><span>·</span>${dateHTML(j)}</div>${state.active.words.length||state.active.lowered.length?`<div class="job-signals">${state.active.words.length?`<span class="match-label">${r.matched.length?'优先命中':'未命中优先词'}</span>${r.matched.map((w,i)=>`<span class="word-tag">${esc(r.matchedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}${r.downranked.length?`<span class="match-label">降权</span>${r.downranked.map((w,i)=>`<span class="word-tag">${esc(r.downrankedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}</div>`:''}</div><div class="job-tail"><button type="button" class="secondary" data-job="${esc(j.id)}">查看 JD</button>${applyHTML(j)}</div></article>`;}
 function fillRows(){
   if(!state.results.length){$('jobList').style.border='0';$('jobList').innerHTML=`<div class="empty">${icon('search')}<h3>当前范围没有可显示的岗位</h3><p>当前所选招聘单位或招聘类型范围没有可用数据。这不表示官网没有招聘。</p><button class="secondary" data-action="open-companies">检查单位范围</button></div>`;$('scrollSentinel').textContent='';return;}
-  $('jobList').innerHTML=state.results.slice(0,state.visible).map(rowHTML).join('');
-  $('scrollSentinel').textContent=state.visible<state.results.length?`继续下滑 · 已展示 ${state.visible} / ${state.results.length} 个岗位`:`已展示当前范围 ${state.results.length} 个岗位`;
+  $('jobList').innerHTML=state.results.map(rowHTML).join('');
+  $('scrollSentinel').textContent=state.results.length<state.total?`继续下滑 · 已展示 ${state.results.length} / ${state.total} 个岗位`:`已展示当前范围 ${state.total} 个岗位`;
+}
+let loadingMore=false;
+async function loadMore(){
+  if(loadingMore||state.results.length>=state.total)return;
+  loadingMore=true;const generation=queryGeneration;
+  try{
+    const page=await queryPage(state.active,state.results.length);
+    if(generation!==queryGeneration)return;
+    state.results.push(...page.items.map(toResult));fillRows();
+  }catch(error){if(generation===queryGeneration)$('scrollSentinel').textContent=error.message+' 继续下滑可重试。';}
+  finally{loadingMore=false;}
 }
 function setupScroll(){
   if(observer)observer.disconnect();
   if(!state.searched||!state.results.length||!('IntersectionObserver'in window))return;
   const root=null;
-  observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&state.visible<state.results.length){state.visible=Math.min(state.visible+50,state.results.length);fillRows();}},{root,rootMargin:'160px'});
+  observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)&&state.results.length<state.total)loadMore();},{root,rootMargin:'160px'});
   observer.observe($('scrollSentinel'));
 }
 function highlight(text){const words=[...(state.active?.words||[]),...(state.active?.lowered||[])];if(!words.length)return esc(text);const pattern=words.map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');return text.split(new RegExp(`(${pattern})`,'gi')).map((s,i)=>i%2?`<mark>${esc(s)}</mark>`:esc(s)).join('');}
-function detailHTML(id){const j=JOBS.find(j=>j.id===id);if(!j)return '';const scored=score(j,state.active||{words:[]}),match=scored.matched;return `<div class="detail-head"><h2>${esc(j.title)}</h2><p>${esc(unitName(j))}${j.category?` · ${esc(j.category)}`:''} · ${esc(j.city||'地点未明确')} · ${recruitmentLabels(j).map(esc).join(' · ')}</p><p>${dateHTML(j)} · 匹配分 <span data-match-score>${scoreText(scored.value)}</span></p>${sourceStatusHTML(j)?`<p>${sourceStatusHTML(j)} · 实际招聘及投递可用性请以官网为准。</p>`:''}</div>${state.active?.words.length||state.active?.lowered.length?`<details class="detail-section detail-why"><summary>为什么排在这里 · 匹配分 ${scoreText(scored.value)}</summary><p>优先词加分 ${scored.positive.toFixed(2)} − 降权词扣分 ${scored.penalty.toFixed(2)} = ${scored.value.toFixed(2)}。降权力度暂定；分数仅反映当前可用文字，不评价岗位质量。</p><div class="chips">${match.map(w=>`<span class="word-tag">优先 · ${esc(hitText(j,w))}</span>`).join('')}${scored.downranked.map(w=>`<span class="word-tag">降权 · ${esc(hitText(j,w))}</span>`).join('')}</div></details>`:''}${j.description?`<section class="detail-section"><h3>岗位正文</h3><p>${highlight(j.description)}</p></section>`:''}${j.duty&&(!j.description||!j.description.includes(j.duty))?`<section class="detail-section"><h3>工作职责</h3><p>${highlight(j.duty)}</p></section>`:''}${j.requirements&&(!j.description||!j.description.includes(j.requirements))?`<section class="detail-section"><h3>任职要求</h3><p>${highlight(j.requirements)}</p></section>`:''}${!j.jdComplete?`<p class="detail-disclaimer">${jdNotice(j)}，请前往官网查看。岗位是否仍在招聘及申请条件以官网为准。</p>`:''}`;}
-function setDetail(id){$('modalDetail').innerHTML=detailHTML(id);const j=JOBS.find(j=>j.id===id);$('detailApply').innerHTML=j?applyHTML(j):'';}
+function detailHTML(id){const j=jobCache.get(id);if(!j)return '';const scored=score(j,state.active||{words:[]}),match=scored.matched;return `<div class="detail-head"><h2>${esc(j.title)}</h2><p>${esc(unitName(j))}${j.category?` · ${esc(j.category)}`:''} · ${esc(j.city||'地点未明确')} · ${recruitmentLabels(j).map(esc).join(' · ')}</p><p>${dateHTML(j)} · 匹配分 <span data-match-score>${scoreText(scored.value)}</span></p>${sourceStatusHTML(j)?`<p>${sourceStatusHTML(j)} · 实际招聘及投递可用性请以官网为准。</p>`:''}</div>${state.active?.words.length||state.active?.lowered.length?`<details class="detail-section detail-why"><summary>为什么排在这里 · 匹配分 ${scoreText(scored.value)}</summary><p>优先词加分 ${scored.positive.toFixed(2)} − 降权词扣分 ${scored.penalty.toFixed(2)} = ${scored.value.toFixed(2)}。降权力度暂定；分数仅反映当前可用文字，不评价岗位质量。</p><div class="chips">${match.map(w=>`<span class="word-tag">优先 · ${esc(hitText(j,w))}</span>`).join('')}${scored.downranked.map(w=>`<span class="word-tag">降权 · ${esc(hitText(j,w))}</span>`).join('')}</div></details>`:''}${j.description?`<section class="detail-section"><h3>岗位正文</h3><p>${highlight(j.description)}</p></section>`:''}${j.duty&&(!j.description||!j.description.includes(j.duty))?`<section class="detail-section"><h3>工作职责</h3><p>${highlight(j.duty)}</p></section>`:''}${j.requirements&&(!j.description||!j.description.includes(j.requirements))?`<section class="detail-section"><h3>任职要求</h3><p>${highlight(j.requirements)}</p></section>`:''}${!j.jdComplete?`<p class="detail-disclaimer">${jdNotice(j)}，请前往官网查看。岗位是否仍在招聘及申请条件以官网为准。</p>`:''}`;}
+function setDetail(id){$('modalDetail').innerHTML=detailHTML(id);const j=jobCache.get(id);$('detailApply').innerHTML=j?applyHTML(j):'';}
 function renderDirectory(){
   const totals=Object.create(null);(DATA.parts||JOBS).forEach(item=>{
     if(DATA.parts&&item.unitCounts){for(const [name,count]of Object.entries(item.unitCounts)){const unit=UNIT_ALIASES[name]||name;totals[unit]=(totals[unit]||0)+count;}}
@@ -178,27 +187,35 @@ function render(){
   if(state.searched){fillRows();setupScroll();}
   updateFormStatus();
 }
+const PAGE_SIZE=50;
+async function fetchJSON(url,options){
+  const response=await fetch(url,options).catch(()=>{throw new Error('无法连接服务器。');});
+  if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||'服务暂不可用（HTTP '+response.status+'）。');}
+  return response.json();
+}
+const queryPage=(query,offset)=>fetchJSON('api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:query.words,lowered:query.lowered,selected:query.selected,recruitment:query.recruitment,offset,limit:PAGE_SIZE})});
+const toResult=item=>({job:item,value:item.value,matched:item.matched,downranked:item.downranked,matchedText:item.matchedText,downrankedText:item.downrankedText});
 async function search(scroll=true){
   for(const kind of WORD_KINDS){state.drafts[kind]=$(kind).value;if((state.drafts[kind].trim()||state.editing[kind]!==null)&&!commitWord(kind))return;}
-  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:[...state.selected].sort(),recruitment:state.recruitment},selected=new Set(query.selected);
+  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:[...state.selected].sort(),recruitment:state.recruitment};
   try{
     if(!globalThis.ANDE_DATA)throw new Error('岗位目录加载失败，请刷新页面后再试。');
-    if(DATA.parts){
-      const parts=partsFor(selected);
-      if(typeof globalThis.ANDE_LOAD_PARTS!=='function')throw new Error('岗位加载器未加载，请刷新后再试。');
-      await globalThis.ANDE_LOAD_PARTS(parts,(done,total)=>{if(generation===queryGeneration)updateLoadStatus(`正在加载岗位数据：${done}/${total} 个分片；完整后更新结果，下面仍是上次结果。`);});
-    }
+    updateLoadStatus('正在查询…下面仍是上次结果。');
+    const page=await queryPage(query,0);
     if(generation!==queryGeneration)return;
     const openJob=$('detailDialog')?.open?state.focused:null,detailScroll=$('modalDetail')?.scrollTop;
-    updateLoadStatus('');state.active=query;state.results=collect(query,selected);state.visible=50;state.searched=true;state.focused=openJob;
-    render();if(openJob){setDetail(openJob);$('modalDetail').scrollTop=detailScroll;}
+    updateLoadStatus('');state.active=query;state.results=page.items.map(toResult);state.total=page.total;state.matched=page.matched;state.penalized=page.penalized;state.searched=true;state.focused=openJob;
+    render();if(openJob&&jobCache.has(openJob)){setDetail(openJob);$('modalDetail').scrollTop=detailScroll;}
     if(scroll)requestAnimationFrame(()=>$('results')?.scrollIntoView({behavior:'auto',block:'start'}));
   }catch(error){if(generation===queryGeneration)updateLoadStatus(error.message+' 尚未更新查询结果，可再次点击查找重试。');}
 }
 function focusCompanies(){$('companySearch').focus();}
-function showJob(id){
+async function showJob(id){
   state.focused=id;document.querySelectorAll('[data-job-row]').forEach(row=>row.classList.toggle('active',row.dataset.jobRow===id));
-  setDetail(id);$('detailDialog').showModal();
+  if(jobCache.has(id)){setDetail(id);$('detailDialog').showModal();return;}
+  $('modalDetail').innerHTML='<p class="detail-loading" role="status">正在加载岗位详情…</p>';$('detailApply').innerHTML='';$('detailDialog').showModal();
+  try{jobCache.set(id,await fetchJSON('api/job/'+encodeURIComponent(id)));if(state.focused===id)setDetail(id);}
+  catch(error){if(state.focused===id)$('modalDetail').innerHTML='<p class="detail-disclaimer">'+esc(error.message)+' 请关闭后重试。</p>';}
 }
 document.addEventListener('submit',e=>{if(e.target.matches('[data-search-form]')){e.preventDefault();search();}});
 document.addEventListener('input',e=>{

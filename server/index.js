@@ -43,13 +43,11 @@ function parseQuery(body) {
 }
 
 function search(state, body) {
-  const q = parseQuery(body), { rank } = state, rows = [];
-  for (const job of state.jobs) if (rank.selects(job, q.selected) && rank.matchesRecruitment(job, q.recruitment)) rows.push(rank.score(job, q));
-  rows.sort(rank.compare);
+  const q = parseQuery(body), { rank } = state, rows = rank.collect(state.jobs, q, q.selected);
   const items = rows.slice(q.offset, q.offset + q.limit).map(r => {
     const j = r.job;
     return { id: j.id, sourceKey: j.sourceKey, company: j.company, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan,
-      date: j.date, dateKind: j.dateKind, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, value: r.value, matched: r.matched, downranked: r.downranked,
+      date: j.date, dateKind: j.dateKind, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, url: j.url, value: r.value, matched: r.matched, downranked: r.downranked,
       matchedText: r.matched.map(w => rank.hitText(j, w)), downrankedText: r.downranked.map(w => rank.hitText(j, w)) };
   });
   return { total: rows.length, matched: rows.filter(r => r.matched.length).length, penalized: rows.filter(r => r.downranked.length).length, offset: q.offset, items };

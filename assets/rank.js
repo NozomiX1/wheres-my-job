@@ -54,6 +54,8 @@
   const collator = new Intl.Collator('zh'), dateOf = job => job.__date ?? reliableDate(job), unitOf = job => job.__unit ?? unitName(job);
   const compare = (a, b) => b.value - a.value || dateOf(b.job).localeCompare(dateOf(a.job)) || collator.compare(unitOf(a.job), unitOf(b.job)) || a.job.id.localeCompare(b.job.id);
   const selects = (job, selected) => !selected.size || unitNames(job).some(name => selected.has(name));
+  // 范围（所选单位、招聘类型）内逐岗打分并排序；服务端 /api/search 与测试共用。
+  const collect = (jobs, query, selected) => jobs.filter(j => selects(j, selected) && matchesRecruitment(j, query.recruitment || 'all')).map(j => score(j, query)).sort(compare);
 
-  return { ALIBABA_UNITS, UNIT_ALIASES, unitNames, unitName, matchFields, hitText, score, matchesRecruitment, reliableDate, compare, selects };
+  return { ALIBABA_UNITS, UNIT_ALIASES, unitNames, unitName, matchFields, hitText, score, matchesRecruitment, reliableDate, compare, selects, collect };
 });

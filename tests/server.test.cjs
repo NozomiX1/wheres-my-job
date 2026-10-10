@@ -19,6 +19,7 @@ test('search returns the same ranking as the shared rank module, and pages are c
   a.deepEqual(full.items.slice(0, 5).map(i => [i.id, i.value]), expected);
   a.equal(full.total, jobs.length); a.ok(full.matched > 0); a.ok(full.items.every(i => !('duty' in i) && !('description' in i)), 'list rows must not carry JD text');
   const top = full.items[0]; a.ok(top.matchedText.length === top.matched.length);
+  a.ok(full.items.every(i => /^https?:\/\//.test(i.url)), 'rows need the official link for the apply button');
 });
 
 test('selected units and recruitment scope filter the result set', async () => {

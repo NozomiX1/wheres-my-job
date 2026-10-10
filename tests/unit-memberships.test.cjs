@@ -15,9 +15,9 @@ test('official shared-campus groups join existing units, overlapping selection n
  a.deepEqual(Array.from(app.unitNames(jobs[1])),['淘天集团','阿里云']);app.state.active=q;a.ok(app.detailHTML('alibaba:2').includes('淘天集团 / 阿里云'));a.ok(app.detailHTML('alibaba:2').includes('原职责'));a.equal(JSON.stringify(fixture),original);
  a.equal(app.collect(q,new Set(['淘天集团']))[0].value,app.collect(q,new Set())[0].value);
 });
-test('light catalog group counts and required parts work before any JD download, preserving unknown fallback',()=>{
+test('light catalog group counts work without any JD download, preserving unknown fallback',()=>{
  const parts=[{id:'a',sourceKey:'alibaba',company:'阿里巴巴',count:4,unitCounts:{'淘天集团':2,'阿里云':1,'阿里巴巴控股集团':1,'阿里国际数字商业集团':1}},{id:'b',sourceKey:'alibaba_social',company:'阿里巴巴',count:1}];
- const data={...fixture,jobs:[],parts},app=ui(data);app.renderDirectory();const html=app.element('companyOptions').innerHTML;a.ok(!html.includes('data-company="阿里校园招聘入口"'));a.ok(html.includes('data-company="淘天集团"'));a.equal(app.partsFor(new Set(['阿里云']))[0].id,'a');a.equal(app.partsFor(new Set(['阿里巴巴控股'])).length,2);a.equal(app.partsFor(new Set(['淘天集团','阿里云'])).length,1);a.equal(app.partsFor(new Set(['未知集团'])).length,0);
+ const data={...fixture,jobs:[],parts},app=ui(data);app.renderDirectory();const html=app.element('companyOptions').innerHTML;a.ok(!html.includes('data-company="阿里校园招聘入口"'));a.ok(html.includes('data-company="淘天集团"'));
  const old=ui({...fixture,unitMemberships:undefined,jobs:[base]});a.ok(old.COMPANIES.some(c=>c.name==='阿里校园招聘入口'));a.equal(old.unitName(base),'阿里校园招聘入口');
  const extra=ui({...fixture,unitMemberships:{'alibaba:1':['Token Foundry','千问事业部']},jobs:[base]});a.ok(extra.COMPANIES.some(c=>c.name==='Token Foundry'&&c.initial==='T'));a.ok(extra.COMPANIES.some(c=>c.name==='千问事业部'&&c.initial==='Q'));a.equal(extra.COMPANIES.some(c=>c.name==='通义'),false);
 });

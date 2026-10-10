@@ -10,7 +10,7 @@ sites.json（唯一来源登记）
   → <key>_snapshot.json（可发布快照）
   → publish.js 规范化并整源替换
   → ../data/catalog.js ＋ ../data/parts/*.js
-  → ../index.html ＋ assets/ 浏览器按查询并发加载分片并排序
+  → ../server/index.js 读入内存，按查询打分排序，浏览器每次只取一页
 ```
 
 ```sh
@@ -50,7 +50,7 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 ## 发布数据契约
 
 - `data/catalog.js`（目录：来源、公司、通知、分片清单）＋ `data/parts/<sha256>.js`（完整岗位，按来源／公司分组、每片≤1MiB、内容哈希命名）是唯一公开数据。publisher 读取时从分片还原基线，发布后删除不再被引用的旧分片。
-- 浏览器按所选单位（不选即全部）并发加载所需分片（最多 12 个同时，单分片 30 秒超时，失败不自动重试，再次查询只补失败的），不请求招聘官网。
+- 搜索服务（`server/index.js`）读取这些分片到内存，浏览器只取目录和一页结果，不下载分片，也不请求招聘官网。
 - 岗位字段：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`。ID 为“来源 key＋官方 ID”，不跨来源合并；正文不截断；只承认官网明确给出的事实，未知保持 null；非法协议链接禁用。
 - 来源状态：`ready` 有数据、`failed` 本次失败、`unverified` 尚未接入、`unavailable` 暂无数据。
 - 范围和字段语义只属于登记的入口，不代表公司全球全集。

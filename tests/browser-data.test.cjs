@@ -12,4 +12,4 @@ test('Browser artifacts are lossless bounded chunks plus a body-free startup cat
  // No history: parts that the new catalog no longer references are removed.
  publisher.writeBrowserData({...data,jobs:[job('a:1')]},file,{maxBytes:600});assert.equal(fs.readdirSync(path.join(dir,'parts')).length,1);
 });
-test('HTML startup never requests the full JD baseline and has a visible startup fallback',()=>{const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');assert.ok(!/<script[^>]+src="data\/jobs\.js"/.test(html));assert.ok(html.includes('data/catalog.js'));assert.ok(html.includes('assets/data-loader.js'));assert.ok(html.includes('startupNotice'));});
+test('HTML startup never requests the full JD baseline and has a visible startup fallback',()=>{const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');assert.ok(!/<script[^>]+src="data\/jobs\.js"/.test(html));assert.ok(html.includes('data/catalog.js'));assert.ok(html.includes('assets/rank.js'));assert.ok(!html.includes('data-loader'));assert.ok(html.includes('startupNotice'));});
