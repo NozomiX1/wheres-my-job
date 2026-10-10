@@ -6,7 +6,7 @@
 
 ```text
 sites.json（唯一来源登记）
-  → update.js 按 key 串行调用 crawl.js（子进程跑适配器）
+  → update.js 调用 crawl.js（子进程跑适配器；同一官网串行、不同官网并行最多 4 个，开 Chrome 的来源同时只跑 1 个）
   → <key>_snapshot.json（可发布快照）
   → publish.js 规范化并整源替换
   → ../data/catalog.js ＋ ../data/parts/*.js

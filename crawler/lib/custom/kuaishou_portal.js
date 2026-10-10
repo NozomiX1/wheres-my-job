@@ -275,4 +275,5 @@ async function run(args, options = {}) {
   return envelope;
 }
 module.exports = freeze({ PROFILES, requiresVerification, verifiedSource, validateJobs, normalizeRecord, portalNotice, validateEvidence, collectAvailable, collectNativeAvailable, fetchAvailable, run });
-if (require.main === module) run(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });
+// 延后到模块加载完成再跑：native-ui 会回头 require 本模块，Node 22 对未加载完的冻结导出报 not extensible。
+if (require.main === module) Promise.resolve().then(() => run(process.argv.slice(2))).catch(error => { console.error(error.message); process.exitCode = 1; });

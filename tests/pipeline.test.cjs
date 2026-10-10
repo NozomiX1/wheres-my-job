@@ -475,10 +475,10 @@ test('Moka encrypted response uses strict decrypted shape (local encryption only
   assert.throws(() => moka.extractJobs({ Success: false, jobs: [], total: 0 }), /Unknown/);
 });
 
-test('update is the ONLY chain: serial process.execPath crawl, then one publish; partial failure returns 1', t => {
+test('update is the ONLY chain: process.execPath crawl children, then one publish; partial failure returns 1', async t => {
   const f = fixture(t);
   const calls = [];
-  const result = runUpdate(['a', 'b', 'a'], {
+  const result = await runUpdate(['a', 'b', 'a'], {
     ...f,
     runner: (command, args) => {
       assert.equal(command, process.execPath);
@@ -495,10 +495,10 @@ test('update is the ONLY chain: serial process.execPath crawl, then one publish;
   assert.equal(result.publication.written, true);
   assert.deepEqual(readPublished(f.dataFile).jobs.map(j => j.id).sort(), ['a:fresh', 'b:old']);
   const allCalls = [];
-  const all = runUpdate([], { sites: loadSites(), runner: (_command, args) => { allCalls.push(args[1]); return { status: 1 }; }, publisher: () => ({ code: 1, written: false }) });
+  const all = await runUpdate([], { sites: loadSites(), runner: (_command, args) => { allCalls.push(args[1]); return { status: 1 }; }, publisher: () => ({ code: 1, written: false }) });
   assert.equal(all.code, 1);
-  assert.deepEqual(allCalls, loadSites().map(s => s.key), 'No second hardcoded site list');
-  assert.throws(() => runUpdate(['unknown'], { sites: [A], runner: () => assert.fail('must reject first'), publisher: () => assert.fail('must reject first') }), /Unknown/);
+  assert.deepEqual(allCalls.sort(), loadSites().map(s => s.key).sort(), 'No second hardcoded site list');
+  await assert.rejects(runUpdate(['unknown'], { sites: [A], runner: () => assert.fail('must reject first'), publisher: () => assert.fail('must reject first') }), /Unknown/);
   const chain = ['crawl.js', 'publish.js', 'update.js', 'run_daily.ps1'].map(file => fs.readFileSync(path.join(__dirname, '..', 'crawler', file), 'utf8')).join('\n');
   assert.ok(!/require\([^\n]*(?:score|filter|recall)|(?:build_score_html|split_batches|merge_judge|write_cache|aggregate|narrow|recall)\.js/.test(chain));
   assert.equal(fs.readFileSync(f.index, 'utf8'), 'DO NOT CHANGE');
@@ -518,10 +518,10 @@ test('notices always disclose registry scope and only mention JD gaps when prese
   assert.ok(!partial.data.notices.some(n => n.includes('缺少 JD')));
 });
 
-test('failed top-level crawl launch cannot publish a stale ready candidate alongside a successful source', t => {
+test('failed top-level crawl launch cannot publish a stale ready candidate alongside a successful source', async t => {
   const f = fixture(t);
   crawl(A, f, [rawJob('stale-not-published')]);
-  const result = runUpdate(['a', 'b'], {
+  const result = await runUpdate(['a', 'b'], {
     ...f,
     runner: (_command, args) => {
       if (args[1] === 'a') return { status: null, error: new Error('spawn failed') };
@@ -551,4 +551,24 @@ test('bad baseline is refused without evaluating JavaScript or overwriting it', 
     assert.equal(fs.readFileSync(f.dataFile, 'utf8'), content, 'Explicit illegal category types must never overwrite the baseline');
   }
   assert.throws(() => validateEnvelope([]), /no usable jobs/);
+});
+
+test('update: same host crawls serially, different hosts overlap, Chrome sources share one slot', async () => {
+  const { groupOf } = require('../crawler/update');
+  const site = (key, url, extra = {}) => ({ key, url, ...extra });
+  const sites = [site('m1', 'https://app.mokahr.com/x'), site('m2', 'https://app.mokahr.com/y'), site('v', 'https://hr.vivo.com/'), site('f1', 'https://a.feishu.cn/', { ats: 'feishu' }), site('f2', 'https://b.example.com/', { ats: 'feishu' })];
+  assert.equal(groupOf(sites[0]), groupOf(sites[1]));
+  assert.equal(groupOf(sites[3]), groupOf(sites[4]));
+  assert.notEqual(groupOf(sites[0]), groupOf(sites[2]));
+  let running = 0, peak = 0; const peakByGroup = {};
+  const runner = async (_c, args) => {
+    const group = groupOf(sites.find(s => s.key === args[1]));
+    peakByGroup[group] = (peakByGroup[group] || 0) + 1; running++; peak = Math.max(peak, running);
+    assert.equal(peakByGroup[group], 1, 'same group must never overlap');
+    await new Promise(r => setTimeout(r, 10));
+    running--; peakByGroup[group]--;
+    return { status: 0 };
+  };
+  const result = await runUpdate([], { sites, runner, publisher: () => ({ code: 0, written: false }) });
+  assert.equal(result.code, 0); assert.equal(result.attempts.length, 5); assert.ok(peak > 1, 'different groups run in parallel');
 });

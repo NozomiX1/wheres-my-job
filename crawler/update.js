@@ -1,26 +1,58 @@
-// Single entrypoint: registry -> serial crawl children -> one publish. No scoring/HTML/LLM.
+// Single entrypoint: registry -> crawl children (serial per host, parallel across hosts) -> one publish. No scoring/HTML/LLM.
 // Usage: node crawler/update.js [key ...] (no arguments selects every registry source).
 'use strict';
-const { spawnSync } = require('node:child_process');
+const { spawn } = require('node:child_process');
 const path = require('node:path');
 const { loadSites, publish } = require('./publish');
 
-function runUpdate(keys = [], { sites = loadSites(), runner = spawnSync, publisher = publish, outDir, dataFile, log = () => {} } = {}) {
+// 同一官网（或同一招聘供应商）的来源串行；开 Chrome 的来源共用一组，同时只跑一个（内存）。
+// shortcut: 取主机名最后两段当供应商域，遇 .com.cn 之类会分得过粗（只会更保守地串行），需要时再细分。
+const CHROME = site => site.ats === 'feishu' || /^(kuaishou|baichuan)-/.test(site.adapter || '');
+function groupOf(site) {
+  if (CHROME(site)) return 'chrome';
+  try { return new URL(site.api || site.url).hostname.split('.').slice(-2).join('.'); } catch { return site.key; }
+}
+
+// 子进程输出按行加 [key] 前缀，并行时才分得清。
+function spawnPrefixed(command, args) {
+  return new Promise(resolve => {
+    const tag = '[' + args[1] + '] ';
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    for (const [stream, out] of [[child.stdout, process.stdout], [child.stderr, process.stderr]]) {
+      let rest = '';
+      stream.setEncoding('utf8');
+      stream.on('data', chunk => { const lines = (rest + chunk).split('\n'); rest = lines.pop(); for (const line of lines) out.write(tag + line + '\n'); });
+      stream.on('end', () => { if (rest) out.write(tag + rest + '\n'); });
+    }
+    child.on('error', error => resolve({ status: null, error }));
+    child.on('close', (status, signal) => resolve({ status, signal }));
+  });
+}
+
+async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixed, publisher = publish, outDir, dataFile, log = () => {}, concurrency = 4 } = {}) {
   const selected = [...new Set(keys.length ? keys.flatMap(key => key.split(',').filter(Boolean)) : sites.map(site => site.key))];
   for (const key of selected) if (!sites.some(site => site.key === key)) throw new Error('Unknown source key: ' + key);
-  const attempts = [];
+  const groups = new Map();
   for (const key of selected) {
-    log('crawl ' + key);
-    try {
-      const child = runner(process.execPath, [path.join(__dirname, 'crawl.js'), key], { stdio: 'inherit' });
-      const code = child && !child.error && !child.signal && child.status === 0 ? 0 : 1;
-      attempts.push({ key, code });
-      if (code) log(key + ': crawl failed/unverified; keeping source baseline');
-    } catch (error) {
-      attempts.push({ key, code: 1 });
-      log(key + ': ' + error.message);
-    }
+    const group = groupOf(sites.find(site => site.key === key));
+    groups.set(group, [...(groups.get(group) || []), key]);
   }
+  const queue = [...groups.values()], attempts = [];
+  const worker = async () => {
+    for (let group; (group = queue.shift());) for (const key of group) {
+      log('crawl ' + key);
+      try {
+        const child = await runner(process.execPath, [path.join(__dirname, 'crawl.js'), key]);
+        const code = child && !child.error && !child.signal && child.status === 0 ? 0 : 1;
+        attempts.push({ key, code });
+        if (code) log(key + ': crawl failed/unverified; keeping source baseline');
+      } catch (error) {
+        attempts.push({ key, code: 1 });
+        log(key + ': ' + error.message);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, worker));
   // Even after a partial failure, publish the verified sources and preserve the others.
   let publication;
   try { publication = publisher({ sites, keys: selected, failedKeys: attempts.filter(attempt => attempt.code).map(attempt => attempt.key), outDir, dataFile }); }
@@ -28,15 +60,14 @@ function runUpdate(keys = [], { sites = loadSites(), runner = spawnSync, publish
   return { code: attempts.some(attempt => attempt.code) || publication.code ? 1 : 0, attempts, publication };
 }
 
-module.exports = { runUpdate };
+module.exports = { runUpdate, groupOf };
 if (require.main === module) {
-  try {
-    const result = runUpdate(process.argv.slice(2), { log: console.log });
+  runUpdate(process.argv.slice(2), { log: console.log }).then(result => {
     console.log(result.publication.written ? 'Published sources: ' + result.publication.updated.join(', ') : 'No verified updates; published data unchanged');
     for (const error of result.publication.errors || []) console.error(error);
     process.exitCode = result.code;
-  } catch (error) {
+  }).catch(error => {
     console.error('ERR ' + error.message);
     process.exitCode = 1;
-  }
+  });
 }
