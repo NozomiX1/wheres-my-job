@@ -75,3 +75,14 @@ test('retry-preload: a child that exits 0 without writing its raw file leaves an
   const written = run('require("fs").writeFileSync(process.argv.at(-1), "{}")', path.join(dir, 'y_raw.json'));
   a.equal(written.status, 0); a.equal(written.stderr, '');
 });
+
+test('retry: "fetch failed" logs show the underlying cause, and the final failure is logged once', async () => {
+  const { reasonOf } = require('../crawler/lib/retry');
+  const err = new TypeError('fetch failed', { cause: Object.assign(new Error('connect ETIMEDOUT 1.2.3.4:443'), { code: 'ETIMEDOUT' }) });
+  a.equal(reasonOf(err), 'fetch failed [ETIMEDOUT: connect ETIMEDOUT 1.2.3.4:443]'); a.equal(reasonOf(new Error('plain')), 'plain');
+  const lines = [], original = globalThis.fetch; let calls = 0;
+  globalThis.fetch = async () => { calls++; throw err; };
+  try { installFetchRetry({ log: line => lines.push(line), delays: [0, 0] }); await a.rejects(globalThis.fetch('https://jobs.example.com/x'), /fetch failed/); } finally { globalThis.fetch = original; }
+  a.equal(calls, 3); a.equal(lines.length, 3);
+  a.match(lines[0], /\[retry\] jobs\.example\.com fetch failed \[ETIMEDOUT/); a.match(lines[2], /^\[fetch-error\] jobs\.example\.com fetch failed \[ETIMEDOUT/);
+});
