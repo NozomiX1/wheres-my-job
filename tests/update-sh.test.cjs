@@ -19,8 +19,8 @@ function setup(t) {
 test('update.sh: up to date is a no-op; front-end/docs changes pull without restart; server/crawler changes pull and restart', async t => {
   const s = setup(t);
   let r = await run(s.deploy, s.env); a.equal(r.code, 0); a.match(r.out, /已是最新/); a.ok(!fs.existsSync(s.marker));
-  s.push('index.html', 'v2\n'); s.push('README.md', 'v2\n'); r = await run(s.deploy, s.env); a.equal(r.code, 0, r.out); a.match(r.out, /不需要重启/);
-  a.equal(fs.readFileSync(path.join(s.deploy, 'index.html'), 'utf8'), 'v2\n'); a.ok(!fs.existsSync(s.marker), 'front-end only → no restart');
+  s.push('index.html', 'v2\n'); s.push('README.md', 'v2\n'); s.push('crawler/README.md', 'doc\n'); s.push('server/NOTES.md', 'doc\n'); r = await run(s.deploy, s.env); a.equal(r.code, 0, r.out); a.match(r.out, /不需要重启/);
+  a.equal(fs.readFileSync(path.join(s.deploy, 'index.html'), 'utf8'), 'v2\n'); a.ok(!fs.existsSync(s.marker), 'front-end and docs (even docs inside crawler/ or server/) → no restart');
   s.push('server/index.js', 'v2\n'); r = await run(s.deploy, s.env); a.equal(r.code, 0, r.out); a.match(r.out, /重启服务/); a.ok(fs.existsSync(s.marker), 'server change → restart');
   fs.rmSync(s.marker); s.push('crawler/lib/x.js', 'v1\n'); r = await run(s.deploy, s.env); a.ok(fs.existsSync(s.marker), 'crawler change → restart (the server loads crawler/publish and its libs)');
   fs.rmSync(s.marker); s.push('server/search.js', 'v1\n'); r = await run(s.deploy, {}); a.equal(r.code, 0); a.match(r.out, /需要重启服务才生效/); a.ok(!fs.existsSync(s.marker), 'without ANDE_RESTART_CMD it only says so');
