@@ -27,7 +27,7 @@ curl -fsSL --max-time 900 -o "$WORK/data.tar.gz" "$BASE/data.tar.gz" || { echo "
 GOT=$(node -e "console.log(require('crypto').createHash('sha256').update(require('fs').readFileSync('$WORK/data.tar.gz')).digest('hex'))")
 [ "$GOT" = "$SHA" ] || { echo "sha256 不符（下载不完整或被改动），放弃"; exit 1; }
 mkdir "$WORK/x" && tar -xzf "$WORK/data.tar.gz" -C "$WORK/x" || { echo "解压失败"; exit 1; }
-node "$HERE/validate-data.js" "$WORK/x/data" "$ROOT/data" || exit 1
+node --max-old-space-size=450 "$HERE/validate-data.js" "$WORK/x/data" "$ROOT/data" || exit 1
 
 # 保留最近两份旧数据（data.prev.1 最新），再换上新数据。
 rm -rf data.prev.2; [ -d data.prev.1 ] && mv data.prev.1 data.prev.2; [ -d data ] && mv data data.prev.1
