@@ -16,6 +16,14 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const LIMITS = { body: 65536, words: 300, wordLength: 100, selected: 1000, page: 100, offset: 200000, requests: 120, windowMs: 10000 };
 const RECRUITMENT = new Set(['all', 'social', 'campus', 'internship', 'talent']);
 
+// 放在反向代理（Caddy）后面时，直连地址永远是本机；只有连接来自本机才信任 X-Forwarded-For，并取最后一项（最靠近我们的那个代理写入的），
+// 这样外部直连时伪造该头无效，代理后面的访问者也各用各的限流额度。
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+function clientIp(req) {
+  const peer = req.socket.remoteAddress, forwarded = req.headers['x-forwarded-for'];
+  return LOOPBACK.has(peer) && typeof forwarded === 'string' ? forwarded.split(',').at(-1).trim() || peer : peer;
+}
+
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 
 // 读取已发布数据并预先转好小写文本（每次查询不再重复转换）。
@@ -109,7 +117,7 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
   const server = http.createServer(async (req, res) => {
     const started = Date.now();
     try {
-      const url = new URL(req.url, 'http://localhost'), ip = req.socket.remoteAddress;
+      const url = new URL(req.url, 'http://localhost'), ip = clientIp(req);
       if (url.pathname.startsWith('/api/')) {
         if (limited(ip)) throw new HttpError(429, '请求过于频繁，请稍后再试');
         if (req.method === 'POST' && url.pathname === '/api/search') {
@@ -135,7 +143,7 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
   return { server, reload, state: () => state };
 }
 
-module.exports = { createApp, parseQuery, search, load, LIMITS };
+module.exports = { createApp, parseQuery, search, load, clientIp, LIMITS };
 if (require.main === module) {
   // 生产由采集结束后重启服务来加载新数据（ANDE_RELOAD_MS=0 关闭热加载，避免新旧数据同时在内存里）。
   let app;

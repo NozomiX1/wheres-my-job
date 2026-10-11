@@ -1,7 +1,7 @@
 'use strict';
 // 搜索服务：用仓库里的已发布数据起一个临时端口的服务，只断言不随数据变化的性质。
 const test = require('node:test'), a = require('node:assert/strict'), path = require('node:path');
-const { createApp, LIMITS } = require('../server/index');
+const { createApp, clientIp, LIMITS } = require('../server/index');
 const createRank = require('../assets/rank.js');
 
 const dataFile = path.join(__dirname, 'fixtures', 'data', 'catalog.js'); // 从真实数据抽样的小数据集（每来源 30 条、正文截短）
@@ -82,4 +82,16 @@ test('a large word list (the example set) is accepted and answers quickly once i
   const words = Array.from({ length: 120 }, (_, i) => '词' + i), body = { words: words.slice(0, 85), lowered: words.slice(85), limit: 50 };
   a.equal((await post(body)).status, 200);
   const started = Date.now(); a.equal((await post(body)).status, 200); a.ok(Date.now() - started < 1500, 'cached query took ' + (Date.now() - started) + 'ms');
+});
+
+test('behind a local proxy each visitor (X-Forwarded-For) has their own rate-limit budget; the header is ignored for non-local peers', async () => {
+  const own = createApp({ dataFile, reloadMs: 0, warm: false }); await new Promise(r => own.server.listen(0, '127.0.0.1', r));
+  try {
+    const url = 'http://127.0.0.1:' + own.server.address().port + '/api/health', as = ip => fetch(url, { headers: { 'X-Forwarded-For': ip } }).then(r => r.status), codes = [];
+    for (let i = 0; i < LIMITS.requests + 5; i++) codes.push(await as('1.1.1.1'));
+    a.ok(codes.includes(429), 'first visitor is limited'); a.equal(await as('2.2.2.2'), 200, 'another visitor is not'); a.equal(await as('9.9.9.9, 2.2.2.2'), 200, 'last hop wins, so a spoofed prefix cannot dodge the limit');
+  } finally { own.server.close(); }
+  const req = (peer, header) => ({ socket: { remoteAddress: peer }, headers: header === undefined ? {} : { 'x-forwarded-for': header } });
+  a.equal(clientIp(req('127.0.0.1', '8.8.8.8')), '8.8.8.8'); a.equal(clientIp(req('::1', '7.7.7.7, 8.8.8.8')), '8.8.8.8');
+  a.equal(clientIp(req('203.0.113.5', '8.8.8.8')), '203.0.113.5', 'direct peers cannot spoof'); a.equal(clientIp(req('127.0.0.1')), '127.0.0.1');
 });
