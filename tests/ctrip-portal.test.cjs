@@ -20,14 +20,14 @@ function fakeFetch(rows, { total = rows.length, failOn } = {}) {
 const opts = f => ({ fetchImpl: f, sleep: async () => {} });
 
 test('single scan keeps usable rows, tolerates unknown fields and records total drift / bad rows', async () => {
-  const rows = [row(1), row(2, { requirements: null }), row(3, { jobTitle: '' }), row(4, { id: 'x' }), row(1)];
+  const rows = [row(1), row(2, { requirements: null }), row(3, { jobTitle: '' }), row(4, { fromId: '' }), row(1)];
   const f = fakeFetch(rows, { total: 9 });
   const raw = await c.fetchAll(campus, opts(f));
   a.deepEqual(f.calls, [1, 2]); a.equal(raw.total, 2);
   a.ok(raw.issues.some(s => s.includes('缺ID/标题') && s.includes('2')));
   a.ok(raw.issues.some(s => s.includes('官方total 9')));
   const [x, y] = normalizeJobs(raw.jobs, campus);
-  a.equal(x.id, 'ctrip:101'); a.equal(x.title, '岗位1'); a.deepEqual(x.channels, ['campus']); a.equal(x.jdComplete, true);
+  a.equal(x.id, 'ctrip:MJ1'); a.equal(x.title, '岗位1'); a.deepEqual(x.channels, ['campus']); a.equal(x.jdComplete, true);
   a.match(x.url, /#\/campus\/job-detail\/MJ1$/); a.ok(x.description.includes('构建数据分析体系'));
   a.equal(y.description, ''); a.equal(y.jdComplete, false);
 });
@@ -52,4 +52,10 @@ test('source gate: registered key+adapter+category only', () => {
   a.equal(c.verifiedSource(wrongCategory), false); a.equal(adapterCommand(wrongCategory, '/tmp/raw.json'), null);
   a.equal(adapterCommand({ ...campus, key: 'alias' }, '/tmp/raw.json'), null);
   a.throws(() => normalizeJobs([], { ...campus, adapter: undefined, key: 'ctrip' }));
+});
+
+test('official id is the stable job number (fromId); the per-request numeric id does not matter', async () => {
+  const ids = rows => normalizeJobs(rows, campus).map(j => j.id);
+  const first = (await c.fetchAll(campus, opts(fakeFetch([row(1), row(2)])))).jobs, again = (await c.fetchAll(campus, opts(fakeFetch([row(1, { id: '999001' }), row(2, { id: '999002' })])))).jobs;
+  a.deepEqual(ids(first), ['ctrip:MJ1', 'ctrip:MJ2']); a.deepEqual(ids(again), ids(first));
 });

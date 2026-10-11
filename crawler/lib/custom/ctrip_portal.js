@@ -27,9 +27,9 @@ function profile(site) {
 function requestBody(site, index) {
   const body = structuredClone(profile(site).body); body.pager.index = String(index); return body;
 }
-// 能确定官网身份、标题和正文才发布；null/缺失的 JD 按空串处理，不当作坏记录。
-const usable = job => job && typeof job === 'object' && typeof job.id === 'string' && /^[1-9]\d*$/.test(job.id) &&
-  typeof job.fromId === 'string' && job.fromId.trim() && typeof job.jobTitle === 'string' && job.jobTitle.trim();
+// 官网ID用 fromId（岗位编号 MJ…，与官网链接一致）；接口里的数字 id 每次采集都会重新生成，不能当ID。
+// null/缺失的 JD 按空串处理，不当作坏记录。
+const usable = job => job && typeof job === 'object' && typeof job.fromId === 'string' && job.fromId.trim() && typeof job.jobTitle === 'string' && job.jobTitle.trim();
 
 function validateJobs(jobs) {
   if (!Array.isArray(jobs) || !jobs.length) throw new Error('Ctrip: invalid jobs or effective zero; zero cannot clear existing data');
@@ -45,7 +45,7 @@ function normalizeRecord(job, site) {
   const jd = normalizeJD(html), full = htmlText(html);
   // 原生 requirements 是整篇 HTML 职位描述，不是独立「要求」栏；社招及多方向点状标题无法证明分栏边界时用全文回退。
   const unclear = p.track === 'social' || full.split('\n').some(line => /^[.．·•-]\s*(?:职位描述|岗位描述|工作职责|岗位职责|任职资格|任职要求)\s*[:：]?$/.test(line));
-  return { id: job.id, title: job.jobTitle, city: job.cityName ?? '', category: '', channels: [p.track], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+  return { id: job.fromId, title: job.jobTitle, city: job.cityName ?? '', category: '', channels: [p.track], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
     url: ORIGIN + '/#/' + (p.track === 'campus' ? 'campus' : 'experienced') + '/job-detail/' + encodeURIComponent(job.fromId),
     duty: unclear ? '' : jd.duty, requirements: unclear ? '' : jd.requirements, description: full, jdComplete: jd.hasContent };
 }
@@ -65,7 +65,7 @@ async function fetchAll(site, options = {}) {
     const json = await r.json();
     if (json.retCode !== '201' || !Array.isArray(json.retValue?.recruitJobAdList)) throw new Error('Ctrip: native business refusal on page ' + index);
     return { rows: json.retValue.recruitJobAdList, total: json.retValue.total };
-  }, { maxPages, idOf: job => job.id, usable, issues });
+  }, { maxPages, idOf: job => job.fromId, usable, issues });
   const jobs = [...byId.values()];
   if (!jobs.length) throw new Error('Ctrip: no usable records; zero cannot clear existing data');
   return { total: jobs.length, jobs, issues, verification: { key: site.key, api: API, pages, issues } };

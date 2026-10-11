@@ -66,3 +66,12 @@ test('crawl records problems: retries and issues on a successful run, and every 
   runCrawl(site, { outDir: dir, now: () => '2026-10-09T03:00:00.000Z', runner: (_, args) => { fs.writeFileSync(args.at(-1), JSON.stringify({ total: 2, jobs: good.jobs, issues: [], verification: { key: site.key, pages: 1, issues: [] } })); return { status: 0 }; } });
   a.equal(fs.readFileSync(path.join(dir, 'crawl-issues.jsonl'), 'utf8').trim().split('\n').length, 3);
 });
+
+test('retry-preload: a child that exits 0 without writing its raw file leaves an [exit] line', () => {
+  const { spawnSync } = require('node:child_process'), dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-preload-'));
+  const run = (script, raw) => { const file = path.join(dir, 'adapter.js'); fs.writeFileSync(file, script); return spawnSync(process.execPath, ['--require=' + path.join(__dirname, '../crawler/lib/retry-preload.js'), file, '{}', raw], { encoding: 'utf8' }); };
+  const missing = run('new Promise(() => {})', path.join(dir, 'x_raw.json')); // 悬着的 promise：循环空了，静默退出 0
+  a.equal(missing.status, 0); a.match(missing.stderr, /\[exit\] 进程以 0 退出但没写出 x_raw\.json/);
+  const written = run('require("fs").writeFileSync(process.argv.at(-1), "{}")', path.join(dir, 'y_raw.json'));
+  a.equal(written.status, 0); a.equal(written.stderr, '');
+});
