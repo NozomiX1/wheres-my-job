@@ -47,6 +47,15 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 
 - **腾讯 Workday 详情**：腾讯部分岗位的正文在第三方 Workday 站点。单个岗位返回 403＋`{"errorCode":"S22","message":"permission denied"}`（该岗位匿名不可见，同站其余岗位照常 200）时跳过它、继续下一个并在说明里记数；连续 100 个都是 S22（已下线的岗位常成片出现）或任何其它拒绝（回应读不出、非 S22 的 4xx）仍立即停止。另外，回应是 200 但个别岗位没通过校验（例如回应里的规范网址与列表链接的城市写法不同，如 `UK-London` 对 `United-Kingdom-London`）时也只跳过这一个（说明里记数），连续 20 个才停止；网络错误照旧立即停止。被跳过的岗位沿用已发布的旧正文。
 
+## 失败处理流程
+
+由浅入深，前两层不需要人：
+1. **自动**：请求级重试（5 秒、30 秒）→ 整轮结束后补采（5 分钟、15 分钟，官网拒绝除外）→ 仍失败的来源保留已发布的旧数据。
+2. **看提醒**：有来源超过 3 天没成功更新，`crawl` 工作流会失败，GitHub 发邮件；运行页的汇总表列出各来源状态。
+3. **换时间、换出口再试**：Actions 里手动触发 `crawl`，在 `keys` 里只填失败的来源（可勾选 `full`）。临时的跨境网络问题通常换个时间就好。
+4. **本机兜底**：Actions 上一直不行时在本机采集，合并进正式数据：`sh deploy/crawl-local.sh <来源key>...`（必须明确给出 key）。它会先确认 Actions 没在采集，取回 `data` 作基线（取不到就失败），在独立临时目录里只采这些来源，打印采集前后各来源岗位数，确认后先传 `data.tar.gz`、再传 `data-meta.json`；服务器 10 分钟内自动拉取。`ANDE_DRY_RUN=1` 只采集汇总不上传，`ANDE_YES=1` 跳过确认。**同一时间只能有一个写入者**，用它之前先看 Actions 没有在跑。
+5. **系统性的问题**才改适配器：先看日志、必要时用隔离浏览器匿名抽样几个岗位页，弄清原因，补测试再推送（例：腾讯 Workday，见 PROCESS.md）。
+
 ## 适配器
 
 自研门户统一登记在 `lib/portals.js`（`crawl.js`／`publish.js` 只遍历登记表），模块导出 `requiresVerification／verifiedSource／portalNotice／validateJobs／validateEvidence／normalizeRecord`。新增门户只在登记表加一项，模板见 `lib/custom/_template.js`（默认报未实现，不返回伪造空结果）。

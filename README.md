@@ -17,19 +17,19 @@
 
 **覆盖尚未完善：**只代表各登记官网入口的公开列表，不是公司全球招聘全集；官网没有提供的字段、空正文如实留空。每个招聘单位旁显示岗位数和数据更新日期（多个来源取最早的一天），页脚显示全站最近更新日期。阶段结果与待办见 [PROCESS.md](PROCESS.md)。
 
-数据为 `data/catalog.js` ＋ `data/parts/`（单文件≤1MB），采集成功即整源替换、不保存历史。**数据不在仓库里**（已被 Git 忽略）：自行部署时先用下文的 `node crawler/update.js <来源key>` 采集生成，再启动服务；线上服务器按「服务器部署」一节每天自动增量采集。测试用的抽样小数据在 `tests/fixtures/data/`。
+数据为 `data/catalog.js` ＋ `data/parts/`（单文件≤1MB），采集成功即整源替换、不保存历史。**数据不在仓库里**（已被 Git 忽略）：线上由 GitHub Actions 的 `crawl` 工作流每天采集并把数据发布到本仓库 Release（标签 `data`）；自行部署时直接从 Release 拉取，或用 `node crawler/update.js <来源key>` 自己采集。测试用的抽样小数据在 `tests/fixtures/data/`。
 
 ## 自行部署（快速开始）
 
 仓库只有代码，**不含岗位数据**；自己部署分三步：
 
-1. 安装 **Node.js 22+**。涉及飞书系、快手、百川的来源还需要 Chrome（用 `CHROME_PATH` 指定；Linux 下以 root 或在 Ubuntu 24.04 普通用户运行时需 `--no-sandbox`，可参考 `deploy/install.sh` 里的包装脚本）。
-2. 采集你要的来源（来源 key 见 `crawler/sites.json`，**只填明确要采的 key**），首次是全量，之后同样命令即增量：`node crawler/update.js vivo baidu stepfun`。
+1. 安装 **Node.js 22+**（拉取数据另需 `curl`、`tar`）。
+2. 取得数据，二选一：
+   - **从 Release 拉取（推荐，几十秒）**：`sh deploy/pull.sh`。它会校验 sha256 与内容再放进 `data/`。
+   - **自己采集**：来源 key 见 `crawler/sites.json`，**只填明确要采的 key**，首次是全量，之后同样命令即增量：`node crawler/update.js vivo baidu stepfun`。涉及飞书系、快手、百川的来源还需要 Chrome（用 `CHROME_PATH` 指定；Linux 下以 root 或在 Ubuntu 24.04 普通用户运行时需 `--no-sandbox`，可参考 `deploy/install.sh` 里的包装脚本）。
 3. 启动服务并打开 `http://localhost:8000`：`PORT=8000 node server/index.js`。
 
-**不想自己采集**：维护者的 `crawl` 工作流会把最新数据发布到本仓库 Release（标签 `data`）。克隆代码后拉取并启动即可（需要 `curl`、`tar`）：`sh deploy/pull.sh && PORT=8000 node server/index.js`。`deploy/pull.sh` 会校验 sha256 与内容再替换 `data/`，放进 crontab 即可定时更新（`ANDE_RESTART_CMD` 指定替换后的重启命令）。
-
-要长期运行并每天自动更新，用下文「服务器部署」里的 systemd 配置。
+**长期运行**：把 `deploy/pull.sh` 放进 crontab（每 10 分钟；`ANDE_RESTART_CMD` 指定换上新数据后的重启命令），数据就自动跟着更新。更新代码用 `deploy/update.sh`（`git pull --ff-only`，只在服务端文件变了才重启，见下）。有 root 的服务器也可以用下文的 systemd 配置。
 
 ## 本地查看与检查
 
@@ -54,7 +54,11 @@ node crawler/update.js stepfun stepfun_social
 
 ## 服务器部署
 
-`deploy/` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束后若数据有更新就自动重启服务加载（`deploy/reload.sh`；失败的来源保留上次数据，整轮没发布则不重启）；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。
+**线上的做法**（普通用户、不需要 root）：代码克隆在 `~/ande`，服务只监听本机回环地址，前面由 Caddy 之类反向代理出 HTTPS；crontab 每分钟检查服务是否在跑、开机启动，并每 10 分钟运行 `deploy/pull.sh` 拉取新数据。更新代码：`ssh <主机> 'ANDE_RESTART_CMD=<重启命令> ~/ande/deploy/update.sh'`。限流按 `X-Forwarded-For`（仅信任来自本机反向代理的连接）。
+
+**root＋systemd，并且自己采集**（可选，不是线上用的）：
+
+`deploy/` 里的 `ande-*.service`／`*.timer`、`install.sh`、`deploy.sh`、`crawl.sh`、`reload.sh` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束后若数据有更新就自动重启服务加载（`deploy/reload.sh`；失败的来源保留上次数据，整轮没发布则不重启）；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。
 
 ## 文档与代码入口
 
