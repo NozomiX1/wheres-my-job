@@ -250,6 +250,12 @@ function normalizeRecord(row, site) {
 }
 function portalNotice(site) { return verifiedSource(site) ? (site.track === 'campus' ? '仅覆盖官网默认五项目校园广列表，包含实习、青云及官网链接的Workday岗位；' : '仅覆盖官网默认area=cn无职业筛选广列表，含官网链接的外部入口；') +
   '完整性未验证，不代表公司全球全集；原生PostId字符串是身份，内部详情与外部链接分开；已取得当前正文及额外描述保留，缺详情诚实提示；' + (site.track === 'campus' ? '按官网直接可见原标签标实习及青云计划，应届毕业生不推全职，无计划标签不推非人才计划；' : '性质、人才计划未知；') + '日期及原状态语义未证明，不推定实际可投。' : ''; }
+// Workday 对单个岗位返回 403 ＋ {"errorCode":"S22","message":"permission denied"}：这个岗位匿名不可见（不是官网在拒绝我们，
+// 同一站点其余岗位照常 200）。标记后跳过它；其它任何 403／4xx 仍按拒绝处理，立即停止补充。
+async function markDenied(response, raw) {
+  if (raw.kind !== 'workday' || raw.httpStatus !== 403) return;
+  try { if ((await response.json())?.errorCode === 'S22') raw.permissionDenied = true; } catch { /* 读不出就按普通拒绝处理 */ }
+}
 async function fetchSupplemented(site, base, options = {}) {
   const p = profile(site), { fetchImpl = globalThis.fetch, sleep = ms => new Promise(r => setTimeout(r, ms)), now = Date.now, seed = [], baseCompletedAt = null, known = require('../known').knownIds() } = options;
   check(typeof fetchImpl === 'function' && typeof sleep === 'function' && typeof now === 'function' && Array.isArray(seed), 'invalid supplemental request limits');
@@ -260,16 +266,28 @@ async function fetchSupplemented(site, base, options = {}) {
     while (lastStart !== null && now() - lastStart < 200) await sleep(200 - (now() - lastStart));
     const start = now(), remaining = deadline - start; check(remaining > 0, 'source safety deadline'); lastStart = start;
     const request = raw.request, response = await fetchImpl(request.url, { method: request.method, headers: request.headers, redirect: 'error', signal: AbortSignal.timeout(Math.min(15000, Math.ceil(remaining))) });
-    raw.httpStatus = response?.status ?? null; if (raw.httpStatus === 200) raw.response = await response.json(); return raw;
+    raw.httpStatus = response?.status ?? null; if (raw.httpStatus === 200) raw.response = await response.json(); else await markDenied(response, raw); return raw;
   }
+  // 已下线的岗位常成片排在一起（实测一批新加坡岗位），所以无权限上限放宽到连续 100 个；再多就当作异常，停止。
+  // 回应是 200 但个别岗位没通过校验（如规范网址和列表链接的城市写法不同）只跳过这一个，连续 20 个才停止；网络错误和其它拒绝仍立即停止。
+  let denied = 0, streak = 0, invalid = 0, invalidStreak = 0, unverified = 0, firstUnverified = null;
   for (const row of supplementRows(result.jobs, p).filter(r => !known.has(identity(r.post, p)))) { // 增量：已发布且有补充正文的沿用
     if (now() + 200 >= deadline) { issues.push('达到进程安全时限，补充待补'); break; }
     let raw;
     try { raw = { postId: identity(row.post, p), kind: needsDetail(p, row.post) ? 'internal' : 'workday', request: supplementRequestFor(p, row.post, now()), httpStatus: null, response: null }; }
-    catch (error) { issues.push('外部协议尚未核验，保留原生链接和列表正文：' + error.message); break; }
-    try { raw = await send(raw); supplementData(raw, p, row.post); supplements.push(raw); }
-    catch (error) { stopped = { ...raw, error: String(error?.message || error) }; break; }
+    catch (error) { unverified++; firstUnverified ??= error.message; continue; } // 只是网址形状不在已核验的格式里，没有发请求；跳过这一个，后面的照常
+    try {
+      raw = await send(raw);
+      if (raw.permissionDenied) { denied++; if (++streak >= 100) throw new Error('Tencent Workday: 连续 100 个岗位无权限，停止补充'); continue; }
+      streak = 0;
+      try { supplementData(raw, p, row.post); }
+      catch (error) { if (raw.httpStatus !== 200 || !raw.response) throw error; invalid++; if (++invalidStreak >= 20) throw error; continue; }
+      invalidStreak = 0; supplements.push(raw);
+    } catch (error) { const { permissionDenied, ...rest } = raw; stopped = { ...rest, error: String(error?.message || error) }; break; }
   }
+  if (denied) issues.push('Workday 无权限查看（S22 permission denied）的岗位已跳过 ' + denied + ' 个，沿用已有正文');
+  if (unverified) issues.push('外部协议尚未核验，保留原生链接和列表正文（' + unverified + ' 个：' + firstUnverified + '）');
+  if (invalid) issues.push('Workday 回应未通过校验（如规范网址与列表链接不一致）的岗位已跳过 ' + invalid + ' 个，沿用已有正文');
   return collectSupplemented(base, p, supplements, issues, stopped, baseCompletedAt);
 }
 async function fetchAvailable(site, options = {}) {
@@ -281,7 +299,7 @@ async function fetchAvailable(site, options = {}) {
     while (lastStart !== null && now() - lastStart < 200) await sleep(200 - (now() - lastStart));
     const start = now(), remaining = deadline - start; check(remaining > 0, 'source safety deadline'); lastStart = start; const request = raw.request;
     const r = await fetchImpl(request.url, { method: request.method, headers: request.headers, ...(request.body === null ? {} : { body: JSON.stringify(request.body) }), redirect: 'error', signal: AbortSignal.timeout(Math.min(15000, Math.ceil(remaining))) });
-    raw.httpStatus = r?.status ?? null; if (raw.httpStatus === 200) raw.response = await r.json(); return raw;
+    raw.httpStatus = r?.status ?? null; if (raw.httpStatus === 200) raw.response = await r.json(); else await markDenied(r, raw); return raw;
   }
   let ended = pages.length > 0 && atEnd(pageData(pages.at(-1), p, pages.length), pages.length);
   for (let n = pages.length + 1; !ended && n <= maxPages; n++) {

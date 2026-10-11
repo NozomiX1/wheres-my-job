@@ -45,6 +45,8 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 
 `.github/workflows/crawl.yml`（定时＋手动）：取回 Release 上的 `data.tar.gz` 当基线 → `update.js`（每周日全量，其余增量；个别来源失败不阻止上传）→ `pack-release.js` 打包并先后上传 `data.tar.gz`、`data-meta.json` → 若有来源超过 72 小时没成功更新（`check-fresh.js`）让运行失败以触发 GitHub 邮件。标签由仓库变量 `DATA_TAG` 决定（默认 `data-candidate`）；有标签就必须取到基线才继续，否则失败，避免失败的来源凭空消失。工作流只响应定时和手动触发，运行日志是公开的。`deploy/pull.sh` 是消费方：meta 的 sha256 变了才下载，校验后用 `validate-data.js` 检查岗位数不少于现有一半，再改名替换（保留两份旧数据）并重启。公开仓库 60 天无活动时定时任务会被 GitHub 自动停用。
 
+- **腾讯 Workday 详情**：腾讯部分岗位的正文在第三方 Workday 站点。单个岗位返回 403＋`{"errorCode":"S22","message":"permission denied"}`（该岗位匿名不可见，同站其余岗位照常 200）时跳过它、继续下一个并在说明里记数；连续 100 个都是 S22（已下线的岗位常成片出现）或任何其它拒绝（回应读不出、非 S22 的 4xx）仍立即停止。另外，回应是 200 但个别岗位没通过校验（例如回应里的规范网址与列表链接的城市写法不同，如 `UK-London` 对 `United-Kingdom-London`）时也只跳过这一个（说明里记数），连续 20 个才停止；网络错误照旧立即停止。被跳过的岗位沿用已发布的旧正文。
+
 ## 适配器
 
 自研门户统一登记在 `lib/portals.js`（`crawl.js`／`publish.js` 只遍历登记表），模块导出 `requiresVerification／verifiedSource／portalNotice／validateJobs／validateEvidence／normalizeRecord`。新增门户只在登记表加一项，模板见 `lib/custom/_template.js`（默认报未实现，不返回伪造空结果）。

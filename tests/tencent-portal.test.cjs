@@ -185,3 +185,44 @@ test('Tencent details bind to their official PostId, so a skipped (incrementally
   a.deepEqual(b.validateEvidence(r.verification, r.jobs, social).jobs, r.jobs);
   a.throws(() => b.collectAvailable([page(social, 1, [known, fresh])], social, [detail(social, fresh), detail(social, fresh)]), /not bound/);
 });
+
+test('Tencent Workday: a posting that answers 403 S22 "permission denied" is skipped; any other refusal, or 100 in a row, still stops', async () => {
+  const mk = n => ({ ...row(campus, String(2000000000000000000n + BigInt(n))), id: 90000 + n, position: null, positionSource: 'workday', positionUrl: 'https://tencent.wd1.myworkdayjobs.com/Tencent_Careers/job/Singapore-CapitaSky/Associate-Backend-Engineer_R10' + (8000 + n) });
+  const run = async (posts, bodyFor) => {
+    const calls = []; let clock = stamp;
+    const r = await b.fetchAvailable(campus, { now: () => clock, sleep: async ms => { clock += ms; }, fetchImpl: async url => {
+      if (!url.includes('myworkdayjobs')) return { status: 200, json: async () => page(campus, 1, posts).response };
+      calls.push(url); const body = bodyFor(calls.length); return { status: 403, json: async () => body };
+    } });
+    return { r, calls };
+  };
+  const denied = { errorCode: 'S22', httpStatus: 403, message: 'permission denied', locale: 'zh-CN', messageParams: {}, errorCaseId: 'X' };
+  // 两个无权限岗位被跳过，第三个是别的 403 → 在它这里停止；跳过的数量写进说明，证据仍然有效。
+  const three = [mk(1), mk(2), mk(3)], first = await run(three, n => (n < 3 ? denied : { errorCode: 'S99', message: 'blocked' }));
+  a.equal(first.calls.length, 3); a.match(first.r.issues.join(';'), /已跳过 2 个/); a.equal(first.r.verification.stopped.postId, three[2].postId); a.equal(Object.hasOwn(first.r.verification.stopped, 'permissionDenied'), false);
+  a.equal(first.r.verification.supplements.length, 0); a.equal(b.validateEvidence(first.r.verification, first.r.jobs, campus).total, 3);
+  // 全部是 S22：连续 100 个后停止，不会把剩下的全部请求一遍；中间夹一个别的拒绝则在它这里立即停止。
+  const many = Array.from({ length: 100 }, (_, i) => mk(i + 10)), second = await run(many, () => denied);
+  a.equal(second.calls.length, 100); a.match(second.r.verification.stopped.error, /连续 100 个岗位无权限/); a.equal(second.r.verification.stopped.postId, many[99].postId);
+  // 非 S22 的 403（或读不出 JSON）一律是拒绝：第一个就停。
+  const plain = await run(three, () => ({ message: 'Forbidden' })); a.equal(plain.calls.length, 1); a.equal(plain.r.verification.stopped.httpStatus, 403);
+});
+
+test('Tencent Workday: a 200 response that fails validation (e.g. canonical URL differs) is skipped; 20 in a row, or a network error, stops', async () => {
+  const mk = n => ({ ...row(campus, String(2000000000000000000n + BigInt(n))), id: 90000 + n, position: null, positionSource: 'workday', positionUrl: 'https://tencent.wd1.myworkdayjobs.com/Tencent_Careers/job/UK-London/Role-' + n + '_R10' + (7000 + n) });
+  const run = async (posts, answer) => {
+    const calls = []; let clock = stamp;
+    const r = await b.fetchAvailable(campus, { now: () => clock, sleep: async ms => { clock += ms; }, fetchImpl: async url => {
+      if (!url.includes('myworkdayjobs')) return { status: 200, json: async () => page(campus, 1, posts).response };
+      calls.push(url); return answer(calls.length);
+    } });
+    return { r, calls };
+  };
+  const invalid = { status: 200, json: async () => ({ jobPostingInfo: { externalUrl: 'https://tencent.wd1.myworkdayjobs.com/Tencent_Careers/job/United-Kingdom-London/x' } }) };
+  const three = [mk(1), mk(2), mk(3)], first = await run(three, n => (n < 3 ? invalid : { status: 403, json: async () => ({ message: 'Forbidden' }) }));
+  a.equal(first.calls.length, 3); a.match(first.r.issues.join(';'), /未通过校验.*已跳过 2 个/); a.equal(first.r.verification.stopped.postId, three[2].postId); a.equal(first.r.verification.stopped.httpStatus, 403);
+  a.equal(b.validateEvidence(first.r.verification, first.r.jobs, campus).total, 3);
+  const many = Array.from({ length: 25 }, (_, i) => mk(i + 10)), second = await run(many, () => invalid);
+  a.equal(second.calls.length, 20); a.equal(second.r.verification.stopped.httpStatus, 200); a.equal(second.r.verification.stopped.postId, many[19].postId); a.equal(b.validateEvidence(second.r.verification, second.r.jobs, campus).total, 25);
+  const down = await run(three, () => { throw new TypeError('fetch failed'); }).catch(e => e); a.ok(down instanceof Error || down.calls.length === 1, 'a network error is not skipped');
+});
