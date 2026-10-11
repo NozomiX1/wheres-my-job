@@ -41,6 +41,10 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 - **日志**：`update.js` 每次运行写 `out/logs/update-<时间>.log`（含全部子进程输出，每行带 `[来源]` 前缀），并在 `out/logs/runs.jsonl` 为每个来源追加一行（起始时间、秒数、退出码）。采集有问题先看这里，再看 `crawl-issues.jsonl`。
 - **并发**：同一官网（取主机名最后两段）串行，不同官网最多 4 路并行，开 Chrome 的来源同时只跑 1 个。
 
+## 数据分发（Release）
+
+`.github/workflows/crawl.yml`（定时＋手动）：取回 Release 上的 `data.tar.gz` 当基线 → `update.js`（每周日全量，其余增量；个别来源失败不阻止上传）→ `pack-release.js` 打包并先后上传 `data.tar.gz`、`data-meta.json` → 若有来源超过 72 小时没成功更新（`check-fresh.js`）让运行失败以触发 GitHub 邮件。标签由仓库变量 `DATA_TAG` 决定（默认 `data-candidate`）；有标签就必须取到基线才继续，否则失败，避免失败的来源凭空消失。工作流只响应定时和手动触发，运行日志是公开的。`deploy/pull.sh` 是消费方：meta 的 sha256 变了才下载，校验后用 `validate-data.js` 检查岗位数不少于现有一半，再改名替换（保留两份旧数据）并重启。公开仓库 60 天无活动时定时任务会被 GitHub 自动停用。
+
 ## 适配器
 
 自研门户统一登记在 `lib/portals.js`（`crawl.js`／`publish.js` 只遍历登记表），模块导出 `requiresVerification／verifiedSource／portalNotice／validateJobs／validateEvidence／normalizeRecord`。新增门户只在登记表加一项，模板见 `lib/custom/_template.js`（默认报未实现，不返回伪造空结果）。

@@ -1,0 +1,83 @@
+# 正式采集：在 GitHub 托管机上每天增量、每周全量。以 Release 里上一份数据为基线，采完把新数据传回 Release；
+# 服务器和自行部署的人用 deploy/pull.sh 从 Release 拉取。数据放哪个标签由仓库变量 DATA_TAG 决定（未设置时是 data-candidate，
+# 对比满意后 `gh variable set DATA_TAG --body data` 切到正式标签 data）。
+name: crawl
+on:
+  schedule:
+    - cron: '30 22 * * *' # 北京时间每天 06:30，增量
+    - cron: '0 19 * * 6'  # 北京时间周日 03:00，全量
+  workflow_dispatch:
+    inputs:
+      keys: { description: '来源 key，空格分隔；留空为全部', required: false, default: '' }
+      full: { description: '强制全量（重取所有详情）', type: boolean, default: false }
+permissions:
+  contents: write
+concurrency: { group: crawl, cancel-in-progress: false }
+env:
+  TAG: ${{ vars.DATA_TAG || 'data-candidate' }}
+  GH_TOKEN: ${{ github.token }}
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: machine
+        run: |
+          nproc; free -m | sed -n 1,2p; node --version; google-chrome --version
+          printf '#!/bin/sh\nexec /usr/bin/google-chrome --no-sandbox --disable-dev-shm-usage "$@"\n' | sudo tee /usr/local/bin/chrome-ns >/dev/null
+          sudo chmod +x /usr/local/bin/chrome-ns
+      - name: baseline
+        run: |
+          set -e
+          # 标签存在就必须取回基线（取不到就失败，绝不在没有基线的情况下继续，否则失败的来源会凭空消失）；标签不存在才是首次运行。
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release download "$TAG" -p data.tar.gz -D .
+            tar -xzf data.tar.gz && rm data.tar.gz
+            node -e "const d=require('./crawler/publish').readPublished('data/catalog.js'); console.log('基线：' + d.jobs.length + ' 个岗位，' + d.sources.length + ' 个来源')"
+          else echo "标签 $TAG 还没有发布过，按首次运行处理"; fi
+      - name: crawl
+        id: crawl
+        env:
+          CHROME_PATH: /usr/local/bin/chrome-ns
+          KEYS: ${{ inputs.keys }}
+          FULL: ${{ inputs.full }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          before=$(sha256sum data/catalog.js 2>/dev/null | cut -d' ' -f1 || true)
+          flags=""; if [ "$FULL" = "true" ] || [ "$SCHEDULE" = "0 19 * * 6" ]; then flags="--full"; fi
+          set +e; node crawler/update.js $flags $KEYS; echo "update 退出码 $?"; set -e # 个别来源失败不阻止已成功的数据上传
+          after=$(sha256sum data/catalog.js 2>/dev/null | cut -d' ' -f1 || true)
+          if [ -n "$after" ] && [ "$before" != "$after" ]; then echo "changed=yes" >> "$GITHUB_OUTPUT"; else echo "changed=no" >> "$GITHUB_OUTPUT"; fi
+      - name: release
+        if: steps.crawl.outputs.changed == 'yes'
+        run: |
+          set -e
+          node crawler/pack-release.js out-release
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "数据（$TAG）" --latest=false $([ "$TAG" = data ] || echo --prerelease) \
+            --notes "由 crawl 工作流生成的已发布数据，每次采集后更新。服务器与自行部署的人用 deploy/pull.sh 拉取。"
+          # 先传数据包、后传 meta：拉取方先看 meta，所以不会读到“meta 已更新、数据包还是旧的”。
+          gh release upload "$TAG" out-release/data.tar.gz --clobber
+          gh release upload "$TAG" out-release/data-meta.json --clobber
+      - name: summary
+        if: always()
+        run: |
+          node - <<'JS'
+          const fs = require('fs'), path = require('path'), out = 'crawler/out';
+          const runs = new Map(); try { for (const l of fs.readFileSync(path.join(out, 'logs/runs.jsonl'), 'utf8').trim().split('\n')) { const r = JSON.parse(l); runs.set(r.key, r); } } catch {}
+          const rows = [];
+          try { for (const f of fs.readdirSync(out).filter(f => f.endsWith('_status.json')).sort()) {
+            const s = JSON.parse(fs.readFileSync(path.join(out, f), 'utf8')); let total = null;
+            try { total = JSON.parse(fs.readFileSync(path.join(out, s.key + '_snapshot.json'), 'utf8')).jobs.length; } catch {}
+            rows.push({ key: s.key, status: s.status, total, seconds: runs.get(s.key)?.seconds ?? null, message: String(s.message || '').slice(0, 100) });
+          } } catch {}
+          const bad = rows.filter(r => !['ready', 'available'].includes(r.status));
+          const md = [`成功 ${rows.length - bad.length} / ${rows.length}；未成功：${bad.map(r => r.key + ':' + r.status).join('、') || '无'}\n`, '| 来源 | 状态 | 岗位数 | 秒 | 说明 |', '|---|---|---|---|---|', ...rows.map(r => `| ${r.key} | ${r.status} | ${r.total ?? ''} | ${r.seconds ?? ''} | ${r.message.replace(/\|/g, '/')} |`)];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md.join('\n') + '\n');
+          JS
+      - name: freshness
+        if: always()
+        # 有来源超过 3 天没成功更新，就让这次运行失败（GitHub 会发邮件），平时个别来源偶发失败不打扰。
+        run: node crawler/check-fresh.js 72

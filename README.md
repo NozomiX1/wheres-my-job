@@ -27,6 +27,8 @@
 2. 采集你要的来源（来源 key 见 `crawler/sites.json`，**只填明确要采的 key**），首次是全量，之后同样命令即增量：`node crawler/update.js vivo baidu stepfun`。
 3. 启动服务并打开 `http://localhost:8000`：`PORT=8000 node server/index.js`。
 
+**不想自己采集**：维护者的 `crawl` 工作流会把最新数据发布到本仓库 Release（标签 `data`）。克隆代码后拉取并启动即可（需要 `curl`、`tar`）：`sh deploy/pull.sh && PORT=8000 node server/index.js`。`deploy/pull.sh` 会校验 sha256 与内容再替换 `data/`，放进 crontab 即可定时更新（`ANDE_RESTART_CMD` 指定替换后的重启命令）。
+
 要长期运行并每天自动更新，用下文「服务器部署」里的 systemd 配置。
 
 ## 本地查看与检查
