@@ -1,8 +1,8 @@
 'use strict';
-// 重试只针对临时性错误：网络错误／超时（fetch 抛错）、HTTP 5xx 和 408，最多再试 2 次（间隔 1 秒、3 秒）。
+// 重试只针对临时性错误：网络错误／超时（fetch 抛错）、HTTP 5xx 和 408，最多再试 2 次（间隔 5 秒、30 秒）。
 // 被官网拒绝（403／412／429 及其它 4xx）、重定向、验证页一律不重试，原样交给调用方，由它立即停止。
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-const DELAYS = [1000, 3000];
+const DELAYS = [5000, 30000];
 const transientStatus = status => status >= 500 || status === 408;
 // fetch 抛的 'fetch failed' 本身没信息，真正原因（连接重置、超时、域名解析失败等）在 error.cause 里。
 const reasonOf = error => { const c = error?.cause, detail = c && (c.code || c.name) ? ' [' + [c.code || c.name, c.message && c.message !== error.message ? c.message : ''].filter(Boolean).join(': ') + ']' : ''; return (error?.message || String(error)) + detail; };

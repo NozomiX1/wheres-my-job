@@ -59,7 +59,8 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 
 ## 重试与问题记录
 
-- `lib/retry.js`：只对临时性错误重试——网络错误／超时、HTTP 5xx、408，每个请求最多再试 2 次（间隔 1 秒、3 秒）；403／412／429 等其它 4xx、重定向、验证页一律不重试。`crawl.js` 通过 `NODE_OPTIONS=--require=lib/retry-preload.js` 给适配器子进程的全局 fetch 加上该重试；飞书的页面内请求直接用 `withRetry`。子进程把 `[retry] ...` 写到 stderr，`crawl.js` 计数。
+- `lib/retry.js`：只对临时性错误重试——网络错误／超时、HTTP 5xx、408，每个请求最多再试 2 次（间隔 5 秒、30 秒）；403／412／429 等其它 4xx、重定向、验证页一律不重试。`crawl.js` 通过 `NODE_OPTIONS=--require=lib/retry-preload.js` 给适配器子进程的全局 fetch 加上该重试；飞书的页面内请求直接用 `withRetry`。子进程把 `[retry] ...` 写到 stderr，`crawl.js` 计数。
+- **补采**（`update.js`，命令行默认开启，`--no-retry` 关闭；库调用默认不补采）：主轮结束后，失败且不是官网拒绝的来源再跑一次（等 5 分钟），仍失败再等 15 分钟补最后一次；每次只重跑还没成功的来源，所有结果仍只发布一次。是否“官网拒绝”看该来源失败输出里有没有 4xx（408 除外）、验证页、`refus`／`blocked` 等字样（`REFUSAL`，宁可多判为拒绝）；拒绝当天不补采，次日定时任务照常再试。`runs.jsonl` 每次尝试一行（带 `attempt`，拒绝的带 `refused`），`last-run.json` 另有 `recovered`（补采救回）和 `refused`。
 - 记录：采集失败，或成功但有重试、坏记录、total 不符、详情没取全时，`crawl.js` 追加一行 JSON 到 `<outDir>/crawl-issues.jsonl`（`at,key,outcome,error|issues,retries`；`outcome` 为 ready-with-issues／failed／unverified），并写入 `<key>_status.json` 的 `issues` 与 `message`。干净的成功不记录。
 
 ## 检查

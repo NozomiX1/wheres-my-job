@@ -594,3 +594,37 @@ test('old portals declare their own "has detail" marker (their jdComplete is alw
   assert.equal(huawei.hasDetail(job({ channels: ['campus'], description: '意向' })), true);
   assert.equal(huawei.hasDetail(job({ requirements: '要求' })), true); // 社招：详情与列表同文，有要求即可
 });
+
+test('retry passes: only failed non-refusal sources are re-crawled, after the configured waits, then one publish', async t => {
+  const f = fixture(t), calls = [], waits = [], published = [];
+  const tries = { a: 0, b: 0 };
+  const result = await runUpdate(['a', 'b'], {
+    ...f, retryDelays: [111, 222], sleep: async ms => { waits.push(ms); },
+    runner: (_command, args) => { const key = args[1]; calls.push(key); tries[key]++; return { status: key === 'a' && tries.a >= 2 ? 0 : 1 }; }, // a 第 2 次成功，b 一直失败
+    publisher: options => { published.push(options.failedKeys); return { code: 0, written: false, updated: [] }; }
+  });
+  assert.deepEqual(calls, ['a', 'b', 'a', 'b', 'b']); // 主轮 a b；补采 1：a b；补采 2：只剩 b
+  assert.deepEqual(waits, [111, 222]);
+  assert.deepEqual(published, [['b']]); // 只发布一次，最终失败的才算失败
+  assert.equal(result.code, 1);
+});
+
+test('retry passes: a refusal is never retried the same day; success on the first pass ends retries early', async t => {
+  const f = fixture(t), calls = [], waits = [];
+  await runUpdate(['a', 'b'], {
+    ...f, retryDelays: [1, 1], sleep: async ms => { waits.push(ms); },
+    runner: async (_command, args, { onLine }) => { calls.push(args[1]); if (args[1] === 'a') onLine('[a] Official list HTTP 429'); else onLine('[b] Chrome protocol timeout: Runtime.evaluate'); return { status: 1 }; },
+    publisher: () => ({ code: 0, written: false, updated: [] })
+  });
+  assert.equal(calls.filter(k => k === 'a').length, 1, 'refusal: one attempt only');
+  assert.equal(calls.filter(k => k === 'b').length, 3, 'timeout: 1 + 2 retries');
+  const quick = [];
+  await runUpdate(['a'], { ...f, retryDelays: [1, 1], sleep: async ms => quick.push(ms), runner: (() => { let n = 0; return () => ({ status: n++ ? 0 : 1 }); })(), publisher: () => ({ code: 0, written: false, updated: [] }) });
+  assert.deepEqual(quick, [1], 'no second wait once everything recovered');
+});
+
+test('refusal detection: 4xx (except 408), verification pages and explicit refusals; timeouts and 5xx are not refusals', () => {
+  const { REFUSAL } = require('../crawler/update');
+  for (const text of ['native HTTP 403', 'list HTTP 429', 'status: 412', 'Official page blocked or requires verification; stopped', 'Tencent Workday: detail HTTP refusal', '官网拒绝']) assert.match(text, REFUSAL, text);
+  for (const text of ['list HTTP 503', 'HTTP 408', 'Chrome protocol timeout: Runtime.evaluate', 'fetch failed [ETIMEDOUT]', 'Official normal successful list request/scope was not observed', 'Adapter did not write new raw data', '已更新：403 个岗位', 'Feishu: page 403']) assert.doesNotMatch(text, REFUSAL, text);
+});

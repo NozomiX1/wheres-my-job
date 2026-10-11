@@ -9,7 +9,7 @@ const nosleep = async () => {};
 test('retry: transient errors and 5xx/408 are retried at most twice; refusals and other 4xx are returned at once', async () => {
   let calls = 0; const waits = [], notes = [];
   const flaky = await withRetry(async () => { calls++; if (calls < 3) throw new Error('fetch failed'); return { status: 200 }; }, { sleepImpl: async ms => waits.push(ms), onRetry: (n, why) => notes.push([n, why]) });
-  a.equal(flaky.status, 200); a.equal(calls, 3); a.deepEqual(waits, [1000, 3000]); a.deepEqual(notes, [[1, 'fetch failed'], [2, 'fetch failed']]);
+  a.equal(flaky.status, 200); a.equal(calls, 3); a.deepEqual(waits, [5000, 30000]); a.deepEqual(notes, [[1, 'fetch failed'], [2, 'fetch failed']]);
   calls = 0; await a.rejects(withRetry(async () => { calls++; throw new Error('boom'); }, { sleepImpl: nosleep }), /boom/); a.equal(calls, 3); // 共 3 次尝试
   for (const status of [500, 503, 408]) { calls = 0; const r = await withRetry(async () => { calls++; return { status }; }, { sleepImpl: nosleep }); a.equal(calls, 3, 'HTTP ' + status); a.equal(r.status, status); }
   for (const status of [403, 412, 429, 404, 302, 200]) { calls = 0; const r = await withRetry(async () => { calls++; return { status }; }, { sleepImpl: nosleep }); a.equal(calls, 1, 'HTTP ' + status + ' is never retried'); a.equal(r.status, status); }
