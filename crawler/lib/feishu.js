@@ -152,6 +152,14 @@ class CDP {
   close() { this.ws.close(); }
 }
 
+// 拒绝页（验证码、登录墙）正文很短；列表页右侧会直接显示第一个岗位的 JD，JD 里可能碰巧写着“访问异常”“安全验证”，所以只在正文短时才按用语判断。
+const BLOCK_TEXT = /访问异常|verify you are human|403 Forbidden|请完成验证|安全验证|滑块验证|登录后查看|请先登录|请登录后/i;
+function blockedReason(visible, origin) {
+  if (new URL(visible.url).origin !== origin) return '页面跳转到 ' + new URL(visible.url).origin;
+  const match = visible.text.length < 600 && visible.text.match(BLOCK_TEXT);
+  return match ? '页面文字含「' + match[0] + '」' : '';
+}
+
 async function fetchWithChrome(site, options = {}) {
   if (!verifiedSource(site)) throw new Error('Feishu source has not been individually verified');
   const candidates = process.platform === 'darwin' ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'] : process.platform === 'win32' ? ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'] : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
@@ -220,7 +228,8 @@ async function fetchWithChrome(site, options = {}) {
       if (normalError) throw normalError;
       if (!headers || !complete()) throw new Error('Official normal successful list request/scope was not observed');
       const visible = await page.evaluate('({url:location.href,text:document.body.innerText})');
-      if (new URL(visible.url).origin !== origin || /访问异常|verify you are human|403 Forbidden|请完成验证|安全验证|滑块验证|登录后查看|请先登录|请登录后/i.test(visible.text)) throw new Error('Official page blocked or requires verification; stopped');
+      const reason = blockedReason(visible, origin);
+      if (reason) throw new Error('Official page blocked or requires verification; stopped（' + reason + '）');
       validateInitialResponses([...normalRequests.values()]);
       if (normalError) throw normalError;
       capturing = false;
@@ -262,5 +271,5 @@ async function run(args, options = {}) {
   return result;
 }
 
-module.exports = { CDP, requiresVerification, verifiedSource, portalNotice, CLASSIFIED_NOTICE, requestBody, validateInitialResponses, extractPage, normalizePost, normalizeRecord, validateJobs, validateEvidence, fetchAll, fetchPortals, fetchClassified, fetchWithChrome, run };
+module.exports = { blockedReason, CDP, requiresVerification, verifiedSource, portalNotice, CLASSIFIED_NOTICE, requestBody, validateInitialResponses, extractPage, normalizePost, normalizeRecord, validateJobs, validateEvidence, fetchAll, fetchPortals, fetchClassified, fetchWithChrome, run };
 if (require.main === module) run(process.argv.slice(2), { log: console.log }).then(result => console.log('Feishu source fetched: ' + result.total)).catch(error => { console.error('ERR ' + error.message); process.exitCode = 1; });

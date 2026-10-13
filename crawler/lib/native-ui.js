@@ -12,6 +12,7 @@ const SELECTORS = {
   baichuan: '.atsx-pagination-next:not(.atsx-pagination-disabled)',
   kuaishou_social: '.social-index-table .ant-pagination-next:not(.ant-pagination-disabled)'
 };
+// 拒绝页（验证码、登录墙）正文很短；正常页面里的 JD 可能碰巧含“访问异常”等用语，所以只在正文短时才按用语判断（见 feishu.js blockedReason）。
 const BLOCKED = /访问被拒绝|访问异常|403 Forbidden|verify you are human|请完成.{0,12}验证|安全验证|滑块验证|拖动.{0,12}滑块|登录后查看|请先登录|请登录后|需要登录|必须登录|please (?:sign|log) in|captcha/i;
 class NativeUIError extends Error { constructor(message) { super('Native UI: ' + message); } }
 const check = (ok, message) => { if (!ok) throw new NativeUIError(message); };
@@ -188,7 +189,7 @@ async function collect(site, { open = openChrome, maxPages = 200, now = Date.now
       } catch (error) { fail(error instanceof NativeUIError ? error.message.slice('Native UI: '.length) + '; stopped' : 'necessary response body/business/shape failure; stopped'); }
     }).catch(() => fail('response capture queue failed; stopped'));
   }
-  const domExpression = click => `(()=>{const text=document.title+'\\n'+(document.body?.innerText||''),blocked=${BLOCKED}.test(text);if(location.origin!==${JSON.stringify(origin)})return 'origin';if(blocked)return 'blocked';${click ? `const e=document.querySelector(${JSON.stringify(SELECTORS[site.key])});if(!e||e.disabled||e.getAttribute('aria-disabled')==='true'||!e.getClientRects().length)return 'missing';e.click();` : ''}return 'ok';})()`;
+  const domExpression = click => `(()=>{const text=document.title+'\\n'+(document.body?.innerText||''),blocked=text.length<600&&${BLOCKED}.test(text);if(location.origin!==${JSON.stringify(origin)})return 'origin';if(blocked)return 'blocked';${click ? `const e=document.querySelector(${JSON.stringify(SELECTORS[site.key])});if(!e||e.disabled||e.getAttribute('aria-disabled')==='true'||!e.getClientRects().length)return 'missing';e.click();` : ''}return 'ok';})()`;
   try {
     session = await operate(() => open()); page = session.page;
     process.once('SIGTERM', interrupt); process.once('SIGINT', interrupt);

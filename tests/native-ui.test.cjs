@@ -249,6 +249,9 @@ test('ordinary 登录 is not refusal; origin changes, visible captcha or require
     const f = fake(bai, { text }), r = await ui.collect(bai, f.options);
     a.equal(r.pages.length, 1); a.equal(f.clicks.length, 0); a.match(r.issues.join(';'), /blocked/); secretsAbsent(r);
   }
+  // 正常页面正文很长，JD 里碰巧写着“访问异常”不算拒绝（只在正文短时才按用语判断）。
+  const g = fake(bai, { text: '负责登录风险发现、访问异常监控。' + '。'.repeat(600) }); await ui.collect(bai, g.options);
+  a.equal(g.clicks.length > 0, true);
   const f = fake(bai); f.onSleep = ms => { if (ms >= 100) f.origin = 'https://secret.invalid'; };
   const r = await ui.collect(bai, f.options); a.equal(r.pages.length, 1); a.equal(f.clicks.length, 0); a.match(r.issues.join(';'), /redirected/); secretsAbsent(r);
 });

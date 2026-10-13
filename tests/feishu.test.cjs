@@ -86,3 +86,10 @@ test('real chain: injected run → crawl snapshot → publisher', async t => {
   a.equal(published.written, true);
   a.deepEqual(readPublished(dataFile).jobs.map(j => j.id), ['sensetime:1', 'sensetime:2']);
 });
+
+test('拒绝页判断：短正文含拒绝用语或跳到别的站点才算拒绝；列表页里的 JD 碰巧含“访问异常”不算', () => {
+  const o = 'https://jobs.bytedance.com', jd = '负责堡垒机登录体系的安全运营，包括登录风险发现、访问异常监控、应急响应' + '。'.repeat(600);
+  a.equal(feishu.blockedReason({ url: o + '/x', text: jd }, o), '');
+  a.match(feishu.blockedReason({ url: o + '/x', text: '访问异常，请稍后再试' }, o), /访问异常/);
+  a.match(feishu.blockedReason({ url: 'https://login.example.com/', text: '正常' }, o), /跳转到/);
+});
