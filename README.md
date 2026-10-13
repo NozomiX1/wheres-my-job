@@ -5,7 +5,7 @@
 
 免费、源码公开的公司官网岗位收集器，面向所有职业。按自己的关键词排序，查看招聘方提供的完整JD，再前往官网申请；不替用户判断岗位质量或录取概率。
 
-[GitHub](https://github.com/NozomiX1/wheres-my-job)（在线服务内测中，GitHub Pages 静态版已下线；可按下文自行部署）
+**在线使用：[wheresjob.cn](https://wheresjob.cn)**　·　[GitHub](https://github.com/NozomiX1/wheres-my-job)（源码；也可按下文自行部署）
 
 ## 使用
 
