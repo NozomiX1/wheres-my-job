@@ -6,6 +6,7 @@ on:
   schedule:
     - cron: '30 22 * * *' # 北京时间每天 06:30，增量
     - cron: '0 19 * * 6'  # 北京时间周日 03:00，全量
+    - cron: '0 8 * * *'   # 北京时间每天 16:00，补采：只重跑超过 12 小时没成功更新、且不是被官网拒绝的来源（换一台新的运行器）
   workflow_dispatch:
     inputs:
       keys: { description: '来源 key，空格分隔；留空为全部', required: false, default: '' }
@@ -47,6 +48,10 @@ jobs:
           SCHEDULE: ${{ github.event.schedule }}
         run: |
           before=$(sha256sum data/catalog.js 2>/dev/null | cut -d' ' -f1 || true)
+          if [ "$SCHEDULE" = "0 8 * * *" ]; then
+            KEYS=$(node crawler/check-fresh.js --retry 12); echo "补采来源：${KEYS:-无}"
+            if [ -z "$KEYS" ]; then echo "changed=no" >> "$GITHUB_OUTPUT"; exit 0; fi
+          fi
           flags=""; if [ "$FULL" = "true" ] || [ "$SCHEDULE" = "0 19 * * 6" ]; then flags="--full"; fi
           set +e; node crawler/update.js $flags $KEYS; echo "update 退出码 $?"; set -e # 个别来源失败不阻止已成功的数据上传
           after=$(sha256sum data/catalog.js 2>/dev/null | cut -d' ' -f1 || true)
@@ -79,5 +84,5 @@ jobs:
           JS
       - name: freshness
         if: always()
-        # 有来源超过 3 天没成功更新，就让这次运行失败（GitHub 会发邮件），平时个别来源偶发失败不打扰。
-        run: node crawler/check-fresh.js 72
+        # 有来源超过 36 小时没成功更新（早上、下午的补采都没救回来），就让这次运行失败（GitHub 会发邮件），平时个别来源偶发失败不打扰。
+        run: node crawler/check-fresh.js 36

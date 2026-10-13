@@ -3,7 +3,7 @@
 const test = require('node:test'), a = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), http = require('node:http');
 const { execFile } = require('node:child_process');
 const { pack } = require('../crawler/pack-release');
-const { stale } = require('../crawler/check-fresh');
+const { stale, retryable } = require('../crawler/check-fresh');
 const { readPublished } = require('../crawler/publish');
 
 const fixture = path.join(__dirname, 'fixtures', 'data'), repo = path.join(__dirname, '..');
@@ -25,6 +25,12 @@ test('pack: archive + meta with matching sha256, job and source counts', t => {
 test('stale: sources never or long ago updated are listed', () => {
   const now = Date.parse('2026-10-11T00:00:00Z'), h = n => new Date(now - n * 3600000).toISOString();
   a.deepEqual(stale([{ key: 'a', lastSuccess: h(1) }, { key: 'b', lastSuccess: h(80) }, { key: 'c' }], 72, now), ['b', 'c']);
+});
+
+test('retryable: stale and not refused; fresh or refused sources are skipped', () => {
+  const now = Date.parse('2026-01-02T00:00:00Z'), h = n => new Date(now - n * 3600000).toISOString();
+  const sources = [{ key: 'ok', lastSuccess: h(1), message: '' }, { key: 'net', lastSuccess: h(30), message: 'Adapter failed' }, { key: 'ban', lastSuccess: h(30), message: '官网拒绝；Adapter failed' }, { key: 'new', message: '' }];
+  a.deepEqual(retryable(sources, 12, now), ['net', 'new']);
 });
 
 test('validate-data refuses a dataset that is too small against the current one', async () => {

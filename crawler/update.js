@@ -91,7 +91,7 @@ async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixe
   if (recovered.length) say('recovered by retry: ' + recovered.join(','));
   // Even after a partial failure, publish the verified sources and preserve the others.
   let publication;
-  try { publication = publisher({ sites, keys: selected, failedKeys: attempts.filter(attempt => attempt.code).map(attempt => attempt.key), outDir, dataFile }); }
+  try { publication = publisher({ sites, keys: selected, failedKeys: attempts.filter(attempt => attempt.code).map(attempt => attempt.key), refusedKeys, outDir, dataFile }); }
   catch (error) { publication = { code: 1, written: false, updated: [], errors: [error.message] }; }
   const code = attempts.some(attempt => attempt.code) || publication.code ? 1 : 0;
   say('update done: ok=' + attempts.filter(a => !a.code).length + ' failed=' + attempts.filter(a => a.code).map(a => a.key).join(',') + ' published=' + (publication.updated || []).length + (publication.errors?.length ? ' publish-errors=' + publication.errors.join(' | ') : ''));

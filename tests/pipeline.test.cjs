@@ -8,7 +8,8 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { runCrawl, validateEnvelope } = require('../crawler/crawl');
-const { publish, normalizeJobs, coverageFor, readPublished, loadSites } = require('../crawler/publish');
+const { publish, normalizeJobs, coverageFor, readPublished, loadSites, REFUSED_MARK } = require('../crawler/publish');
+const { retryable } = require('../crawler/check-fresh');
 const { runUpdate } = require('../crawler/update');
 const moka = require('../crawler/lib/moka');
 const A = { key: 'a', company: 'Alpha', ats: 'moka', orgId: 'official', siteId: 123, site: 'campus', batch: '指定批次' };
@@ -607,6 +608,19 @@ test('retry passes: only failed non-refusal sources are re-crawled, after the co
   assert.deepEqual(waits, [111, 222]);
   assert.deepEqual(published, [['b']]); // 只发布一次，最终失败的才算失败
   assert.equal(result.code, 1);
+});
+
+test('refused sources: publish marks the stored message so the afternoon retry can skip them; update.js passes refusedKeys', async t => {
+  const f = fixture(t);
+  assert.equal(crawl(A, f, [rawJob('old')]).code, 0);
+  assert.equal(crawl(B, f, [], T3).code, 1); // B 采集失败
+  assert.equal(publish({ ...f, keys: ['a', 'b'], failedKeys: ['b'], refusedKeys: ['b'] }).code, 1);
+  const message = readPublished(f.dataFile).sources.find(s => s.key === 'b').message;
+  assert.ok(message.startsWith(REFUSED_MARK), message);
+  assert.deepEqual(retryable(readPublished(f.dataFile).sources, 0), ['a']); // 阈值 0：a 过时且可补采；b 被拒绝，跳过
+  const seen = [];
+  await runUpdate(['a', 'b'], { ...f, runner: async (_c, args, { onLine }) => { if (args[1] === 'b') onLine('[b] Official list HTTP 429'); return { status: args[1] === 'b' ? 1 : 0 }; }, publisher: options => { seen.push(options.refusedKeys); return { code: 0, written: false, updated: [] }; } });
+  assert.deepEqual(seen, [['b']]);
 });
 
 test('retry passes: a refusal is never retried the same day; success on the first pass ends retries early', async t => {

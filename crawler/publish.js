@@ -325,7 +325,10 @@ function validateSnapshot(snapshot, status, site) {
   return normalizeJobs(snapshot.jobs, site, { detailIds: validation?.detailIds });
 }
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [], acceptShrink = [] } = {}) {
+// 官网拒绝的来源在 message 前加这个标记，下午补采据此跳过（见 check-fresh.js）。
+const REFUSED_MARK = '官网拒绝；';
+
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [], refusedKeys = [], acceptShrink = [] } = {}) {
   const baseline = readPublished(dataFile);
   if (typeof reproject !== 'boolean' || reproject && !keys.length) throw new Error('Reprojection requires explicit source keys');
   const selected = new Set(keys);
@@ -381,7 +384,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         status: validStatus ? status.status : failed.has(site.key) ? 'failed' : status ? 'unverified' : 'unavailable',
         lastSuccess: previous?.lastSuccess ?? null,
         lastAttempt: status?.key === site.key && validTimestamp(status.lastAttempt) ? status.lastAttempt : previous?.lastAttempt ?? null,
-        message: validStatus && typeof status.message === 'string' ? status.message : error.message,
+        message: (refusedKeys.includes(site.key) ? REFUSED_MARK : '') + (validStatus && typeof status.message === 'string' ? status.message : error.message),
         coverage: previous?.coverage ?? null
       });
     }
@@ -418,7 +421,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], errors, data };
 }
 
-module.exports = { knownIds, loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, writeBrowserData, validateSnapshot, publish };
+module.exports = { knownIds, loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, writeBrowserData, validateSnapshot, publish, REFUSED_MARK };
 if (require.main === module) {
   try {
     const keys = process.argv.slice(2);
