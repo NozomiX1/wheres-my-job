@@ -56,6 +56,8 @@ node crawler/update.js stepfun stepfun_social
 
 **线上的做法**（普通用户、不需要 root）：代码克隆在 `~/ande`，服务只监听本机回环地址，前面由 Caddy 之类反向代理出 HTTPS；crontab 每分钟检查服务是否在跑、开机启动，并每 10 分钟运行 `deploy/pull.sh` 拉取新数据。更新代码：`ssh <主机> 'ANDE_RESTART_CMD=<重启命令> ~/ande/deploy/update.sh'`。限流按 `X-Forwarded-For`（仅信任来自本机反向代理的连接）。
 
+**访问统计与隐私**：设置环境变量 `ANDE_ACCESS_LOG=<文件>` 后，服务会记录每次打开页面、搜索、看详情的「时间、IP、一个随机生成的浏览器编号、是否像爬虫」，**不记录搜索词**；文件只有本人可读，超过 30 天的记录自动删除。浏览器编号是页面第一次打开时在本机随机生成、存在 `localStorage` 的字符串，不含个人信息，清除站点数据即重置。看统计：`node deploy/access-stats.js [日志文件] [--days N] [--ips]`（`ANDE_EXCLUDE_IPS=ip1,ip2` 可排除自己）。IP 和浏览器编号都只是近似的「人数」：共用出口会少算，换网络或清数据会多算。运营公开站点时请在隐私说明里如实写明这一条。
+
 **root＋systemd，并且自己采集**（可选，不是线上用的）：
 
 `deploy/` 里的 `ande-*.service`／`*.timer`、`install.sh`、`deploy.sh`、`crawl.sh`、`reload.sh` 是在 Ubuntu 服务器上常驻运行的配置（systemd）：`ande-server.service` 常驻搜索服务；`ande-crawl.timer` 每天 06:30 增量采集，`ande-crawl-full.timer` 每周日 03:00 全量重取详情，采集结束后若数据有更新就自动重启服务加载（`deploy/reload.sh`；失败的来源保留上次数据，整轮没发布则不重启）；采集前会备份 `data/`（保留 7 份）。首次在服务器上运行 `deploy/install.sh`（建 `ande` 用户、安装并启用单元），之后在本机用 `deploy/deploy.sh [ssh别名]` 同步代码并重启服务。采集并发默认 4，服务器上设为 2（`ANDE_CONCURRENCY`）以适应 1.6G 内存。查看状态：`/api/health`（数据更新时间、最近一次采集结果）、`journalctl -u ande-server`、`crawler/out/logs/`。

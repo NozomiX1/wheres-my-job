@@ -11,6 +11,7 @@ const vm = require('node:vm');
 const createRank = require('../assets/rank.js');
 const { cityKeys } = require('../assets/cities.js');
 const { createIndex } = require('./search');
+const { createAccessLog } = require('./access');
 
 const ROOT = path.join(__dirname, '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -74,9 +75,12 @@ function exampleTerms() {
   return [...(sandbox.ANDE_EXAMPLES?.keywords || []), ...(sandbox.ANDE_EXAMPLES?.downrank || [])];
 }
 
-function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'data', 'catalog.js'), log = () => {}, reloadMs = 30000, warm = true } = {}) {
+function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'data', 'catalog.js'), log = () => {}, reloadMs = 30000, warm = true, accessLog = process.env.ANDE_ACCESS_LOG || '' } = {}) {
   if (!fs.existsSync(dataFile)) throw new Error('找不到数据文件 ' + dataFile + '。请先采集生成数据（node crawler/update.js <来源key>，见 README），再启动服务。');
   let state = load(dataFile);
+  const access = createAccessLog(accessLog);
+  access.prune();
+  const pruneTimer = setInterval(access.prune, 864e5); pruneTimer.unref();
   const warmUp = () => { if (warm) { const started = Date.now(), current = state; current.index.warm(exampleTerms()).then(() => log('warmed', current.index.size(), 'terms in', Date.now() - started, 'ms')).catch(error => log('warm failed:', error.message)); } };
   warmUp();
   const files = new Map(), hits = new Map();
@@ -122,6 +126,8 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
     const started = Date.now();
     try {
       const url = new URL(req.url, 'http://localhost'), ip = clientIp(req);
+      const event = req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html') ? 'page' : req.method === 'POST' && url.pathname === '/api/search' ? 'search' : req.method === 'GET' && url.pathname.startsWith('/api/job/') ? 'job' : '';
+      if (event) access.record(event, req, ip);
       if (url.pathname.startsWith('/api/')) {
         if (limited(ip)) throw new HttpError(429, '请求过于频繁，请稍后再试');
         if (req.method === 'POST' && url.pathname === '/api/search') {

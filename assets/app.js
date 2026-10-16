@@ -222,8 +222,16 @@ function render(){
   updateFormStatus();
 }
 const PAGE_SIZE=50;
-async function fetchJSON(url,options){
-  const response=await fetch(url,options).catch(()=>{throw new Error('无法连接服务器。');});
+// 随机浏览器编号：只在本机生成并随请求发给服务器，用来统计「独立浏览器」数；不含任何个人信息，清除站点数据即重置。
+let visitor;
+function visitorId(){
+  if(visitor!==undefined)return visitor;
+  try{visitor=localStorage.getItem('ande.visitor.v1');if(!visitor){visitor=globalThis.crypto?.randomUUID?.()||Array.from({length:4},()=>Math.random().toString(16).slice(2,10)).join('-');localStorage.setItem('ande.visitor.v1',visitor);}}
+  catch{visitor='';}
+  return visitor;
+}
+async function fetchJSON(url,options={}){
+  const response=await fetch(url,{...options,headers:{...options.headers,...(visitorId()?{'X-Visitor-Id':visitorId()}:{})}}).catch(()=>{throw new Error('无法连接服务器。');});
   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||'服务暂不可用（HTTP '+response.status+'）。');}
   return response.json();
 }
