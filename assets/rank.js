@@ -5,6 +5,7 @@
   if (typeof module === 'object' && module.exports) module.exports = factory;
   else root.ANDE_RANK = factory;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createRank(DATA) {
+  const { cityKeys } = typeof module === 'object' && module.exports ? require('./cities.js') : globalThis.ANDE_CITIES;
   // Display units only: keep source identity, raw company and all job facts untouched.
   const ALIBABA_UNITS = ['阿里巴巴控股'];
   const UNIT_ALIASES = { '阿里巴巴控股集团': '阿里巴巴控股', '阿里国际数字商业集团': '阿里国际' };
@@ -45,6 +46,13 @@
     if (type === 'talent') return job.talentPlan !== false;
     return false;
   }
+  // 工作地点：没选城市 = 不限；选了则岗位城市与所选有交集才通过。认不出城市的岗位（空值、只有省名）按 unknown 决定去留。
+  // 服务端可预先把城市集合放进 job.__cities。
+  function selectsCity(job, cities, unknown = true) {
+    if (!cities?.size) return true;
+    const keys = job.__cities ?? cityKeys(job.city);
+    return keys.length ? keys.some(city => cities.has(city)) : unknown;
+  }
   function reliableDate(job) {
     const d = job.date;
     return ['published', 'updated'].includes(job.dateKind) && /^\d{4}-\d{2}-\d{2}$/.test(d || '') && !Number.isNaN(Date.parse(d)) && new Date(d).toISOString().slice(0, 10) === d ? d : '';
@@ -54,8 +62,8 @@
   const collator = new Intl.Collator('zh'), dateOf = job => job.__date ?? reliableDate(job), unitOf = job => job.__unit ?? unitName(job);
   const compare = (a, b) => b.value - a.value || dateOf(b.job).localeCompare(dateOf(a.job)) || collator.compare(unitOf(a.job), unitOf(b.job)) || a.job.id.localeCompare(b.job.id);
   const selects = (job, selected) => !selected.size || unitNames(job).some(name => selected.has(name));
-  // 范围（所选单位、招聘类型）内逐岗打分并排序；服务端 /api/search 与测试共用。
-  const collect = (jobs, query, selected) => jobs.filter(j => selects(j, selected) && matchesRecruitment(j, query.recruitment || 'all')).map(j => score(j, query)).sort(compare);
+  // 范围（所选单位、招聘类型、工作地点）内逐岗打分并排序；服务端 /api/search 与测试共用。
+  const collect = (jobs, query, selected) => jobs.filter(j => selects(j, selected) && matchesRecruitment(j, query.recruitment || 'all') && selectsCity(j, query.cities, query.unknown !== false)).map(j => score(j, query)).sort(compare);
 
-  return { ALIBABA_UNITS, UNIT_ALIASES, unitNames, unitName, matchFields, hitText, score, matchesRecruitment, reliableDate, compare, selects, collect };
+  return { ALIBABA_UNITS, UNIT_ALIASES, unitNames, unitName, matchFields, hitText, score, matchesRecruitment, selectsCity, reliableDate, compare, selects, collect };
 });

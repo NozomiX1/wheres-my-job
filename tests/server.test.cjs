@@ -28,7 +28,7 @@ test('selected units and recruitment scope filter the result set', async () => {
 });
 
 test('invalid input is rejected with 4xx, never 500', async () => {
-  for (const body of [{ words: 'x' }, { words: [''] }, { words: ['a'.repeat(LIMITS.wordLength + 1)] }, { words: Array(LIMITS.words + 1).fill('a') }, { limit: LIMITS.page + 1 }, { limit: 0 }, { offset: -1 }, { recruitment: 'x' }, { selected: [1] }, []])
+  for (const body of [{ words: 'x' }, { words: [''] }, { words: ['a'.repeat(LIMITS.wordLength + 1)] }, { words: Array(LIMITS.words + 1).fill('a') }, { limit: LIMITS.page + 1 }, { limit: 0 }, { offset: -1 }, { recruitment: 'x' }, { selected: [1] }, { cities: '北京' }, { cities: [1] }, { cities: Array(LIMITS.cities + 1).fill('北京') }, { unknown: 'no' }, []])
     a.equal((await post(body)).status, 400, JSON.stringify(body).slice(0, 40));
   a.equal((await post(null, '{not json')).status, 400);
   a.equal((await post(null, JSON.stringify({ words: ['a'.repeat(LIMITS.body)] }))).status, 413);
@@ -67,9 +67,10 @@ test('per-IP rate limit answers 429 and the service survives', async () => {
 test('the cached index ranks exactly like the reference rank.collect: order, values, hit words, counts, deep pages', async () => {
   const { jobs, rank } = app.state();
   const queries = [{ words: ['算法', 'python', '大模型'], lowered: ['销售'] }, { words: ['Agent', 'C++', '实习'] }, { lowered: ['测试'] }, { words: ['算法', '算法'], lowered: ['算法'] },
-    { words: ['财务'], selected: ['字节跳动'], recruitment: 'campus' }, { words: ['  前端'], lowered: ['后端 '] }, {}];
+    { words: ['财务'], selected: ['字节跳动'], recruitment: 'campus' }, { words: ['  前端'], lowered: ['后端 '] }, {},
+    { cities: ['北京'] }, { words: ['算法'], cities: ['北京', '上海'], unknown: false }, { cities: ['不存在的城市'] }, { cities: ['杭州'], unknown: false, recruitment: 'campus', selected: ['字节跳动'] }];
   for (const q of queries) {
-    const query = { words: [], lowered: [], selected: [], recruitment: 'all', ...q }, ref = rank.collect(jobs, query, new Set(query.selected));
+    const query = { words: [], lowered: [], selected: [], recruitment: 'all', cities: [], ...q }, ref = rank.collect(jobs, { ...query, cities: new Set(query.cities) }, new Set(query.selected));
     for (const offset of [0, 1500]) {
       const got = await (await post({ ...query, offset, limit: 100 })).json();
       a.equal(got.total, ref.length); a.equal(got.matched, ref.filter(r => r.matched.length).length); a.equal(got.penalized, ref.filter(r => r.downranked.length).length);

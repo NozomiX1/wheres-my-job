@@ -9,11 +9,12 @@ const zlib = require('node:zlib');
 const { readPublished } = require('../crawler/publish');
 const vm = require('node:vm');
 const createRank = require('../assets/rank.js');
+const { cityKeys } = require('../assets/cities.js');
 const { createIndex } = require('./search');
 
 const ROOT = path.join(__dirname, '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
-const LIMITS = { body: 65536, words: 300, wordLength: 100, selected: 1000, page: 100, offset: 200000, requests: 120, windowMs: 10000 };
+const LIMITS = { body: 65536, words: 300, wordLength: 100, selected: 1000, cities: 200, page: 100, offset: 200000, requests: 120, windowMs: 10000 };
 const RECRUITMENT = new Set(['all', 'social', 'campus', 'internship', 'talent']);
 
 // 放在反向代理（Caddy）后面时，直连地址永远是本机；只有连接来自本机才信任 X-Forwarded-For，并取最后一项（最靠近我们的那个代理写入的），
@@ -33,6 +34,7 @@ function load(dataFile) {
     Object.defineProperty(job, '__lc', { value: [job.title || '', job.duty || job.description || '', job.requirements || ''].map(text => text.toLowerCase()), enumerable: false });
     Object.defineProperty(job, '__date', { value: rank.reliableDate(job), enumerable: false });
     Object.defineProperty(job, '__unit', { value: rank.unitName(job), enumerable: false });
+    Object.defineProperty(job, '__cities', { value: cityKeys(job.city), enumerable: false });
     byId.set(job.id, job);
   }
   const updated = data.sources.map(s => s.lastSuccess).filter(Boolean).sort().at(-1) ?? null; // 各来源最近成功时间里最新的
@@ -49,8 +51,10 @@ function parseQuery(body) {
   const selected = body.selected ?? [], recruitment = body.recruitment ?? 'all', offset = body.offset ?? 0, limit = body.limit ?? 50;
   if (!Array.isArray(selected) || selected.length > LIMITS.selected || selected.some(n => typeof n !== 'string')) throw new HttpError(400, 'selected 无效');
   if (!RECRUITMENT.has(recruitment)) throw new HttpError(400, 'recruitment 无效');
+  const cities = body.cities ?? [], unknown = body.unknown ?? true;
+  if (!Array.isArray(cities) || cities.length > LIMITS.cities || cities.some(c => typeof c !== 'string' || c.length > LIMITS.wordLength) || typeof unknown !== 'boolean') throw new HttpError(400, 'cities 或 unknown 无效');
   if (!Number.isInteger(offset) || offset < 0 || offset > LIMITS.offset || !Number.isInteger(limit) || limit < 1 || limit > LIMITS.page) throw new HttpError(400, '分页参数无效');
-  return { words: list(body.words, 'words'), lowered: list(body.lowered, 'lowered'), selected: new Set(selected), recruitment, offset, limit };
+  return { words: list(body.words, 'words'), lowered: list(body.lowered, 'lowered'), selected: new Set(selected), recruitment, cities: new Set(cities), unknown, offset, limit };
 }
 
 function search(state, body) {

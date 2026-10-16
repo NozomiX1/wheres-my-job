@@ -8,7 +8,7 @@ function fixture(){
  // 每次 fetch 登记为待决请求，测试里用 reply/fail 决定结果。
  const fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({url,body:options?.body?JSON.parse(options.body):null,reply:(body,status=200)=>resolve({ok:status<400,status,json:async()=>body}),fail:()=>reject(new TypeError('x'))}));
  const ctx=vm.createContext({URL,fetch,ANDE_DATA:data,ANDE_EXAMPLES:{keywords:[],downrank:[]},document:{addEventListener(){},querySelectorAll(){return []},querySelector:element,getElementById:element},window:{scrollTo(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}}});
- vm.runInContext(fs.readFileSync(require.resolve('../assets/rank.js'),'utf8'),ctx);vm.runInContext(script+'\nglobalThis.api={state,search,loadMore,showJob,clearSettings,render,jobCache,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
+ vm.runInContext(fs.readFileSync(require.resolve('../assets/cities.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(require.resolve('../assets/rank.js'),'utf8'),ctx);vm.runInContext(script+'\nglobalThis.api={state,search,loadMore,showJob,clearSettings,render,jobCache,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
 }
 const item=(id,extra={})=>({id,sourceKey:'a',company:'甲',title:'岗位'+id,category:'',city:'',channels:['social'],employment:null,talentPlan:null,date:null,dateKind:null,sourceStatus:null,jdComplete:true,value:0,matched:[],downranked:[],matchedText:[],downrankedText:[],...extra});
 const page=(items,total=items.length)=>({total,matched:0,penalized:0,offset:0,items});
@@ -19,7 +19,7 @@ test('Pending/failed query keeps prior results; only a successful response commi
  const failing=f.api.search(false);assert.strictEqual(f.api.state.active,old);assert.ok(f.api.message.includes('正在查询'));f.requests[0].fail();await failing;
  assert.strictEqual(f.api.state.active,old);assert.strictEqual(f.api.state.results,results);assert.ok(f.api.message.includes('无法连接服务器'));
  const retry=f.api.search(false);f.api.state.keywords=['尚未提交的编辑'];f.api.state.selected.clear();f.api.state.recruitment='campus';
- assert.deepEqual(f.requests[1].body,{words:['财务'],lowered:[],selected:['甲'],recruitment:'all',offset:0,limit:50});
+ assert.deepEqual(f.requests[1].body,{words:['财务'],lowered:[],selected:['甲'],recruitment:'all',cities:[],unknown:true,offset:0,limit:50});
  f.requests[1].reply({total:120,matched:7,penalized:2,offset:0,items:[item('a:1',{value:4.35,matched:['财务'],matchedText:['财务 × 2']})]});await retry;
  assert.deepEqual(Array.from(f.api.state.active.words),['财务']);assert.deepEqual(Array.from(f.api.state.active.selected),['甲']);assert.equal(f.api.state.active.recruitment,'all');
  assert.equal(f.api.state.total,120);assert.equal(f.api.state.matched,7);assert.equal(f.api.state.penalized,2);assert.equal(f.api.state.results.length,1);assert.equal(f.api.message,'');

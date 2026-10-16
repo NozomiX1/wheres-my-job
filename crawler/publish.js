@@ -8,6 +8,7 @@ const { createHash } = require('node:crypto');
 const { normalizeJD } = require('./lib/jd-text');
 const moka = require('./lib/moka');
 const portals = require('./lib/portals');
+const { cityKeys } = require('../assets/cities');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'catalog.js');
 const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
@@ -312,7 +313,16 @@ function writeBrowserData(data, catalogFile, { maxBytes = 1024 * 1024 } = {}) {
     }
     flush();
   }
-  const catalog = { ...data, jobs: [], parts };
+  // 工作地点选项：首屏只加载目录，所以城市及岗位数在这里算好；认不出城市的岗位数单独记（筛选时默认也显示）。
+  const cityCounts = new Map();
+  let cityUnknown = 0;
+  for (const job of data.jobs) {
+    const keys = cityKeys(job.city);
+    if (!keys.length) cityUnknown++;
+    for (const name of keys) cityCounts.set(name, (cityCounts.get(name) || 0) + 1);
+  }
+  const cities = [...cityCounts].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0], 'zh')).map(([name, count]) => ({ name, count }));
+  const catalog = { ...data, jobs: [], parts, cities, cityUnknown };
   atomicWrite(catalogFile, 'globalThis.ANDE_DATA = ' + JSON.stringify(catalog).replace(/</g, '\\u003c') + ';\n');
   // 不保存历史：目录换成新的之后，删除不再被引用的旧分片。
   const live = new Set(parts.map(part => path.basename(part.file)));

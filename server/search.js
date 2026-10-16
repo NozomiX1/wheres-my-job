@@ -21,9 +21,9 @@ function createIndex(jobs, rank, { maxTerms = 1500 } = {}) {
   }
 
   // 返回 { total, matched, penalized, rows:[{job,value,matched,downranked}] }（rows 只含请求的一页）
-  function query({ words = [], lowered = [], selected = new Set(), recruitment = 'all', offset = 0, limit = 50 }) {
+  function query({ words = [], lowered = [], selected = new Set(), recruitment = 'all', cities = new Set(), unknown = true, offset = 0, limit = 50 }) {
     const idx = [];
-    for (let i = 0; i < n; i++) if (rank.selects(jobs[i], selected) && rank.matchesRecruitment(jobs[i], recruitment)) idx.push(i);
+    for (let i = 0; i < n; i++) if (rank.selects(jobs[i], selected) && rank.matchesRecruitment(jobs[i], recruitment) && rank.selectsCity(jobs[i], cities, unknown)) idx.push(i);
     const pos = new Int32Array(n), neg = new Int32Array(n), wm = words.map(w => masks(w.toLowerCase())), lm = lowered.map(w => masks(w.toLowerCase()));
     for (const m of wm) for (const i of idx) pos[i] += POINTS[m[i]];
     for (const m of lm) for (const i of idx) neg[i] += POINTS[m[i]];

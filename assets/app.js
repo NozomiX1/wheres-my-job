@@ -21,11 +21,12 @@ const PREFERENCES_KEY='ande.preferences.v1';
 const WORD_KINDS=['keywords','downrank'];
 const EXAMPLE_KEYWORDS=globalThis.ANDE_EXAMPLES?.keywords||[];
 const EXAMPLE_DOWNRANK=globalThis.ANDE_EXAMPLES?.downrank||[];
-const state={keywords:[],downrank:[],drafts:{keywords:'',downrank:''},editing:{keywords:null,downrank:null},feedback:{keywords:'',downrank:''},selected:new Set(),recruitment:'all',searched:false,active:null,results:[],total:0,matched:0,penalized:0,focused:null};
+const state={keywords:[],downrank:[],drafts:{keywords:'',downrank:''},editing:{keywords:null,downrank:null},feedback:{keywords:'',downrank:''},selected:new Set(),recruitment:'all',cities:new Set(),unknown:true,searched:false,active:null,results:[],total:0,matched:0,penalized:0,focused:null};
 let preferencesMessage='';
 let queryGeneration=0,loadMessage=globalThis.ANDE_DATA?'':'岗位目录加载失败，请刷新页面后再试。';
 function updateLoadStatus(message){loadMessage=message;if($('dataLoadNotice')){$('dataLoadNotice').textContent=message;$('dataLoadNotice').hidden=!message;}}
 const directory={query:'',letter:''};
+const CITIES=DATA.cities||[],CITY_TOP=30,cityView={query:'',all:false};
 let observer=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -36,20 +37,20 @@ function restorePreferences(){
   try{
     const raw=localStorage.getItem(PREFERENCES_KEY);if(!raw)return;
     const saved=JSON.parse(raw);
-    if(saved?.version!==1||!WORD_KINDS.every(k=>Array.isArray(saved[k])&&saved[k].every(w=>typeof w==='string'))||!Array.isArray(saved.selected)||!saved.selected.every(n=>typeof n==='string')||saved.recruitment!==undefined&&!RECRUITMENT_TYPES.some(([type])=>type===saved.recruitment))throw new Error('Invalid preferences');
+    if(saved?.version!==1||!WORD_KINDS.every(k=>Array.isArray(saved[k])&&saved[k].every(w=>typeof w==='string'))||!Array.isArray(saved.selected)||!saved.selected.every(n=>typeof n==='string')||saved.recruitment!==undefined&&!RECRUITMENT_TYPES.some(([type])=>type===saved.recruitment)||saved.cities!==undefined&&!(Array.isArray(saved.cities)&&saved.cities.every(n=>typeof n==='string'))||saved.unknown!==undefined&&typeof saved.unknown!=='boolean')throw new Error('Invalid preferences');
     for(const kind of WORD_KINDS){const seen=new Set();state[kind]=saved[kind].map(w=>w.trim()).filter(w=>{const key=wordKey(w);if(!key||/[,，、;；\n\r]/.test(w)||seen.has(key))return false;seen.add(key);return true;});}
     state.selected=new Set(saved.selected.flatMap(n=>n==='阿里巴巴'?ALIBABA_UNITS:[n==='阿里招聘（部门待核）'?RETIRED_ALIBABA_SELECTION:n]));
-    state.recruitment=saved.recruitment??'all';
+    state.recruitment=saved.recruitment??'all';state.cities=new Set(saved.cities??[]);state.unknown=saved.unknown??true;
     preferencesMessage=[...state.selected].some(n=>!COMPANIES.some(c=>c.name===n))?'部分已保存范围已退出或不在当前目录；请移除其标签或重新选择，尚未自动查询。':'';
   }catch{preferencesMessage='本机设置不可用，当前页面仍可使用；可清空后重新保存。';}
 }
 function persistPreferences(){
-  try{localStorage.setItem(PREFERENCES_KEY,JSON.stringify({version:1,keywords:state.keywords,downrank:state.downrank,selected:[...state.selected],recruitment:state.recruitment}));preferencesMessage='';}
+  try{localStorage.setItem(PREFERENCES_KEY,JSON.stringify({version:1,keywords:state.keywords,downrank:state.downrank,selected:[...state.selected],recruitment:state.recruitment,cities:[...state.cities],unknown:state.unknown}));preferencesMessage='';}
   catch{preferencesMessage='本机保存不可用，设置暂时只保留在当前页面。';}
 }
 function queryDirty(){
   if(!state.active)return false;
-  return state.recruitment!==state.active.recruitment||WORD_KINDS.some(k=>state.drafts[k].trim()||state.editing[k]!==null)||JSON.stringify(state.keywords)!==JSON.stringify(state.active.words)||JSON.stringify(state.downrank)!==JSON.stringify(state.active.lowered)||JSON.stringify([...state.selected].sort())!==JSON.stringify(state.active.selected);
+  return state.recruitment!==state.active.recruitment||JSON.stringify([...state.cities].sort())!==JSON.stringify(state.active.cities||[])||state.cities.size>0&&state.unknown!==(state.active.unknown!==false)||WORD_KINDS.some(k=>state.drafts[k].trim()||state.editing[k]!==null)||JSON.stringify(state.keywords)!==JSON.stringify(state.active.words)||JSON.stringify(state.downrank)!==JSON.stringify(state.active.lowered)||JSON.stringify([...state.selected].sort())!==JSON.stringify(state.active.selected);
 }
 function updateFormStatus(){
   if($('preferencesNotice')){$('preferencesNotice').textContent=preferencesMessage;$('preferencesNotice').hidden=!preferencesMessage;}
@@ -104,7 +105,7 @@ function fillExample(){
 function clearSettings(){
   queryGeneration++;loadMessage='';
   for(const kind of WORD_KINDS){state[kind]=[];state.drafts[kind]='';state.editing[kind]=null;state.feedback[kind]='';}
-  state.selected.clear();state.recruitment='all';directory.query='';directory.letter='';state.searched=false;state.active=null;state.results=[];state.total=0;state.matched=0;state.penalized=0;state.focused=null;
+  state.selected.clear();state.recruitment='all';state.cities.clear();state.unknown=true;cityView.query='';cityView.all=false;directory.query='';directory.letter='';state.searched=false;state.active=null;state.results=[];state.total=0;state.matched=0;state.penalized=0;state.focused=null;
   try{localStorage.removeItem(PREFERENCES_KEY);preferencesMessage='';}catch{preferencesMessage='本页面已清空，但浏览器不允许清除本机保存的设置。';}
   render();window.scrollTo({top:0,behavior:'auto'});$('keywords').focus();
 }
@@ -131,14 +132,26 @@ function wordEditor(kind){
   const positive=kind==='keywords';
   return `<section class="word-editor" data-keyword-editor="${kind}" aria-labelledby="${kind}Label"><div class="word-heading"><label id="${kind}Label" for="${kind}">${positive?'优先词':'降权词'}</label></div><p class="word-hint" id="${kind}Hint">${positive?'填写想优先看的方向、技能或工作内容，命中会加分。':'填写不太想看的方向或工作内容，命中会扣分。'}</p><div class="word-list" id="${kind}Words" role="group" aria-label="${positive?'已添加的优先词':'已添加的降权词'}"></div><div class="word-entry"><textarea id="${kind}" class="field" data-word-input="${kind}" rows="1" placeholder="添加一个词或短语" autocomplete="off" spellcheck="false" aria-describedby="${kind}Hint ${kind}Feedback">${esc(state.drafts[kind])}</textarea><button type="button" class="secondary" data-add-word="${kind}" title="回车也可添加">添加</button><button type="button" class="cancel-word" data-cancel-word="${kind}" hidden>取消</button></div><p class="word-feedback" id="${kind}Feedback" role="status" aria-live="polite" hidden></p></section>`;
 }
+function workplaceEditor(){
+  if(!CITIES.length)return '';
+  return `<section class="recruitment-editor" aria-labelledby="cityLabel"><div class="word-heading"><span class="label" id="cityLabel">工作地点</span><span id="cityScopeEmpty">全部地点</span></div><label class="directory-search">${icon('search')}<input id="citySearch" type="search" value="${esc(cityView.query)}" placeholder="搜索城市" aria-label="搜索工作地点城市" autocomplete="off" spellcheck="false"></label><div class="recruitment-filters city-options" id="cityOptions" role="group" aria-labelledby="cityLabel"></div><button type="button" class="text-button" id="cityMore" data-action="toggle-cities"></button><label class="city-unknown"><input type="checkbox" id="cityUnknown" ${state.unknown?'checked':''}> 包含城市未标明的岗位（约 ${DATA.cityUnknown||0} 个）</label></section>`;
+}
+function renderCities(){
+  if(!$('cityOptions'))return;
+  const q=cityView.query.trim().toLowerCase(),pool=q?CITIES.filter(c=>c.name.toLowerCase().includes(q)):cityView.all?CITIES:CITIES.slice(0,CITY_TOP);
+  const shown=[...state.cities].map(name=>CITIES.find(c=>c.name===name)||{name,count:0}).concat(pool.filter(c=>!state.cities.has(c.name)));
+  $('cityOptions').innerHTML=shown.length?shown.map(c=>`<button type="button" class="recruitment-choice" data-city="${esc(c.name)}" aria-pressed="${state.cities.has(c.name)}">${esc(c.name)}${c.count?`<span class="city-count">${c.count}</span>`:''}</button>`).join(''):'<span class="word-hint">没有匹配的城市</span>';
+  $('cityScopeEmpty').hidden=state.cities.size>0;
+  $('cityMore').hidden=!!q||CITIES.length<=CITY_TOP;$('cityMore').textContent=cityView.all?'收起':`更多城市（共 ${CITIES.length} 个）`;
+}
 function companyEditor(){return `<section class="company-editor" aria-labelledby="companyLabel"><div class="word-heading"><span class="label" id="companyLabel">招聘单位</span><span id="companyScopeEmpty">全部单位</span></div><div class="word-list" id="companyTags" role="group" aria-label="已选择招聘单位"></div><div class="company-directory" id="companyDirectory"><div class="company-panel"><label class="directory-search">${icon('search')}<input id="companySearch" type="search" value="${esc(directory.query)}" placeholder="搜索单位或别名" aria-label="搜索招聘单位名称或别名" autocomplete="off" spellcheck="false"></label><div class="alphabet" id="companyAlphabet" role="group" aria-label="按招聘单位名称首字母筛选"></div><div class="company-grid" id="companyOptions"></div></div></div></section>`;}
 function recruitmentEditor(){return `<section class="recruitment-editor" aria-labelledby="recruitmentLabel"><div class="word-heading"><span class="label" id="recruitmentLabel">招聘类型</span></div><div class="recruitment-filters" id="recruitmentFilters" role="group" aria-labelledby="recruitmentLabel">${RECRUITMENT_TYPES.map(([type,label])=>`<button type="button" class="recruitment-choice" data-recruitment="${type}" aria-pressed="${state.recruitment===type}">${label}</button>`).join('')}</div></section>`;}
-function commonForm(){return `<form class="keyword-form" data-search-form>${wordEditor('keywords')}${wordEditor('downrank')}${recruitmentEditor()}${companyEditor()}<div class="search-actions"><div class="condition-actions"><button type="button" class="text-button" data-action="clear-settings">重置筛选和关键词</button><button type="button" class="text-button" data-action="fill-example">填入示例</button></div><button class="primary" type="submit">${icon('search')} 查找岗位</button></div><p class="word-feedback" id="preferencesNotice" role="status" hidden></p><p class="query-notice" id="dataLoadNotice" role="status" ${loadMessage?'':'hidden'}>${esc(loadMessage)}</p><p class="query-notice" id="queryNotice" role="status" hidden>条件已更改，查找后更新；下面仍是上次结果。</p></form>`;}
+function commonForm(){return `<form class="keyword-form" data-search-form>${wordEditor('keywords')}${wordEditor('downrank')}${recruitmentEditor()}${workplaceEditor()}${companyEditor()}<div class="search-actions"><div class="condition-actions"><button type="button" class="text-button" data-action="clear-settings">重置筛选和关键词</button><button type="button" class="text-button" data-action="fill-example">填入示例</button></div><button class="primary" type="submit">${icon('search')} 查找岗位</button></div><p class="word-feedback" id="preferencesNotice" role="status" hidden></p><p class="query-notice" id="dataLoadNotice" role="status" ${loadMessage?'':'hidden'}>${esc(loadMessage)}</p><p class="query-notice" id="queryNotice" role="status" hidden>条件已更改，查找后更新；下面仍是上次结果。</p></form>`;}
 function homeHTML(){return `<div class="wrap ${state.searched?'searched':''}">${header()}<main class="hero-a apple-home"><h1>安得岗位千万件，<br><span>大庇天下寒士俱欢颜。</span></h1><div class="search-card">${commonForm()}</div></main>${state.searched?resultsShell():''}${footer()}</div>`;}
 function resultsShell(){const matches=state.matched,penalized=state.penalized;const hasWords=state.active.words.length||state.active.lowered.length;return `<section class="results" id="results"><div class="results-heading"><div><h2>岗位 <span class="muted count" style="font-weight:450;font-size:12px">${state.total} 个</span></h2><p>${hasWords?`${matches} 个优先词命中 · ${penalized} 个降权 · 当前范围全部保留`:'可靠官网日期优先 · 未明确日期放后'}</p></div><span class="result-order">${hasWords?'匹配分优先':'日期优先'} ↓</span></div>${state.results.some(r=>!r.job.jdComplete)?'<p class="ranking-note">部分岗位尚未同步或核验完整 JD；匹配分仅基于当前可用文字，请以官网为准。</p>':''}${state.active.words.length&&!matches&&state.total?'<p class="ranking-note">暂无优先词命中，岗位仍全部保留。</p>':''}<div id="workListScroll"><div class="job-list" id="jobList"></div><div class="scroll-sentinel" id="scrollSentinel"></div></div></section>`;}
 function rowHTML(r){const j=r.job;return `<article class="job-row ${state.focused===j.id?'active':''}" data-job-row="${esc(j.id)}"><div class="job-score ${r.value===0?'is-zero':''}" title="关键词匹配分，不是岗位质量或录取概率"><strong data-match-score>${scoreText(r.value)}</strong><span>匹配分</span></div><div class="job-body"><div class="job-title-line"><button class="job-title" type="button" data-job="${esc(j.id)}">${esc(j.title)}</button>${recruitmentLabels(j).map(label=>`<span class="job-track">${esc(label)}</span>`).join('')}${sourceStatusHTML(j)}</div><div class="job-meta"><span>${esc(unitName(j))}</span><span>·</span>${j.category?`<span class="job-category">${esc(j.category)}</span><span>·</span>`:''}<span>${esc(j.city)}</span><span>·</span>${dateHTML(j)}</div>${state.active.words.length||state.active.lowered.length?`<div class="job-signals">${state.active.words.length?`<span class="match-label">${r.matched.length?'优先命中':'未命中优先词'}</span>${r.matched.map((w,i)=>`<span class="word-tag">${esc(r.matchedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}${r.downranked.length?`<span class="match-label">降权</span>${r.downranked.map((w,i)=>`<span class="word-tag">${esc(r.downrankedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}</div>`:''}</div><div class="job-tail"><button type="button" class="secondary" data-job="${esc(j.id)}">查看 JD</button>${applyHTML(j)}</div></article>`;}
 function fillRows(){
-  if(!state.results.length){$('jobList').style.border='0';$('jobList').innerHTML=`<div class="empty">${icon('search')}<h3>当前范围没有可显示的岗位</h3><p>当前所选招聘单位或招聘类型范围没有可用数据。这不表示官网没有招聘。</p><button class="secondary" data-action="open-companies">检查单位范围</button></div>`;$('scrollSentinel').textContent='';return;}
+  if(!state.results.length){$('jobList').style.border='0';$('jobList').innerHTML=`<div class="empty">${icon('search')}<h3>当前范围没有可显示的岗位</h3><p>当前所选招聘单位、招聘类型或工作地点范围没有可用数据。这不表示官网没有招聘。</p><button class="secondary" data-action="open-companies">检查单位范围</button></div>`;$('scrollSentinel').textContent='';return;}
   $('jobList').innerHTML=state.results.map(rowHTML).join('');
   $('scrollSentinel').textContent=state.results.length<state.total?`继续下滑 · 已展示 ${state.results.length} / ${state.total} 个岗位`:`已展示当前范围 ${state.total} 个岗位`;
 }
@@ -183,7 +196,7 @@ function render(){
   if(observer)observer.disconnect();
   $('app').innerHTML=homeHTML();
   for(const kind of WORD_KINDS)updateWordEditor(kind);
-  renderDirectory();renderSelection();
+  renderDirectory();renderSelection();renderCities();
   if(state.searched){fillRows();setupScroll();}
   updateFormStatus();
 }
@@ -193,11 +206,11 @@ async function fetchJSON(url,options){
   if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||'服务暂不可用（HTTP '+response.status+'）。');}
   return response.json();
 }
-const queryPage=(query,offset)=>fetchJSON('api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:query.words,lowered:query.lowered,selected:query.selected,recruitment:query.recruitment,offset,limit:PAGE_SIZE})});
+const queryPage=(query,offset)=>fetchJSON('api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({words:query.words,lowered:query.lowered,selected:query.selected,recruitment:query.recruitment,cities:query.cities||[],unknown:query.unknown!==false,offset,limit:PAGE_SIZE})});
 const toResult=item=>({job:item,value:item.value,matched:item.matched,downranked:item.downranked,matchedText:item.matchedText,downrankedText:item.downrankedText});
 async function search(scroll=true){
   for(const kind of WORD_KINDS){state.drafts[kind]=$(kind).value;if((state.drafts[kind].trim()||state.editing[kind]!==null)&&!commitWord(kind))return;}
-  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:[...state.selected].sort(),recruitment:state.recruitment};
+  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:[...state.selected].sort(),recruitment:state.recruitment,cities:[...state.cities].sort(),unknown:state.unknown};
   try{
     if(!globalThis.ANDE_DATA)throw new Error('岗位目录加载失败，请刷新页面后再试。');
     updateLoadStatus('正在查询…下面仍是上次结果。');
@@ -221,8 +234,10 @@ document.addEventListener('submit',e=>{if(e.target.matches('[data-search-form]')
 document.addEventListener('input',e=>{
   const kind=e.target.dataset.wordInput;if(WORD_KINDS.includes(kind)){state.drafts[kind]=e.target.value;state.feedback[kind]='';updateWordEditor(kind);updateFormStatus();}
   if(e.target.id==='companySearch'){directory.query=e.target.value;directory.letter='';renderDirectory();}
+  if(e.target.id==='citySearch'){cityView.query=e.target.value;renderCities();}
 });
 document.addEventListener('change',e=>{
+  if(e.target.id==='cityUnknown'){state.unknown=e.target.checked;persistPreferences();updateFormStatus();return;}
   if(e.target.dataset.company){if(e.target.checked)state.selected.add(e.target.dataset.company);else state.selected.delete(e.target.dataset.company);persistPreferences();renderSelection();updateFormStatus();}
 });
 document.addEventListener('click',e=>{
@@ -233,10 +248,12 @@ document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-remove-company]');if(remove){state.selected.delete(remove.dataset.removeCompany);persistPreferences();renderSelection();updateFormStatus();$('companySearch').focus({preventScroll:true});return;}
   const letter=e.target.closest('[data-letter]');if(letter){directory.letter=letter.dataset.letter;directory.query='';$('companySearch').value='';renderDirectory();$('companyOptions').scrollTop=0;return;}
   const recruitment=e.target.closest('[data-recruitment]');if(recruitment){state.recruitment=recruitment.dataset.recruitment;document.querySelectorAll('[data-recruitment]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.recruitment===state.recruitment));persistPreferences();updateFormStatus();return;}
+  const city=e.target.closest('[data-city]');if(city){const name=city.dataset.city;if(state.cities.has(name))state.cities.delete(name);else state.cities.add(name);city.setAttribute('aria-pressed',state.cities.has(name));$('cityScopeEmpty').hidden=state.cities.size>0;persistPreferences();updateFormStatus();return;}
   const job=e.target.closest('[data-job]');if(job){showJob(job.dataset.job);return;}
   const button=e.target.closest('[data-action]');if(!button)return;
   switch(button.dataset.action){
     case 'open-companies':focusCompanies();break;
+    case 'toggle-cities':cityView.all=!cityView.all;renderCities();break;
     case 'clear-settings':clearSettings();break;
     case 'fill-example':fillExample();break;
     case 'close-detail':$('detailDialog').close();break;
@@ -247,7 +264,7 @@ document.addEventListener('keydown',e=>{
   if(e.isComposing||e.keyCode===229)return;
   const kind=e.target.dataset.wordInput;
   if(WORD_KINDS.includes(kind)){if(e.key==='Enter'){e.preventDefault();commitWord(kind);}else if(e.key==='Escape'){e.preventDefault();cancelWord(kind);}return;}
-  if(e.target.id==='companySearch'&&e.key==='Enter')e.preventDefault();
+  if((e.target.id==='companySearch'||e.target.id==='citySearch')&&e.key==='Enter')e.preventDefault();
 });
 restorePreferences();
 render();

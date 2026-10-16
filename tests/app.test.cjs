@@ -3,7 +3,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/app.js'),'utf8');
-const rankScript=fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
+const rankScript=fs.readFileSync(path.join(root,'assets/cities.js'),'utf8')+fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
 const examplesScript=fs.readFileSync(path.join(root,'assets/example-words.js'),'utf8');
 const dataset=require('../crawler/publish').readPublished(path.join(root,'tests/fixtures/data/catalog.js'));
 const base={id:'unit-base',sourceKey:'unit',company:'字节跳动',city:'北京',title:'',duty:'',requirements:'',description:'',channels:['campus'],employment:'full-time',talentPlan:false,date:'2026-09-10',dateKind:'published',url:'https://example.test/job',jdComplete:true,category:''};
@@ -115,6 +115,10 @@ p.state.active={words:[],lowered:[]};const hostile=p.rowHTML({job:{...base,id:'\
 assert.ok(p.detailHTML('unit-unknown').includes('正文完整性尚未核验'));assert.ok(!p.detailHTML('unit-unknown').includes('虚构'));assert.ok(p.detailHTML('unit-unknown').includes('前往官网'));
 const prefs={version:1,keywords:[' 财务 ','财务'],downrank:['销售'],selected:['字节跳动'],recruitment:'social'},restored=load(prefs);restored.restorePreferences();assert.deepEqual([...restored.state.keywords],['财务']);assert.equal(restored.state.recruitment,'social');assert.equal(restored.state.active,null);assert.equal(restored.state.searched,false);
 const invalid=load({...prefs,recruitment:'bad'});invalid.restorePreferences();assert.ok(invalid.message());
+const cityPrefs=load({...prefs,cities:['北京','上海'],unknown:false});cityPrefs.restorePreferences();assert.deepEqual([...cityPrefs.state.cities],['北京','上海']);assert.equal(cityPrefs.state.unknown,false);assert.equal(cityPrefs.state.active,null);assert.equal(cityPrefs.writes(),0);
+cityPrefs.persistPreferences();const savedCities=JSON.parse(cityPrefs.storage.get('ande.preferences.v1'));assert.deepEqual(savedCities.cities,['北京','上海']);assert.equal(savedCities.unknown,false);
+const noCityPrefs=load(prefs);noCityPrefs.restorePreferences();assert.equal(noCityPrefs.state.cities.size,0);assert.equal(noCityPrefs.state.unknown,true);assert.equal(noCityPrefs.message(),'');
+for(const bad of [{cities:'北京'},{cities:[1]},{unknown:'no'}]){const b=load({...prefs,...bad});b.restorePreferences();assert.ok(b.message(),JSON.stringify(bad));}
 // Validate the current published schema, not a permanently frozen legacy record count.
 // Initial HTML records were explicitly retired; official blank/unknown facts still remain.
 assert.equal(dataset.version,1);assert.equal(new Set(dataset.jobs.map(j=>j.id)).size,dataset.jobs.length);assert.ok(dataset.jobs.every(j=>!j.id.startsWith('sample-')&&(j.category===undefined||typeof j.category==='string')&&(j.sourceStatus==null||typeof j.sourceStatus==='string')&&!('score'in j)&&!('titleTier'in j)));assert.ok(dataset.sources.every(s=>s.lastSuccess===null||typeof s.lastSuccess==='string'));

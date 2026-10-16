@@ -13,3 +13,14 @@ test('Browser artifacts are lossless bounded chunks plus a body-free startup cat
  publisher.writeBrowserData({...data,jobs:[job('a:1')]},file,{maxBytes:600});assert.equal(fs.readdirSync(path.join(dir,'parts')).length,1);
 });
 test('HTML startup never requests the full JD baseline and has a visible startup fallback',()=>{const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');assert.ok(!/<script[^>]+src="data\/jobs\.js"/.test(html));assert.ok(html.includes('data/catalog.js'));assert.ok(html.includes('assets/rank.js'));assert.ok(!html.includes('data-loader'));assert.ok(html.includes('startupNotice'));});
+
+test('The startup catalog lists work locations with job counts (most jobs first) and the number of jobs with no known city',t=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ande-city-catalog-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const withCity=(id,city)=>({...job(id),city});
+ const data={version:1,legacy:false,notices:[],companies:[{name:'甲',initial:'A',aliases:[]}],sources:[{key:'a',company:'甲',status:'ready',message:'',lastSuccess:null,lastAttempt:null}],
+  jobs:[withCity('a:1','北京市'),withCity('a:2','北京/上海'),withCity('a:3','海淀区'),withCity('a:4','上海'),withCity('a:5','杭州'),withCity('a:6','广东省'),withCity('a:7','')]};
+ const catalog=publisher.writeBrowserData(data,path.join(dir,'catalog.js'));
+ assert.deepEqual(catalog.cities,[{name:'北京',count:3},{name:'上海',count:2},{name:'杭州',count:1}]);
+ assert.equal(catalog.cityUnknown,2,'province-only and empty cities are counted as unknown');
+ assert.deepEqual(publisher.readPublished(path.join(dir,'catalog.js')).jobs.map(j=>j.id),data.jobs.map(j=>j.id),'extra catalog fields do not break reading');
+});
