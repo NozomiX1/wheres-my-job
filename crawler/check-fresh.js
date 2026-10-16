@@ -16,7 +16,7 @@ function retryable(sources, hours, now = Date.now()) {
 
 module.exports = { stale, retryable };
 if (require.main === module && process.argv[2] === '--retry') {
-  console.log(retryable(readPublished(process.argv[4] || path.join(__dirname, '..', 'data', 'catalog.js')).sources, Number(process.argv[3]) || 12).join(' '));
+  console.log(retryable(readPublished(process.argv[4] || path.join(__dirname, '..', 'data', 'catalog.js')).sources, Number(process.argv[3]) || 18).join(' '));
 } else if (require.main === module) {
   const hours = Number(process.argv[2]) || 72, file = process.argv[3] || path.join(__dirname, '..', 'data', 'catalog.js');
   const old = stale(readPublished(file).sources, hours);

@@ -2,11 +2,13 @@
 # 服务器和自行部署的人用 deploy/pull.sh 从 Release 拉取。数据放哪个标签由仓库变量 DATA_TAG 决定（未设置时是 data-candidate，
 # 对比满意后 `gh variable set DATA_TAG --body data` 切到正式标签 data）。
 name: crawl
+# 运行列表里每次运行的标题，区分是哪一种触发（工作流名 crawl 不改：crawl-local.sh 和文档都按它查询）。
+run-name: ${{ github.event_name != 'schedule' && '手动采集' || github.event.schedule == '0 8 * * *' && '下午补采' || github.event.schedule == '0 19 * * 6' && '周日全量' || '早间增量' }}
 on:
   schedule:
     - cron: '30 22 * * *' # 北京时间每天 06:30，增量
     - cron: '0 19 * * 6'  # 北京时间周日 03:00，全量
-    - cron: '0 8 * * *'   # 北京时间每天 16:00，补采：只重跑超过 12 小时没成功更新、且不是被官网拒绝的来源（换一台新的运行器）
+    - cron: '0 8 * * *'   # 北京时间每天 16:00，补采：只重跑超过 18 小时没成功更新、且不是被官网拒绝的来源（换一台新的运行器）
   workflow_dispatch:
     inputs:
       keys: { description: '来源 key，空格分隔；留空为全部', required: false, default: '' }
@@ -49,7 +51,7 @@ jobs:
         run: |
           before=$(sha256sum data/catalog.js 2>/dev/null | cut -d' ' -f1 || true)
           if [ "$SCHEDULE" = "0 8 * * *" ]; then
-            KEYS=$(node crawler/check-fresh.js --retry 12); echo "补采来源：${KEYS:-无}"
+            KEYS=$(node crawler/check-fresh.js --retry 18); echo "补采来源：${KEYS:-无}"
             if [ -z "$KEYS" ]; then echo "changed=no" >> "$GITHUB_OUTPUT"; exit 0; fi
           fi
           flags=""; if [ "$FULL" = "true" ] || [ "$SCHEDULE" = "0 19 * * 6" ]; then flags="--full"; fi
@@ -64,8 +66,10 @@ jobs:
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "数据（$TAG）" --latest=false $([ "$TAG" = data ] || echo --prerelease) \
             --notes "由 crawl 工作流生成的已发布数据，每次采集后更新。服务器与自行部署的人用 deploy/pull.sh 拉取。"
           # 先传数据包、后传 meta：拉取方先看 meta，所以不会读到“meta 已更新、数据包还是旧的”。
-          gh release upload "$TAG" out-release/data.tar.gz --clobber
-          gh release upload "$TAG" out-release/data-meta.json --clobber
+          # GitHub 偶尔瞬时返回 "release not found"（10-14 那次整轮数据因此没上传），重试几次。
+          up() { for i in 1 2 3; do gh release upload "$TAG" "$1" --clobber && return 0; sleep 20; done; return 1; }
+          up out-release/data.tar.gz
+          up out-release/data-meta.json
       - name: summary
         if: always()
         run: |
