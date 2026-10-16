@@ -62,7 +62,7 @@ function search(state, body) {
   const q = parseQuery(body), { rank } = state, result = state.index.query(q);
   const items = result.rows.map(r => {
     const j = r.job;
-    return { id: j.id, sourceKey: j.sourceKey, company: j.company, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan,
+    return { id: j.id, sourceKey: j.sourceKey, company: j.company, employer: j.employer, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan,
       date: j.date, dateKind: j.dateKind, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, url: j.url, value: r.value, matched: r.matched, downranked: r.downranked,
       matchedText: r.matched.map(w => rank.hitText(j, w)), downrankedText: r.downranked.map(w => rank.hitText(j, w)) };
   });

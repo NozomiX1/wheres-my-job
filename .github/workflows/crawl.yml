@@ -13,11 +13,12 @@ on:
     inputs:
       keys: { description: '来源 key，空格分隔；留空为全部', required: false, default: '' }
       full: { description: '强制全量（重取所有详情）', type: boolean, default: false }
+      tag: { description: '发布到哪个 Release 标签（留空用仓库变量 DATA_TAG）；试运行新来源时填一个新名字，如 data-trial', required: false, default: '' }
 permissions:
   contents: write
 concurrency: { group: crawl, cancel-in-progress: false }
 env:
-  TAG: ${{ vars.DATA_TAG || 'data-candidate' }}
+  TAG: ${{ inputs.tag || vars.DATA_TAG || 'data-candidate' }}
   GH_TOKEN: ${{ github.token }}
 jobs:
   crawl:

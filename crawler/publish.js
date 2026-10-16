@@ -11,7 +11,7 @@ const portals = require('./lib/portals');
 const { cityKeys } = require('../assets/cities');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'catalog.js');
-const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus'];
+const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus', 'employer']; // category、sourceStatus、employer 可缺省
 
 function loadSites() {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 'utf8')).sites;
@@ -206,7 +206,8 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
         date, dateKind: date ? (fullMoka ? 'published' : job.dateKind ?? null) : null,
         url: safeUrl(first(job, urlFields)) || buildUrl(site, officialId),
         duty: jd ? jd.duty : newDirectJD ? text(job.duty, 'duty') : joinText(job, dutyFields), requirements: jd ? jd.requirements : newDirectJD ? text(job.requirements, 'requirements') : joinText(job, requireFields), description: jd ? jd.description : newDirectJD ? text(job.description, 'description') : joinText(job, descriptionFields),
-        jdComplete: jd ? jd.hasContent : job.jdComplete === true, sourceStatus
+        jdComplete: jd ? jd.hasContent : job.jdComplete === true, sourceStatus,
+        ...(typeof job.employer === 'string' && job.employer.trim() ? { employer: job.employer.trim() } : {}) // 汇聚平台（如国聘）上岗位的实际发布企业
       };
     } catch (error) {
       throw new Error(site.key + ' job[' + index + ']: ' + error.message);
@@ -262,10 +263,11 @@ function readPublished(file) {
     keys.add(source.key);
   }
   for (const job of data.jobs) {
-    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
+    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus', 'employer'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
     // Optional display fields may be absent in old schema-1 data; do not add keys to retained jobs.
     if (Object.hasOwn(job, 'category') && typeof job.category !== 'string') throw new Error('Invalid baseline category');
     if (job.sourceStatus != null && (typeof job.sourceStatus !== 'string' || !job.sourceStatus.trim())) throw new Error('Invalid baseline sourceStatus');
+    if (job.employer != null && typeof job.employer !== 'string') throw new Error('Invalid baseline employer');
     for (const field of ['id', 'sourceKey', 'company', 'title', 'city', 'url', 'duty', 'requirements', 'description']) if (typeof job[field] !== 'string') throw new Error('Invalid baseline job text');
     if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean' || ![null, 'published', 'updated'].includes(job.dateKind) || (job.date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(job.date) || normalizeDate(job.date) !== job.date))) throw new Error('Invalid baseline job metadata');
     if (job.url && !safeUrl(job.url)) throw new Error('Unsafe baseline job URL');
@@ -411,7 +413,8 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   for (const replacement of replacements.values()) jobs.push(...replacement);
   const companies = baseline.companies.map(company => ({ name: company.name, initial: company.initial, aliases: company.aliases }));
   for (const source of sources.values()) if (!companies.some(company => company.name === source.company)) {
-    companies.push({ name: source.company, initial: /^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#', aliases: [] });
+    const site = sites.find(s => s.key === source.key);
+    companies.push({ name: source.company, initial: site?.initial || (/^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#'), aliases: site?.aliases || [] });
   }
   const notices = ['数据范围以各注册来源的渠道、批次及接口参数为准；注册来源不等于公司全量，跨来源机会暂不合并。'];
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"moka-portal-v1"'))) notices.push(moka.PORTAL_NOTICE);
