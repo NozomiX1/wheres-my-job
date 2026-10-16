@@ -26,7 +26,7 @@ let preferencesMessage='';
 let queryGeneration=0,loadMessage=globalThis.ANDE_DATA?'':'岗位目录加载失败，请刷新页面后再试。';
 function updateLoadStatus(message){loadMessage=message;if($('dataLoadNotice')){$('dataLoadNotice').textContent=message;$('dataLoadNotice').hidden=!message;}}
 const directory={query:'',letter:''};
-const CITIES=DATA.cities||[],CITY_TOP=30,cityView={query:'',all:false};
+const CITIES=DATA.cities||[],CITY_TOP=30,cityView={query:'',all:false,height:0};
 let observer=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -45,12 +45,16 @@ function restorePreferences(){
   }catch{preferencesMessage='本机设置不可用，当前页面仍可使用；可清空后重新保存。';}
 }
 function persistPreferences(){
-  try{localStorage.setItem(PREFERENCES_KEY,JSON.stringify({version:1,keywords:state.keywords,downrank:state.downrank,selected:[...state.selected],recruitment:state.recruitment,cities:[...state.cities],unknown:state.unknown}));preferencesMessage='';}
+  try{localStorage.setItem(PREFERENCES_KEY,JSON.stringify({version:1,keywords:state.keywords,downrank:state.downrank,selected:effectiveSelected(),recruitment:state.recruitment,cities:[...state.cities],unknown:state.unknown}));preferencesMessage='';}
   catch{preferencesMessage='本机保存不可用，设置暂时只保留在当前页面。';}
 }
+// 选中了全部招聘单位 = 不限：提交和保存时当作空选择，这样以后新增的单位不会因旧名单而漏掉。
+const allCompaniesSelected=()=>COMPANIES.length>0&&COMPANIES.every(c=>state.selected.has(c.name));
+const effectiveSelected=()=>allCompaniesSelected()?[]:[...state.selected];
+const directoryList=()=>{const q=directory.query.trim().toLowerCase();return COMPANIES.filter(c=>(!directory.letter||c.initial===directory.letter)&&(!q||(c.name+' '+c.aliases).toLowerCase().includes(q)));};
 function queryDirty(){
   if(!state.active)return false;
-  return state.recruitment!==state.active.recruitment||JSON.stringify([...state.cities].sort())!==JSON.stringify(state.active.cities||[])||state.cities.size>0&&state.unknown!==(state.active.unknown!==false)||WORD_KINDS.some(k=>state.drafts[k].trim()||state.editing[k]!==null)||JSON.stringify(state.keywords)!==JSON.stringify(state.active.words)||JSON.stringify(state.downrank)!==JSON.stringify(state.active.lowered)||JSON.stringify([...state.selected].sort())!==JSON.stringify(state.active.selected);
+  return state.recruitment!==state.active.recruitment||JSON.stringify([...state.cities].sort())!==JSON.stringify(state.active.cities||[])||state.cities.size>0&&state.unknown!==(state.active.unknown!==false)||WORD_KINDS.some(k=>state.drafts[k].trim()||state.editing[k]!==null)||JSON.stringify(state.keywords)!==JSON.stringify(state.active.words)||JSON.stringify(state.downrank)!==JSON.stringify(state.active.lowered)||JSON.stringify(effectiveSelected().sort())!==JSON.stringify(state.active.selected);
 }
 function updateFormStatus(){
   if($('preferencesNotice')){$('preferencesNotice').textContent=preferencesMessage;$('preferencesNotice').hidden=!preferencesMessage;}
@@ -134,19 +138,30 @@ function wordEditor(kind){
 }
 function workplaceEditor(){
   if(!CITIES.length)return '';
-  return `<section class="recruitment-editor" aria-labelledby="cityLabel"><div class="word-heading"><span class="label" id="cityLabel">工作地点</span><span id="cityScopeEmpty">全部地点</span></div><label class="directory-search">${icon('search')}<input id="citySearch" type="search" value="${esc(cityView.query)}" placeholder="搜索城市" aria-label="搜索工作地点城市" autocomplete="off" spellcheck="false"></label><div class="recruitment-filters city-options" id="cityOptions" role="group" aria-labelledby="cityLabel"></div><button type="button" class="text-button" id="cityMore" data-action="toggle-cities"></button><label class="city-unknown"><input type="checkbox" id="cityUnknown" ${state.unknown?'checked':''}> 包含城市未标明的岗位（约 ${DATA.cityUnknown||0} 个）</label></section>`;
+  return `<section class="recruitment-editor" aria-labelledby="cityLabel"><div class="word-heading"><span class="label" id="cityLabel">工作地点</span><span class="bulk-actions"><span id="cityScopeEmpty">全部地点</span><button type="button" class="text-button" data-city-clear title="清空已选的工作地点">清空</button></span></div><div class="word-list" id="cityTags" role="group" aria-label="已选择工作地点"></div><label class="directory-search">${icon('search')}<input id="citySearch" type="search" value="${esc(cityView.query)}" placeholder="搜索城市" aria-label="搜索工作地点城市" autocomplete="off" spellcheck="false"></label><div class="alphabet" id="cityTabs" role="group" aria-label="城市列表范围"></div><div class="company-grid city-grid" id="cityOptions" role="group" aria-labelledby="cityLabel"></div><label class="company-option city-unknown ${state.unknown?'chosen':''}"><input type="checkbox" id="cityUnknown" ${state.unknown?'checked':''}><span class="company-copy"><span class="company-name" style="display:block">包含城市未标明的岗位</span><span class="company-count" style="display:block">官网没写城市或只写到省的岗位，约 ${DATA.cityUnknown||0} 个；选了城市时默认也显示</span></span></label></section>`;
+}
+function renderCityTags(){
+  if(!$('cityTags'))return;
+  $('cityTags').innerHTML=[...state.cities].map(name=>`<span class="word-token"><span class="company-tag-name">${esc(name)}</span><button type="button" class="word-remove" data-remove-city="${esc(name)}" aria-label="移除工作地点 ${esc(name)}">×</button></span>`).join('');
+  $('cityScopeEmpty').hidden=state.cities.size>0;
 }
 function renderCities(){
   if(!$('cityOptions'))return;
   const q=cityView.query.trim().toLowerCase(),pool=q?CITIES.filter(c=>c.name.toLowerCase().includes(q)):cityView.all?CITIES:CITIES.slice(0,CITY_TOP);
-  const shown=[...state.cities].map(name=>CITIES.find(c=>c.name===name)||{name,count:0}).concat(pool.filter(c=>!state.cities.has(c.name)));
-  $('cityOptions').innerHTML=shown.length?shown.map(c=>`<button type="button" class="recruitment-choice" data-city="${esc(c.name)}" aria-pressed="${state.cities.has(c.name)}">${esc(c.name)}${c.count?`<span class="city-count">${c.count}</span>`:''}</button>`).join(''):'<span class="word-hint">没有匹配的城市</span>';
-  $('cityScopeEmpty').hidden=state.cities.size>0;
-  $('cityMore').hidden=!!q||CITIES.length<=CITY_TOP;$('cityMore').textContent=cityView.all?'收起':`更多城市（共 ${CITIES.length} 个）`;
+  $('cityTabs').hidden=!!q;
+  $('cityTabs').innerHTML=[[false,`热门（${Math.min(CITY_TOP,CITIES.length)}）`],[true,`全部（${CITIES.length}）`]].map(([all,label])=>`<button class="letter ${cityView.all===all?'on':''}" type="button" data-city-tab="${all}" aria-pressed="${cityView.all===all}">${label}</button>`).join('');
+  $('cityOptions').innerHTML=pool.length?pool.map(c=>`<label class="company-option ${state.cities.has(c.name)?'chosen':''}"><input type="checkbox" data-city="${esc(c.name)}" ${state.cities.has(c.name)?'checked':''}><span class="company-copy"><span class="company-name" style="display:block">${esc(c.name)}</span><span class="company-count" style="display:block">${c.count} 个岗位</span></span></label>`).join(''):'<span class="word-hint">没有匹配的城市</span>';
+  // 热门（30 个）按内容自然高度，量下来后「全部」固定同高、搜索结果最高同高，切换时页面不跳；滚动条槽位由 CSS 预留。
+  const box=$('cityOptions'),hot=!q&&!cityView.all;
+  box.setAttribute('style','');
+  if(hot&&box.offsetHeight)cityView.height=box.offsetHeight;
+  if(!hot&&cityView.height)box.setAttribute('style',(q?'max-height:':'height:')+cityView.height+'px');
+  box.scrollTop=0;renderCityTags();
 }
-function companyEditor(){return `<section class="company-editor" aria-labelledby="companyLabel"><div class="word-heading"><span class="label" id="companyLabel">招聘单位</span><span id="companyScopeEmpty">全部单位</span></div><div class="word-list" id="companyTags" role="group" aria-label="已选择招聘单位"></div><div class="company-directory" id="companyDirectory"><div class="company-panel"><label class="directory-search">${icon('search')}<input id="companySearch" type="search" value="${esc(directory.query)}" placeholder="搜索单位或别名" aria-label="搜索招聘单位名称或别名" autocomplete="off" spellcheck="false"></label><div class="alphabet" id="companyAlphabet" role="group" aria-label="按招聘单位名称首字母筛选"></div><div class="company-grid" id="companyOptions"></div></div></div></section>`;}
+function syncCityChips(){document.querySelectorAll('[data-city]').forEach(input=>{input.checked=state.cities.has(input.dataset.city);input.closest('.company-option').classList.toggle('chosen',input.checked);});}
+function companyEditor(){return `<section class="company-editor" aria-labelledby="companyLabel"><div class="word-heading"><span class="label" id="companyLabel">招聘单位</span><span class="bulk-actions"><span id="companyScopeEmpty">全部单位</span><button type="button" class="text-button" data-bulk-company="select" title="全选当前列表（所选字母或搜索结果）">全选</button><button type="button" class="text-button" data-bulk-company="clear" title="清空当前列表里已选的单位">清空</button></span></div><div class="word-list" id="companyTags" role="group" aria-label="已选择招聘单位"></div><div class="company-directory" id="companyDirectory"><div class="company-panel"><label class="directory-search">${icon('search')}<input id="companySearch" type="search" value="${esc(directory.query)}" placeholder="搜索单位或别名" aria-label="搜索招聘单位名称或别名" autocomplete="off" spellcheck="false"></label><div class="alphabet" id="companyAlphabet" role="group" aria-label="按招聘单位名称首字母筛选"></div><div class="company-grid" id="companyOptions"></div></div></div></section>`;}
 function recruitmentEditor(){return `<section class="recruitment-editor" aria-labelledby="recruitmentLabel"><div class="word-heading"><span class="label" id="recruitmentLabel">招聘类型</span></div><div class="recruitment-filters" id="recruitmentFilters" role="group" aria-labelledby="recruitmentLabel">${RECRUITMENT_TYPES.map(([type,label])=>`<button type="button" class="recruitment-choice" data-recruitment="${type}" aria-pressed="${state.recruitment===type}">${label}</button>`).join('')}</div></section>`;}
-function commonForm(){return `<form class="keyword-form" data-search-form>${wordEditor('keywords')}${wordEditor('downrank')}${recruitmentEditor()}${workplaceEditor()}${companyEditor()}<div class="search-actions"><div class="condition-actions"><button type="button" class="text-button" data-action="clear-settings">重置筛选和关键词</button><button type="button" class="text-button" data-action="fill-example">填入示例</button></div><button class="primary" type="submit">${icon('search')} 查找岗位</button></div><p class="word-feedback" id="preferencesNotice" role="status" hidden></p><p class="query-notice" id="dataLoadNotice" role="status" ${loadMessage?'':'hidden'}>${esc(loadMessage)}</p><p class="query-notice" id="queryNotice" role="status" hidden>条件已更改，查找后更新；下面仍是上次结果。</p></form>`;}
+function commonForm(){return `<form class="keyword-form" data-search-form>${wordEditor('keywords')}${wordEditor('downrank')}${recruitmentEditor()}${workplaceEditor()}${companyEditor()}<div class="search-actions"><div class="condition-actions"><button type="button" class="secondary" data-action="clear-settings">重置筛选和关键词</button><button type="button" class="secondary" data-action="fill-example">填入示例</button></div><button class="primary" type="submit">${icon('search')} 查找岗位</button></div><p class="word-feedback" id="preferencesNotice" role="status" hidden></p><p class="query-notice" id="dataLoadNotice" role="status" ${loadMessage?'':'hidden'}>${esc(loadMessage)}</p><p class="query-notice" id="queryNotice" role="status" hidden>条件已更改，查找后更新；下面仍是上次结果。</p></form>`;}
 function homeHTML(){return `<div class="wrap ${state.searched?'searched':''}">${header()}<main class="hero-a apple-home"><h1>安得岗位千万件，<br><span>大庇天下寒士俱欢颜。</span></h1><div class="search-card">${commonForm()}</div></main>${state.searched?resultsShell():''}${footer()}</div>`;}
 function resultsShell(){const matches=state.matched,penalized=state.penalized;const hasWords=state.active.words.length||state.active.lowered.length;return `<section class="results" id="results"><div class="results-heading"><div><h2>岗位 <span class="muted count" style="font-weight:450;font-size:12px">${state.total} 个</span></h2><p>${hasWords?`${matches} 个优先词命中 · ${penalized} 个降权 · 当前范围全部保留`:'可靠官网日期优先 · 未明确日期放后'}</p></div><span class="result-order">${hasWords?'匹配分优先':'日期优先'} ↓</span></div>${state.results.some(r=>!r.job.jdComplete)?'<p class="ranking-note">部分岗位尚未同步或核验完整 JD；匹配分仅基于当前可用文字，请以官网为准。</p>':''}${state.active.words.length&&!matches&&state.total?'<p class="ranking-note">暂无优先词命中，岗位仍全部保留。</p>':''}<div id="workListScroll"><div class="job-list" id="jobList"></div><div class="scroll-sentinel" id="scrollSentinel"></div></div></section>`;}
 function rowHTML(r){const j=r.job;return `<article class="job-row ${state.focused===j.id?'active':''}" data-job-row="${esc(j.id)}"><div class="job-score ${r.value===0?'is-zero':''}" title="关键词匹配分，不是岗位质量或录取概率"><strong data-match-score>${scoreText(r.value)}</strong><span>匹配分</span></div><div class="job-body"><div class="job-title-line"><button class="job-title" type="button" data-job="${esc(j.id)}">${esc(j.title)}</button>${recruitmentLabels(j).map(label=>`<span class="job-track">${esc(label)}</span>`).join('')}${sourceStatusHTML(j)}</div><div class="job-meta"><span>${esc(unitName(j))}</span><span>·</span>${j.category?`<span class="job-category">${esc(j.category)}</span><span>·</span>`:''}<span>${esc(j.city)}</span><span>·</span>${dateHTML(j)}</div>${state.active.words.length||state.active.lowered.length?`<div class="job-signals">${state.active.words.length?`<span class="match-label">${r.matched.length?'优先命中':'未命中优先词'}</span>${r.matched.map((w,i)=>`<span class="word-tag">${esc(r.matchedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}${r.downranked.length?`<span class="match-label">降权</span>${r.downranked.map((w,i)=>`<span class="word-tag">${esc(r.downrankedText?.[i]??hitText(j,w))}</span>`).join('')}`:''}</div>`:''}</div><div class="job-tail"><button type="button" class="secondary" data-job="${esc(j.id)}">查看 JD</button>${applyHTML(j)}</div></article>`;}
@@ -183,13 +198,13 @@ function renderDirectory(){
   });
   const available=new Set(COMPANIES.map(c=>c.initial));
   $('companyAlphabet').innerHTML=['',...'ABCDEFGHIJKLMNOPQRSTUVWXYZ','#'].map(l=>`<button class="letter ${directory.letter===l?'on':''}" type="button" data-letter="${l}" aria-pressed="${directory.letter===l}" ${l&&!available.has(l)?'disabled':''}>${l||'全部'}</button>`).join('');
-  const q=directory.query.trim().toLowerCase();const companies=COMPANIES.filter(c=>(!directory.letter||c.initial===directory.letter)&&(!q||(c.name+' '+c.aliases).toLowerCase().includes(q)));
+  const companies=directoryList();
   $('companyOptions').innerHTML=companies.length?companies.map(c=>{const sourceKeys=new Set((DATA.parts||JOBS).filter(item=>unitNames(item).includes(c.name)).map(item=>item.sourceKey)),sources=(DATA.sources||[]).filter(s=>unitName(s)===c.name||sourceKeys.has(s.key)),count=totals[c.name]||0;const pending=sources.some(s=>s.status!=='ready'),oldest=sources.map(s=>bjDate(s.lastSuccess)).filter(Boolean).sort()[0];const caption=count?`${count} 个岗位${oldest?` · ${oldest.slice(5)} 更新`:''}${sources.some(s=>s.status==='failed')?' · 最近更新失败':''}`:pending?'暂无数据':'0 个岗位';return `<label class="company-option ${state.selected.has(c.name)?'chosen':''}"><input type="checkbox" data-company="${esc(c.name)}" ${state.selected.has(c.name)?'checked':''}><span class="company-copy"><span class="company-name" style="display:block">${esc(c.name)}</span><span class="company-count ${pending?'warning':''}" style="display:block">${caption}</span></span></label>`}).join(''):'<div class="company-empty">目录没有匹配项，不代表该单位没有招聘。</div>';
 }
 function renderSelection(){
   const list=$('companyTags');
-  list.innerHTML=[...state.selected].map(name=>`<span class="word-token"><span class="company-tag-name">${esc(name)}</span><button type="button" class="word-remove" data-remove-company="${esc(name)}" aria-label="移除招聘单位 ${esc(name)}">×</button></span>`).join('');
-  $('companyScopeEmpty').hidden=state.selected.size>0;
+  list.innerHTML=allCompaniesSelected()?'':[...state.selected].map(name=>`<span class="word-token"><span class="company-tag-name">${esc(name)}</span><button type="button" class="word-remove" data-remove-company="${esc(name)}" aria-label="移除招聘单位 ${esc(name)}">×</button></span>`).join('');
+  $('companyScopeEmpty').hidden=state.selected.size>0&&!allCompaniesSelected();
   document.querySelectorAll('[data-company]').forEach(input=>{input.checked=state.selected.has(input.dataset.company);input.closest('.company-option').classList.toggle('chosen',input.checked);});
 }
 function render(){
@@ -210,7 +225,7 @@ const queryPage=(query,offset)=>fetchJSON('api/search',{method:'POST',headers:{'
 const toResult=item=>({job:item,value:item.value,matched:item.matched,downranked:item.downranked,matchedText:item.matchedText,downrankedText:item.downrankedText});
 async function search(scroll=true){
   for(const kind of WORD_KINDS){state.drafts[kind]=$(kind).value;if((state.drafts[kind].trim()||state.editing[kind]!==null)&&!commitWord(kind))return;}
-  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:[...state.selected].sort(),recruitment:state.recruitment,cities:[...state.cities].sort(),unknown:state.unknown};
+  const generation=++queryGeneration,query={words:[...state.keywords],lowered:[...state.downrank],selected:effectiveSelected().sort(),recruitment:state.recruitment,cities:[...state.cities].sort(),unknown:state.unknown};
   try{
     if(!globalThis.ANDE_DATA)throw new Error('岗位目录加载失败，请刷新页面后再试。');
     updateLoadStatus('正在查询…下面仍是上次结果。');
@@ -237,7 +252,8 @@ document.addEventListener('input',e=>{
   if(e.target.id==='citySearch'){cityView.query=e.target.value;renderCities();}
 });
 document.addEventListener('change',e=>{
-  if(e.target.id==='cityUnknown'){state.unknown=e.target.checked;persistPreferences();updateFormStatus();return;}
+  if(e.target.dataset.city){if(e.target.checked)state.cities.add(e.target.dataset.city);else state.cities.delete(e.target.dataset.city);syncCityChips();renderCityTags();persistPreferences();updateFormStatus();return;}
+  if(e.target.id==='cityUnknown'){state.unknown=e.target.checked;e.target.closest('.company-option').classList.toggle('chosen',state.unknown);persistPreferences();updateFormStatus();return;}
   if(e.target.dataset.company){if(e.target.checked)state.selected.add(e.target.dataset.company);else state.selected.delete(e.target.dataset.company);persistPreferences();renderSelection();updateFormStatus();}
 });
 document.addEventListener('click',e=>{
@@ -248,12 +264,14 @@ document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-remove-company]');if(remove){state.selected.delete(remove.dataset.removeCompany);persistPreferences();renderSelection();updateFormStatus();$('companySearch').focus({preventScroll:true});return;}
   const letter=e.target.closest('[data-letter]');if(letter){directory.letter=letter.dataset.letter;directory.query='';$('companySearch').value='';renderDirectory();$('companyOptions').scrollTop=0;return;}
   const recruitment=e.target.closest('[data-recruitment]');if(recruitment){state.recruitment=recruitment.dataset.recruitment;document.querySelectorAll('[data-recruitment]').forEach(button=>button.setAttribute('aria-pressed',button.dataset.recruitment===state.recruitment));persistPreferences();updateFormStatus();return;}
-  const city=e.target.closest('[data-city]');if(city){const name=city.dataset.city;if(state.cities.has(name))state.cities.delete(name);else state.cities.add(name);city.setAttribute('aria-pressed',state.cities.has(name));$('cityScopeEmpty').hidden=state.cities.size>0;persistPreferences();updateFormStatus();return;}
+  const cityRemove=e.target.closest('[data-remove-city]');if(cityRemove){state.cities.delete(cityRemove.dataset.removeCity);syncCityChips();renderCityTags();persistPreferences();updateFormStatus();$('citySearch').focus({preventScroll:true});return;}
+  const bulk=e.target.closest('[data-bulk-company]');if(bulk){for(const c of directoryList()){if(bulk.dataset.bulkCompany==='select')state.selected.add(c.name);else state.selected.delete(c.name);}persistPreferences();renderSelection();updateFormStatus();return;}
+  if(e.target.closest('[data-city-clear]')){state.cities.clear();syncCityChips();renderCityTags();persistPreferences();updateFormStatus();return;}
+  const cityTab=e.target.closest('[data-city-tab]');if(cityTab){cityView.all=cityTab.dataset.cityTab==='true';renderCities();return;}
   const job=e.target.closest('[data-job]');if(job){showJob(job.dataset.job);return;}
   const button=e.target.closest('[data-action]');if(!button)return;
   switch(button.dataset.action){
     case 'open-companies':focusCompanies();break;
-    case 'toggle-cities':cityView.all=!cityView.all;renderCities();break;
     case 'clear-settings':clearSettings();break;
     case 'fill-example':fillExample();break;
     case 'close-detail':$('detailDialog').close();break;

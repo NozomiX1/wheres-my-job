@@ -3,7 +3,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const script=fs.readFileSync(require.resolve('../assets/app.js'),'utf8').replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'');
 function fixture(){
- const elements=new Map(),requests=[],data={version:1,companies:[{name:'甲',initial:'A',aliases:[]}],sources:[],notices:[],jobs:[],parts:[{company:'甲',sourceKey:'a',count:1}]};
+ const elements=new Map(),requests=[],data={version:1,companies:[{name:'甲',initial:'A',aliases:[]},{name:'乙',initial:'B',aliases:[]}],sources:[],notices:[],jobs:[],parts:[{company:'甲',sourceKey:'a',count:1}]};
  const element=id=>{if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,style:{},setAttribute(){},focus(){},select(){},showModal(){this.open=true;},close(){this.open=false;}});return elements.get(id);};
  // 每次 fetch 登记为待决请求，测试里用 reply/fail 决定结果。
  const fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({url,body:options?.body?JSON.parse(options.body):null,reply:(body,status=200)=>resolve({ok:status<400,status,json:async()=>body}),fail:()=>reject(new TypeError('x'))}));
@@ -13,6 +13,14 @@ function fixture(){
 const item=(id,extra={})=>({id,sourceKey:'a',company:'甲',title:'岗位'+id,category:'',city:'',channels:['social'],employment:null,talentPlan:null,date:null,dateKind:null,sourceStatus:null,jdComplete:true,value:0,matched:[],downranked:[],matchedText:[],downrankedText:[],...extra});
 const page=(items,total=items.length)=>({total,matched:0,penalized:0,offset:0,items});
 const tick=()=>new Promise(r=>setImmediate(r));
+
+test('Selecting every unit is sent as no limit; a partial selection is sent by name',async()=>{
+ const f=fixture(),empty={total:0,matched:0,penalized:0,offset:0,items:[]};
+ f.api.state.selected.add('甲');f.api.state.selected.add('乙');
+ const all=f.api.search(false);assert.deepEqual(f.requests[0].body.selected,[]);f.requests[0].reply(empty);await all;
+ f.api.state.selected.delete('乙');
+ const part=f.api.search(false);assert.deepEqual(f.requests[1].body.selected,['甲']);f.requests[1].reply(empty);await part;
+});
 
 test('Pending/failed query keeps prior results; only a successful response commits the captured conditions and server counts',async()=>{
  const f=fixture(),old={words:['旧词'],lowered:[],selected:[],recruitment:'all'},results=[{job:item('a:0'),value:0,matched:[],downranked:[]}];f.api.state.active=old;f.api.state.results=results;f.api.state.selected.add('甲');f.api.state.keywords=['财务'];
