@@ -22,7 +22,7 @@ function fakeApi(jobs, { refuse = false } = {}) {
   };
   return { fetchImpl, calls };
 }
-const mk = (i, extra = {}) => ({ job_id: String(1000 + i), job_name: '岗位' + i, company_name: '公司' + (i % 7), nature: 'N' + (1 + i % 3), experience: 'E' + (1 + i % 2), education: 'D' + (1 + (i >> 1) % 2),
+const mk = (i, extra = {}) => ({ update_time: '2026-10-14 18:59:04', job_id: String(1000 + i), job_name: '岗位' + i, company_name: '公司' + (i % 7), nature: 'N' + (1 + i % 3), experience: 'E' + (1 + i % 2), education: 'D' + (1 + (i >> 1) % 2),
   recruitment_type_cn: i % 2 ? '校园招聘' : '社会招聘', nature_cn: i % 3 ? '社招' : '实习', category_cn: '研发', contents: '工作内容：\n写代码', district_list: [{ area_code: '000000.110000.110100.110101', area_cn: '北京-东城区' }], ...extra });
 
 test('guopin: splits by nature → experience → education until every partition is under the 1000 cap, and collects each job once', async () => {
@@ -59,8 +59,8 @@ test('guopin: refuses to run for an unverified source identity', async () => {
 
 test('guopin: records map to published fields; employer is the posting company; date and plan stay unknown', () => {
   const r = g.normalizeRecord(mk(1, { nature_cn: '实习', recruitment_type_cn: '校园招聘' }), site);
-  a.deepEqual({ id: r.id, title: r.title, employer: r.employer, city: r.city, category: r.category, channels: r.channels, employment: r.employment, date: r.date, talentPlan: r.talentPlan, url: r.url, jd: r.jdComplete, description: r.description },
-    { id: '1001', title: '岗位1', employer: '公司1', city: '北京', category: '研发', channels: ['campus'], employment: 'internship', date: null, talentPlan: null, url: 'https://www.iguopin.com/job/detail?id=1001', jd: true, description: '工作内容：\n写代码' });
+  a.deepEqual({ id: r.id, title: r.title, employer: r.employer, city: r.city, category: r.category, channels: r.channels, employment: r.employment, date: r.date, dateKind: r.dateKind, talentPlan: r.talentPlan, url: r.url, jd: r.jdComplete, description: r.description },
+    { id: '1001', title: '岗位1', employer: '公司1', city: '北京', category: '研发', channels: ['campus'], employment: 'internship', date: '2026-10-14', dateKind: 'platform', talentPlan: null, url: 'https://www.iguopin.com/job/detail?id=1001', jd: true, description: '工作内容：\n写代码' });
   const html = g.normalizeRecord(mk(3, { contents: '<span style="font-size: 14px;color: #666666;">工作职责<br />1.负责A；\r<br />2.负责B&nbsp;。<br /><br />任职资格<br />1.硕士\u200b；\r<br />2.熟悉Linux</span>' }), site);
   a.deepEqual({ duty: html.duty, requirements: html.requirements, description: html.description }, { duty: '工作职责\n1.负责A；\n2.负责B 。', requirements: '任职资格\n1.硕士；\n2.熟悉Linux', description: '' }, 'HTML is turned into plain text and split into duty / requirements');
   a.ok(!/[<>]|&nbsp;|\r|\u200b/.test(html.duty + html.requirements));
@@ -80,7 +80,8 @@ test('guopin: the publisher turns records into published jobs with the posting c
   const { normalizeJobs } = require('../crawler/publish');
   const [job] = normalizeJobs([mk(1, { nature_cn: '实习' })], site);
   a.equal(job.company, '国聘（国企）'); a.equal(job.employer, '公司1'); a.equal(job.id, 'guopin_soe:1001'); a.equal(job.employment, 'internship');
-  a.equal(job.city, '北京'); a.equal(job.url, 'https://www.iguopin.com/job/detail?id=1001'); a.equal(job.date, null); a.deepEqual(job.channels, ['campus']);
+  a.equal(job.city, '北京'); a.equal(job.url, 'https://www.iguopin.com/job/detail?id=1001'); a.equal(job.date, '2026-10-14'); a.equal(job.dateKind, 'platform'); a.deepEqual(job.channels, ['campus']);
+  a.equal(normalizeJobs([mk(5, { update_time: '' })], site)[0].date, null, 'no platform time → no date');
   const [other] = normalizeJobs([mk(2, { company_name: ' ' })], site); a.ok(!('employer' in other), 'no employer field when the posting company is unknown');
 });
 

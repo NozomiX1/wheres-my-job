@@ -12,7 +12,7 @@ const ADAPTER = 'guopin-portal-v1', PAGE_SIZE = 200, MAX_PAGES = 20, SOE = '11Az
 const HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json', Device: 'h5', Version: '5.2.300' }; // 网页客户端自带的普通应用头
 
 const PROFILES = [{
-  key: 'guopin_soe', company: '国聘（国企）', initial: 'G', aliases: ['国企', '央企', '国聘', '国有企业'],
+  key: 'guopin_soe', company: '国聘（国企）', initial: 'G', aliases: ['国企', '央企', '国聘', '国有企业'], unitCategory: '国企', // 招聘单位分类（目录里的互联网/国企切换）；不叫 category，那是北森来源的请求参数
   ats: 'custom', adapter: ADAPTER, listJD: true, url: ORIGIN + '/', api: LIST, body: { company_nature: [SOE] },
   batch: '国聘平台上企业性质为“国企”的在招岗位', exclude: '(无)'
 }];
@@ -25,7 +25,7 @@ function profileFor(site) {
 }
 function portalNotice(site) {
   if (!verifiedSource(site)) return '';
-  return '国聘仅覆盖平台上企业性质为“国企”的在招岗位，岗位由各企业在国聘自行发布，不代表这些企业官网的全部渠道；招聘单位显示为发布岗位的企业名，岗位链接指向国聘的岗位页。日期、人才计划语义未知；性质只认实习。';
+  return '国聘仅覆盖平台上企业性质为“国企”的在招岗位，岗位由各企业在国聘自行发布，不代表这些企业官网的全部渠道；招聘单位显示为发布岗位的企业名，岗位链接指向国聘的岗位页。日期是国聘给的岗位更新时间，只显示、不参与排序；人才计划语义未知；性质只认实习。';
 }
 
 const usable = job => job && typeof job === 'object' && typeof job.job_id === 'string' && /^\d+$/.test(job.job_id) && typeof job.job_name === 'string' && job.job_name.trim();
@@ -49,6 +49,8 @@ function cityOf(list) {
   }
   return [...new Set(names)].join('/');
 }
+// 国聘给的岗位更新时间（形如 2026-10-16 18:59:04）只取日期，类型记为 platform：页面显示，但不参与同分排序（与互联网来源的日期语义不对等）。
+const dateOf = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : null;
 // JD：国聘的 contents 有的是纯文本，有的是企业粘贴来的 HTML（<span style>、<br />、\r）；统一用共用的 normalizeJD 转成纯文本，
 // 并在能认出「工作职责／任职要求」标题时拆成职责与要求两栏，认不出就整段放 description。去掉不可见的零宽字符。
 function normalizeRecord(job, site) {
@@ -59,7 +61,7 @@ function normalizeRecord(job, site) {
   return {
     id: job.job_id, title: job.job_name, employer: typeof job.company_name === 'string' ? job.company_name.trim() : '',
     city: cityOf(job.district_list), category: typeof job.category_cn === 'string' ? job.category_cn : '', channels,
-    employment: job.nature_cn === '实习' ? 'internship' : null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    employment: job.nature_cn === '实习' ? 'internship' : null, talentPlan: null, date: dateOf(job.update_time), dateKind: 'platform', sourceStatus: null,
     url: ORIGIN + '/job/detail?id=' + job.job_id, duty: jd.duty, requirements: jd.requirements, description: jd.description, jdComplete: jd.hasContent
   };
 }

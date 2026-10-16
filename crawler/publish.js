@@ -167,7 +167,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
       for (const field of dateFields) normalizeDate(job[field]);
       if (fullMoka && job.publishedAt != null && typeof job.publishedAt !== 'string') throw new Error('Invalid publishedAt field');
       const date = normalizeDate(first(job, dateFields));
-      if (job.dateKind != null && !['published', 'updated'].includes(job.dateKind)) throw new Error('Invalid dateKind');
+      if (job.dateKind != null && !['published', 'updated', 'platform'].includes(job.dateKind)) throw new Error('Invalid dateKind'); // platform：汇聚平台给的更新时间，只显示、不参与排序
       const commitment = first(job, ['commitment', 'Commitment', 'Kind', 'recruitType', 'recruit_type']);
       if (commitment != null && typeof commitment !== 'string' && !Number.isSafeInteger(commitment) && !(typeof commitment === 'object' && typeof commitment.name === 'string')) throw new Error('Invalid employment field');
       const kind = typeof commitment === 'object' && commitment ? commitment.name : commitment;
@@ -269,7 +269,7 @@ function readPublished(file) {
     if (job.sourceStatus != null && (typeof job.sourceStatus !== 'string' || !job.sourceStatus.trim())) throw new Error('Invalid baseline sourceStatus');
     if (job.employer != null && typeof job.employer !== 'string') throw new Error('Invalid baseline employer');
     for (const field of ['id', 'sourceKey', 'company', 'title', 'city', 'url', 'duty', 'requirements', 'description']) if (typeof job[field] !== 'string') throw new Error('Invalid baseline job text');
-    if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean' || ![null, 'published', 'updated'].includes(job.dateKind) || (job.date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(job.date) || normalizeDate(job.date) !== job.date))) throw new Error('Invalid baseline job metadata');
+    if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean' || ![null, 'published', 'updated', 'platform'].includes(job.dateKind) || (job.date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(job.date) || normalizeDate(job.date) !== job.date))) throw new Error('Invalid baseline job metadata');
     if (job.url && !safeUrl(job.url)) throw new Error('Unsafe baseline job URL');
     ids.add(job.id);
   }
@@ -419,6 +419,11 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   for (const source of sources.values()) if (!companies.some(company => company.name === source.company)) {
     const site = sites.find(s => s.key === source.key);
     companies.push({ name: source.company, initial: site?.initial || (/^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#'), aliases: site?.aliases || [] });
+  }
+  // 招聘单位分类（页面上的「互联网 / 国企」切换）：只认登记表里的 unitCategory（字符串）；默认是互联网，不写这个字段。
+  for (const company of companies) {
+    const category = sites.find(s => s.company === company.name && typeof s.unitCategory === 'string' && s.unitCategory)?.unitCategory;
+    if (category && category !== '互联网') company.category = category;
   }
   const notices = ['数据范围以各注册来源的渠道、批次及接口参数为准；注册来源不等于公司全量，跨来源机会暂不合并。'];
   if ([...sources.values()].some(source => source.lastSuccess && source.coverage?.includes('"adapter":"moka-portal-v1"'))) notices.push(moka.PORTAL_NOTICE);
