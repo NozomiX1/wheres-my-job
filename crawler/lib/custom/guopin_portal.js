@@ -5,6 +5,7 @@
 // 拆到底仍触顶就整次失败（不发布部分结果）。
 // 宽松策略：坏记录只记 issues；官网拒绝（4xx、业务码异常）立即停止，不重试、不绕过。
 const fs = require('node:fs');
+const { normalizeJD } = require('../jd-text');
 const ORIGIN = 'https://www.iguopin.com', API_ORIGIN = 'https://gp-api.iguopin.com';
 const LIST = API_ORIGIN + '/api/jobs/v1/list', DICT = API_ORIGIN + '/api/base/category/v1/by-alias', TREE = API_ORIGIN + '/api/base/districts/v1/tree';
 const ADAPTER = 'guopin-portal-v1', PAGE_SIZE = 200, MAX_PAGES = 20, SOE = '11AzDak'; // SOE：字典 company_nature 里的「国企」
@@ -48,17 +49,18 @@ function cityOf(list) {
   }
   return [...new Set(names)].join('/');
 }
-// JD 是原生纯文本（含换行），不剥 HTML、不折叠空白；整段放 description（官网不区分职责与要求）。
+// JD：国聘的 contents 有的是纯文本，有的是企业粘贴来的 HTML（<span style>、<br />、\r）；统一用共用的 normalizeJD 转成纯文本，
+// 并在能认出「工作职责／任职要求」标题时拆成职责与要求两栏，认不出就整段放 description。去掉不可见的零宽字符。
 function normalizeRecord(job, site) {
   profileFor(site);
   if (!usable(job)) throw new Error('Guopin: missing official id/title');
   const channels = job.recruitment_type_cn === '校园招聘' ? ['campus'] : job.recruitment_type_cn === '社会招聘' ? ['social'] : [];
-  const description = typeof job.contents === 'string' ? job.contents : '';
+  const jd = normalizeJD(typeof job.contents === 'string' ? job.contents.replace(/[\u200b\u200c\u200d\ufeff]/g, '') : '');
   return {
     id: job.job_id, title: job.job_name, employer: typeof job.company_name === 'string' ? job.company_name.trim() : '',
     city: cityOf(job.district_list), category: typeof job.category_cn === 'string' ? job.category_cn : '', channels,
     employment: job.nature_cn === '实习' ? 'internship' : null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
-    url: ORIGIN + '/job/detail?id=' + job.job_id, duty: '', requirements: '', description, jdComplete: /[\p{L}\p{N}]/u.test(description)
+    url: ORIGIN + '/job/detail?id=' + job.job_id, duty: jd.duty, requirements: jd.requirements, description: jd.description, jdComplete: jd.hasContent
   };
 }
 

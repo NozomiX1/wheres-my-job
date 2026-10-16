@@ -61,6 +61,9 @@ test('guopin: records map to published fields; employer is the posting company; 
   const r = g.normalizeRecord(mk(1, { nature_cn: '实习', recruitment_type_cn: '校园招聘' }), site);
   a.deepEqual({ id: r.id, title: r.title, employer: r.employer, city: r.city, category: r.category, channels: r.channels, employment: r.employment, date: r.date, talentPlan: r.talentPlan, url: r.url, jd: r.jdComplete, description: r.description },
     { id: '1001', title: '岗位1', employer: '公司1', city: '北京', category: '研发', channels: ['campus'], employment: 'internship', date: null, talentPlan: null, url: 'https://www.iguopin.com/job/detail?id=1001', jd: true, description: '工作内容：\n写代码' });
+  const html = g.normalizeRecord(mk(3, { contents: '<span style="font-size: 14px;color: #666666;">工作职责<br />1.负责A；\r<br />2.负责B&nbsp;。<br /><br />任职资格<br />1.硕士\u200b；\r<br />2.熟悉Linux</span>' }), site);
+  a.deepEqual({ duty: html.duty, requirements: html.requirements, description: html.description }, { duty: '工作职责\n1.负责A；\n2.负责B 。', requirements: '任职资格\n1.硕士；\n2.熟悉Linux', description: '' }, 'HTML is turned into plain text and split into duty / requirements');
+  a.ok(!/[<>]|&nbsp;|\r|\u200b/.test(html.duty + html.requirements));
   a.deepEqual(g.normalizeRecord(mk(2, { nature_cn: '社招', recruitment_type_cn: '社会招聘' }), site).channels, ['social']);
   a.equal(g.normalizeRecord(mk(2, { nature_cn: '社招' }), site).employment, null, 'only an explicit internship is recorded');
   a.throws(() => g.normalizeRecord({ job_id: 'x', job_name: '' }, site), /missing official id/);
