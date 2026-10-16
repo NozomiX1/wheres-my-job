@@ -429,7 +429,6 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
     for (const portal of portals.portals) if (portal.noticePass === 2 && hasNotice(portal, site)) notices.push(portal.mod.portalNotice(site));
   }
   if (jobs.some(job => !job.jdComplete || ![job.duty, job.requirements, job.description].some(value => value.trim()))) notices.push('部分岗位缺少 JD 或正文完整性尚未验证；匹配分仅基于已有文字，请前往官网查看完整信息。');
-  if (jobs.some(job => job.sourceStatus && job.sourceStatus !== 'open')) notices.push('部分岗位的官网接口状态非 open，条目中已标明；实际招聘及投递可用性请以官网为准。');
   if ([...sources.values()].some(source => source.status !== 'ready')) notices.push('部分来源尚未取得数据；更新失败时保留已有可用版本，没有则暂不可用，不表示官网无岗位；详情见来源状态。');
   const jobIds = new Set(jobs.map(job => job.id));
   const memberships = Object.fromEntries(Object.entries(unitMemberships).filter(([id]) => jobIds.has(id)));
