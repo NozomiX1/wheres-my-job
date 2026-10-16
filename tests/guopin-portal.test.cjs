@@ -83,3 +83,20 @@ test('guopin: the publisher turns records into published jobs with the posting c
   a.equal(job.city, '北京'); a.equal(job.url, 'https://www.iguopin.com/job/detail?id=1001'); a.equal(job.date, null); a.deepEqual(job.channels, ['campus']);
   const [other] = normalizeJobs([mk(2, { company_name: ' ' })], site); a.ok(!('employer' in other), 'no employer field when the posting company is unknown');
 });
+
+test('guopin: through the real crawl+publish chain, a JD that becomes split does not bring its old whole-body text back', t => {
+  const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+  const { runCrawl } = require('../crawler/crawl'), { publish, readPublished } = require('../crawler/publish');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ande-guopin-chain-')); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const dataFile = path.join(dir, 'data', 'catalog.js');
+  const apply = (contents, time) => {
+    const raw = { total: 1, jobs: [mk(1, { contents })], issues: [], verification: { key: 'guopin_soe', issues: [] } };
+    const crawl = runCrawl(site, { outDir: dir, now: () => time, runner: (_command, args) => { fs.writeFileSync(args.at(-1), JSON.stringify(raw)); return { status: 0 }; } });
+    a.equal(crawl.code, 0); a.equal(publish({ outDir: dir, dataFile, sites: [site], keys: [site.key] }).written, true);
+    return readPublished(dataFile).jobs[0];
+  };
+  const first = apply('这是一整段没有标题的岗位介绍，负责写代码。', '2026-01-01T00:00:00.000Z');
+  a.deepEqual([first.duty, first.requirements, first.description], ['', '', '这是一整段没有标题的岗位介绍，负责写代码。']);
+  const second = apply('工作职责\n1.写代码\n任职资格\n1.本科', '2026-01-02T00:00:00.000Z');
+  a.deepEqual([second.duty, second.requirements, second.description], ['工作职责\n1.写代码', '任职资格\n1.本科', ''], 'the old whole body is not restored next to the new split');
+});

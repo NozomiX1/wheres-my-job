@@ -376,7 +376,11 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         // 旧版 JD 完整而这次不完整（增量跳过或详情没取到）：整段正文沿用旧值（详情通常比列表更全）；
         // 否则只在新内容某字段为空时补上旧的非空值。两种情况下，详情带出的性质/计划/分类也沿用旧值。
         const jd = ['duty', 'requirements', 'description'], jdLost = hasDetail(o) && !hasDetail(job);
-        const restored = jd.filter(field => o[field].trim() && (jdLost || !job[field].trim()));
+        // 整段正文（description）与职责/要求（duty、requirements）是两种结构：新内容已经是其中一种时，不把另一种的旧值带回来
+        // （国聘这类 JD 可能从整段变成拆成职责/要求，旧整段带回来会让同一段话出现两遍）；同一种结构里某栏为空才沿用旧值。
+        const split = ['duty', 'requirements'].some(field => job[field].trim()), whole = Boolean(job.description.trim());
+        const sameStructure = field => field === 'description' ? !split : !whole;
+        const restored = jd.filter(field => o[field].trim() && (jdLost || !job[field].trim() && sameStructure(field)));
         const kept = jdLost || restored.length ? ['employment', 'talentPlan', 'category'].filter(field => (job[field] == null || job[field] === '') && o[field] != null && o[field] !== '') : [];
         return restored.length || kept.length || jdLost ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
       });
