@@ -129,9 +129,9 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
       const event = req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html') ? 'page' : req.method === 'POST' && url.pathname === '/api/search' ? 'search' : req.method === 'GET' && url.pathname.startsWith('/api/job/') ? 'job' : '';
       if (event) access.record(event, req, ip);
       if (url.pathname.startsWith('/api/')) {
-        // 经 xray 回落进来的访客，来源都是本机回环、拿不到真实 IP：此时每个浏览器编号各用一份额度，同时给整个回环来源再设一个 10 倍的总上限。
+        // 经 xray 回落进来的访客，来源都是本机回环、拿不到真实 IP：此时每个浏览器编号各用一份额度，同时给整个回环来源再设一个 2.5 倍（约每秒 30 次，与服务的处理能力相当）的总上限。
         const id = LOOPBACK.has(ip) ? visitorOf(req) : '';
-        if (limited(id ? ip + '|' + id : ip) || (id && limited(ip + '|*', LIMITS.requests * 10))) throw new HttpError(429, '请求过于频繁，请稍后再试');
+        if (limited(id ? ip + '|' + id : ip) || (id && limited(ip + '|*', LIMITS.requests * 2.5))) throw new HttpError(429, '请求过于频繁，请稍后再试');
         if (req.method === 'POST' && url.pathname === '/api/search') {
           const result = search(state, await readBody(req));
           log('search', Date.now() - started + 'ms', 'total', result.total, 'page', result.items.length); // 不记录搜索词
