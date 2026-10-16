@@ -7,12 +7,15 @@ const noSleep = async () => {};
 // 假的国聘接口：按性质/经验/学历过滤，单次查询最多翻到 1000 条（超过的页重复最后一页，和线上一样）。
 function fakeApi(jobs, { refuse = false } = {}) {
   const dict = { job_nature: ['N1', 'N2', 'N3'].map(value => ({ value })), job_experience: ['E1', 'E2'].map(value => ({ value })), job_education: ['D1', 'D2'].map(value => ({ value })) };
+  const area = (province, city) => ({ value: province, children: [{ value: city, children: [{ value: city.slice(0, 5) + '1' }, { value: city.slice(0, 5) + '2' }] }] });
+  const tree = [{ value: '000000', children: [area('110000', '110100'), area('310000', '310100'), area('440000', '440100')] }];
   const calls = [];
   const fetchImpl = async (url, init) => {
-    const body = JSON.parse(init.body); calls.push({ url, body });
+    const body = init.body ? JSON.parse(init.body) : {}; calls.push({ url, body });
+    if (url.endsWith('/tree')) return { status: 200, json: async () => ({ code: 200, data: tree }) };
     if (refuse) return { status: 200, json: async () => ({ code: 400, msg: '当前访问人数过多，请稍后重试或联系客服。' }) };
     if (url.endsWith('/by-alias')) return { status: 200, json: async () => ({ code: 200, data: dict }) };
-    const match = jobs.filter(j => (!body.nature || body.nature.includes(j.nature)) && (!body.experience || body.experience.includes(j.experience)) && (!body.education || body.education.includes(j.education)));
+    const match = jobs.filter(j => (!body.nature || body.nature.includes(j.nature)) && (!body.experience || body.experience.includes(j.experience)) && (!body.education || body.education.includes(j.education)) && (!body.district || body.district.some(path => j.district_list.some(d => d.area_code === path || d.area_code.startsWith(path + '.')))));
     const start = Math.min((body.page - 1) * body.page_size, Math.max(0, 1000 - body.page_size));
     const list = match.slice(start, start + body.page_size);
     return { status: 200, json: async () => ({ code: 200, data: { total: 20 * body.page_size, page: body.page, page_size: body.page_size, list: list.length ? list : null } }) }; // 线上没有匹配时 list 是 null
@@ -31,9 +34,19 @@ test('guopin: splits by nature → experience → education until every partitio
   a.ok(calls.filter(c => c.url.endsWith('/list')).every(c => c.body.company_nature[0] === '11AzDak' && c.body.page_size === 200), 'always scoped to state-owned companies, 200 per page');
 });
 
+test('guopin: a partition that is still full after nature/experience/education is split by the area tree (province, then city)', async () => {
+  const places = ['000000.110000.110100.110101', '000000.110000.110100.110102', '000000.310000.310100.310101', '000000.440000.440100.440101'];
+  const jobs = Array.from({ length: 4400 }, (_, i) => mk(i, { nature: 'N1', experience: 'E1', education: 'D1', district_list: [{ area_code: places[i % 4], area_cn: '某-区' }] })); // 每个区 1100 条：连区也触顶
+  const { fetchImpl } = fakeApi(jobs.map((j, i) => i < 3300 ? { ...j, district_list: [{ area_code: places[i % 3], area_cn: '某-区' }] } : j));
+  await a.rejects(g.run(site, { fetchImpl, sleep: noSleep }), /still reaches the 1000-row cap/);
+  const ok = fakeApi(Array.from({ length: 3996 }, (_, i) => mk(i, { nature: 'N1', experience: 'E1', education: 'D1', district_list: [{ area_code: places[i % 4], area_cn: '某-区' }] }))); // 每个区 999 条（恰好 1000 条看起来也像触顶，要再拆）
+  const out = await g.run(site, { fetchImpl: ok.fetchImpl, sleep: noSleep });
+  a.equal(out.jobs.length, 3996); a.ok(ok.calls.some(c => c.body.district && c.body.district[0].split('.').length === 4), 'went down to the district level');
+});
+
 test('guopin: a small result needs a single pass and a stop on any refusal or bad dictionary', async () => {
   const small = fakeApi(Array.from({ length: 30 }, (_, i) => mk(i))), out = await g.run(site, { fetchImpl: small.fetchImpl, sleep: noSleep });
-  a.equal(out.jobs.length, 30); a.equal(small.calls.length, 2, 'dictionary + one list request');
+  a.equal(out.jobs.length, 30); a.equal(small.calls.length, 3, 'dictionary + area tree + one list request');
   await a.rejects(g.run(site, { fetchImpl: fakeApi([], { refuse: true }).fetchImpl, sleep: noSleep }), /native refusal/);
   await a.rejects(g.run(site, { fetchImpl: async () => ({ status: 403, json: async () => ({}) }), sleep: noSleep }), /HTTP 403/);
   await a.rejects(g.run(site, { fetchImpl: fakeApi([]).fetchImpl, sleep: noSleep }), /no usable records/);
