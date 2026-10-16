@@ -28,10 +28,13 @@ if (require.main === module) {
   const daysAt = args.indexOf('--days'), days = daysAt >= 0 ? Number(args[daysAt + 1]) || 7 : 7;
   const file = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--days') || process.env.ANDE_ACCESS_LOG || path.join(os.homedir(), 'ande-access.log');
   const { rows, ips } = summarize(fs.readFileSync(file, 'utf8'), { days, exclude: (process.env.ANDE_EXCLUDE_IPS || '').split(',').filter(Boolean) });
+  // 经 xray 回落进来的访客来源都是本机回环（拿不到真实 IP）：此时 IP 没有意义，只看独立浏览器。
+  const realIps = ips.some(([ip]) => !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip));
   console.log(`近 ${days} 天（北京时间，不含机器人）`);
-  console.log('日期        页面访问  搜索  看详情  独立IP  独立浏览器');
-  for (const r of rows) console.log(`${r.day}  ${String(r.page).padStart(8)}  ${String(r.search).padStart(4)}  ${String(r.job).padStart(6)}  ${String(r.ips).padStart(6)}  ${String(r.visitors).padStart(10)}`);
-  if (flag('--ips')) { console.log('\nIP（请求数）'); for (const [ip, n] of ips.slice(0, 50)) console.log(`${ip}  ${n}`); }
+  console.log(realIps ? '日期        页面访问  搜索  看详情  独立IP  独立浏览器' : '日期        页面访问  搜索  看详情  独立浏览器');
+  for (const r of rows) console.log(`${r.day}  ${String(r.page).padStart(8)}  ${String(r.search).padStart(4)}  ${String(r.job).padStart(6)}  ${realIps ? String(r.ips).padStart(6) + '  ' : ''}${String(r.visitors).padStart(10)}`);
+  if (!realIps) console.log('\n（日志里的 IP 都是 127.0.0.1：代理没有传访客的真实 IP，所以不统计 IP，人数以独立浏览器为准。）');
+  else if (flag('--ips')) { console.log('\nIP（请求数）'); for (const [ip, n] of ips.slice(0, 50)) console.log(`${ip}  ${n}`); }
 }
 
 module.exports = { summarize };

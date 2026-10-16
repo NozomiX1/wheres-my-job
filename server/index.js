@@ -11,7 +11,7 @@ const vm = require('node:vm');
 const createRank = require('../assets/rank.js');
 const { cityKeys } = require('../assets/cities.js');
 const { createIndex } = require('./search');
-const { createAccessLog } = require('./access');
+const { createAccessLog, visitorOf } = require('./access');
 
 const ROOT = path.join(__dirname, '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
@@ -91,10 +91,10 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
   const timer = reloadMs ? setInterval(reload, reloadMs) : null;
   timer?.unref();
 
-  function limited(ip) {
+  function limited(ip, max = LIMITS.requests) {
     const now = Date.now(), entry = hits.get(ip);
     if (!entry || now - entry.start > LIMITS.windowMs) { hits.set(ip, { start: now, count: 1 }); if (hits.size > 5000) for (const [k, v] of hits) if (now - v.start > LIMITS.windowMs) hits.delete(k); return false; }
-    return ++entry.count > LIMITS.requests;
+    return ++entry.count > max;
   }
   function send(req, res, status, type, payload) {
     const buffer = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
@@ -129,7 +129,9 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
       const event = req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html') ? 'page' : req.method === 'POST' && url.pathname === '/api/search' ? 'search' : req.method === 'GET' && url.pathname.startsWith('/api/job/') ? 'job' : '';
       if (event) access.record(event, req, ip);
       if (url.pathname.startsWith('/api/')) {
-        if (limited(ip)) throw new HttpError(429, '请求过于频繁，请稍后再试');
+        // 经 xray 回落进来的访客，来源都是本机回环、拿不到真实 IP：此时每个浏览器编号各用一份额度，同时给整个回环来源再设一个 10 倍的总上限。
+        const id = LOOPBACK.has(ip) ? visitorOf(req) : '';
+        if (limited(id ? ip + '|' + id : ip) || (id && limited(ip + '|*', LIMITS.requests * 10))) throw new HttpError(429, '请求过于频繁，请稍后再试');
         if (req.method === 'POST' && url.pathname === '/api/search') {
           const result = search(state, await readBody(req));
           log('search', Date.now() - started + 'ms', 'total', result.total, 'page', result.items.length); // 不记录搜索词

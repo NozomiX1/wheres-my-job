@@ -96,3 +96,12 @@ test('behind a local proxy each visitor (X-Forwarded-For) has their own rate-lim
   a.equal(clientIp(req('127.0.0.1', '8.8.8.8')), '8.8.8.8'); a.equal(clientIp(req('::1', '7.7.7.7, 8.8.8.8')), '8.8.8.8');
   a.equal(clientIp(req('203.0.113.5', '8.8.8.8')), '203.0.113.5', 'direct peers cannot spoof'); a.equal(clientIp(req('127.0.0.1')), '127.0.0.1');
 });
+
+test('when the client IP is unknown (loopback only), each browser id gets its own rate-limit budget; without an id they share one', async () => {
+  const own = createApp({ dataFile, reloadMs: 0, warm: false }); await new Promise(r => own.server.listen(0, '127.0.0.1', r));
+  try {
+    const url = 'http://127.0.0.1:' + own.server.address().port + '/api/health', as = id => fetch(url, id ? { headers: { 'X-Visitor-Id': id } } : {}).then(r => r.status), codes = [];
+    for (let i = 0; i < LIMITS.requests + 5; i++) codes.push(await as('browser-aaaa1111'));
+    a.ok(codes.includes(429), 'one browser is limited'); a.equal(await as('browser-bbbb2222'), 200, 'another browser is not'); a.equal(await as('bad id!'), 200, 'an invalid id falls back to the shared budget, which is still unused');
+  } finally { own.server.close(); }
+});

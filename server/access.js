@@ -5,13 +5,15 @@ const fs = require('node:fs');
 const VISITOR = /^[A-Za-z0-9-]{8,64}$/;
 const BOT = /bot|spider|crawl|slurp|curl|wget|python|scrapy|headless|monitor|uptime|check/i;
 
+const visitorOf = req => { const id = String(req.headers['x-visitor-id'] || ''); return VISITOR.test(id) ? id : ''; };
+
 function createAccessLog(file, { days = 30, now = Date.now } = {}) {
   if (!file) return { record() {}, prune() {} };
   return {
     record(event, req, ip) {
-      const id = String(req.headers['x-visitor-id'] || ''), bot = BOT.test(String(req.headers['user-agent'] || '')) ? 1 : 0;
+      const bot = BOT.test(String(req.headers['user-agent'] || '')) ? 1 : 0;
       // shortcut: 同步追加，量很小；访问量大到影响响应时改成批量写。
-      try { fs.appendFileSync(file, [new Date(now()).toISOString(), event, ip, VISITOR.test(id) ? id : '', bot].join('\t') + '\n', { mode: 0o600 }); } catch {}
+      try { fs.appendFileSync(file, [new Date(now()).toISOString(), event, ip, visitorOf(req), bot].join('\t') + '\n', { mode: 0o600 }); } catch {}
     },
     prune() {
       try {
@@ -24,4 +26,4 @@ function createAccessLog(file, { days = 30, now = Date.now } = {}) {
   };
 }
 
-module.exports = { createAccessLog };
+module.exports = { createAccessLog, visitorOf };

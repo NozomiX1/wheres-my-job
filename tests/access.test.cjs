@@ -54,3 +54,10 @@ test('stats: counts per Beijing day, skips bots and excluded IPs, counts unique 
   const file = path.join(os.tmpdir(), 'ande-stats-' + process.pid + '.log'); fs.writeFileSync(file, log);
   try { a.match(execFileSync('node', [path.join(__dirname, '..', 'deploy', 'access-stats.js'), file, '--days', '3650', '--ips'], { encoding: 'utf8' }), /日期[\s\S]*独立IP[\s\S]*1\.1\.1\.1/); } finally { fs.rmSync(file, { force: true }); }
 });
+
+test('stats script: when every IP is loopback it reports browsers only and says why', t => {
+  const file = path.join(tmp(t), 'access.log'), day = new Date().toISOString();
+  fs.writeFileSync(file, [`${day}\tpage\t127.0.0.1\t\t0`, `${day}\tsearch\t127.0.0.1\tbrowser-aaaa\t0`, `${day}\tsearch\t127.0.0.1\tbrowser-bbbb\t0`].join('\n') + '\n');
+  const out = execFileSync('node', [path.join(__dirname, '..', 'deploy', 'access-stats.js'), file, '--days', '3', '--ips'], { encoding: 'utf8' });
+  a.match(out, /独立浏览器/); a.ok(!/独立IP/.test(out)); a.match(out, /127\.0\.0\.1/); a.match(out, /\s2\s*\n/);
+});
