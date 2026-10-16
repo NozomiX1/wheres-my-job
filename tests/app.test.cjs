@@ -70,13 +70,13 @@ p.state.active={words:[],lowered:['销售']};assert.equal(p.scoreText(-.35),'-0.
 for(const [kind,hint]of [['keywords','填写想优先看的方向、技能或工作内容，命中会加分。'],['downrank','填写不太想看的方向或工作内容，命中会扣分。']]){
  const markup=p.wordEditor(kind);assert.ok(markup.includes(`<p class="word-hint" id="${kind}Hint">${hint}</p>`));assert.ok(markup.includes(`aria-describedby="${kind}Hint ${kind}Feedback"`));
 }
-for(const [words,count]of [[p.EXAMPLE_KEYWORDS,85],[p.EXAMPLE_DOWNRANK,37]]){assert.equal(words.length,count);assert.equal(new Set(words.map(w=>w.toLowerCase())).size,count);assert.ok(words.every(w=>w.trim()===w&&!/[\\|?()]/.test(w)));}
-assert.ok(p.EXAMPLE_KEYWORDS.includes('World Model'));assert.ok(p.EXAMPLE_DOWNRANK.includes('测试'));
+for(const [words,count]of [[p.EXAMPLE_KEYWORDS,20],[p.EXAMPLE_DOWNRANK,26]]){assert.equal(words.length,count);assert.equal(new Set(words.map(w=>w.toLowerCase())).size,count);assert.ok(words.every(w=>w.trim()===w&&!/[\\|?()]/.test(w)));}
+assert.ok(p.EXAMPLE_KEYWORDS.includes('Agent'));assert.ok(p.EXAMPLE_DOWNRANK.includes('销售'));
 const example=load();assert.equal(example.state.keywords.length,0);assert.equal(example.state.downrank.length,0);
 example.state.keywords=['财务','agent'];example.state.downrank=['RAG','销售'];example.state.drafts={keywords:'未添加',downrank:'保留草稿'};example.state.editing={keywords:0,downrank:1};example.state.selected.add('字节跳动');example.state.recruitment='campus';example.state.active={words:['财务'],lowered:['RAG'],selected:['字节跳动'],recruitment:'campus'};example.state.searched=true;
 const active=example.state.active,results=example.state.results;
 example.fillExample();assert.equal(example.writes(),1);const once=JSON.stringify([example.state.keywords,example.state.downrank]);example.fillExample();assert.equal(example.writes(),2);assert.equal(JSON.stringify([example.state.keywords,example.state.downrank]),once);
-assert.equal(example.state.keywords.length,86);assert.equal(example.state.downrank.length,38);assert.deepEqual([...example.state.keywords].slice(0,2),['财务','agent']);assert.equal(example.state.drafts.keywords,'未添加');assert.equal(example.state.drafts.downrank,'保留草稿');assert.equal(example.state.editing.keywords,0);assert.equal(example.state.editing.downrank,1);assert.equal(example.state.recruitment,'campus');assert.strictEqual(example.state.active,active);assert.strictEqual(example.state.results,results);assert.ok(example.state.feedback.keywords.includes('相抵'));
+assert.equal(example.state.keywords.length,21);assert.equal(example.state.downrank.length,27);assert.deepEqual([...example.state.keywords].slice(0,2),['财务','agent']);assert.equal(example.state.drafts.keywords,'未添加');assert.equal(example.state.drafts.downrank,'保留草稿');assert.equal(example.state.editing.keywords,0);assert.equal(example.state.editing.downrank,1);assert.equal(example.state.recruitment,'campus');assert.strictEqual(example.state.active,active);assert.strictEqual(example.state.results,results);assert.ok(example.state.feedback.keywords.includes('相抵'));
 const saved=JSON.parse(example.storage.get('ande.preferences.v1'));assert.deepEqual(saved.downrank,[...example.state.downrank]);assert.ok(!('drafts'in saved));
 const types=Array.from(p.RECRUITMENT_TYPES,([type])=>type),scopes=j=>types.filter(t=>p.matchesRecruitment(j,t));
 assert.deepEqual(scopes({channels:[],employment:null,talentPlan:null}),types);
