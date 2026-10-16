@@ -18,7 +18,7 @@ dialog{border:0;padding:0;border-radius:18px;box-shadow:0 0 0 1px #0000000f,0 28
 @media(max-width:740px){.city-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .bulk-actions{display:flex;align-items:center;gap:12px}.bulk-actions .text-button{color:var(--ink)}.city-unknown{margin-top:12px}
 /* 编辑风格（预览）：纸色、墨色、细线、直角；标题与口号用衬线，控件仍用无衬线。 */
-:root{--bg:#fbfbfa;--paper:#fbfbfa;--ink:#181a1b;--muted:#565b5d;--line:#d8dcda;--soft:#f3f4f3;--blue:#181a1b;--rule:#242728;--serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",serif}
+:root{--bg:#fbfbfa;--paper:#fbfbfa;--ink:#181a1b;--muted:#565b5d;--line:#d8dcda;--soft:#f3f4f3;--blue:#181a1b;--body:#2c2e2f;--rule:#242728;--serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",serif}
 input::placeholder,textarea::placeholder{color:#74797b}
 h1,h2,h3,.brand{font-family:var(--serif)}
 .brand{font-weight:700;letter-spacing:.02em}
@@ -47,3 +47,37 @@ input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}input
 .letter:hover:not(:disabled):not(.on),.github-link:hover,.icon-button:hover{background:var(--soft);color:var(--ink)}
 .text-button:hover{color:var(--ink);text-decoration:underline}
 .primary:hover,.apply-link:hover{background:#3b3e40;color:var(--paper)}
+/* JD 弹窗：窄一些的阅读栏、事实栏、章节细线、深墨色正文 */
+dialog{width:min(780px,calc(100vw - 32px))}
+.detail-content{padding:26px 36px 32px}
+.detail-head h2{font-size:26px;line-height:1.4;letter-spacing:0}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:20px 0 0;border:1px solid var(--line)}
+.facts div{padding:10px 14px;min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts div:nth-child(3n){border-right:0}.facts div:nth-last-child(-n+3){border-bottom:0}
+.facts dt{font-size:11px;color:var(--muted)}.facts dd{margin:2px 0 0;font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+.facts-score{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700}
+.detail-head p{font-size:12px}
+.detail-section{margin-top:28px}
+.detail-section h3{font-size:16px;padding-top:14px;margin-bottom:12px;border-top:1px solid var(--line)}
+.detail-section p{font-size:14.5px;line-height:1.95;color:var(--body)}
+.detail-why{margin-top:22px;border:1px solid var(--line);padding:10px 14px}
+.detail-why summary{font-weight:400;font-size:12px;color:var(--muted)}.detail-why[open] summary{color:var(--ink)}
+.detail-why p{font-size:12px;line-height:1.8;color:var(--muted)}
+@media(max-width:740px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}.facts div:nth-child(3n){border-right:1px solid var(--line)}.facts div:nth-child(2n){border-right:0}.facts div:nth-last-child(-n+3){border-bottom:1px solid var(--line)}.facts div:nth-last-child(-n+2){border-bottom:0}.detail-content{padding:20px 20px 26px}}
+/* 弹窗：滚到头不带动背后的页面；顶栏的标题与两个按钮统一成同高、同风格 */
+html{scrollbar-gutter:stable}html:has(dialog[open]){overflow:hidden}
+.detail-content{overscroll-behavior:contain}
+.dialog-head{padding:12px 20px 12px 36px;border-bottom:1px solid var(--line)}
+.dialog-head .eyebrow{font-family:var(--serif);font-size:14px;font-weight:700;letter-spacing:.08em;color:var(--ink)}
+.dialog-actions{gap:8px}
+.dialog-actions .apply-link,.icon-button{height:34px}
+.dialog-actions .apply-link{padding:0 16px;font-size:13px}
+.icon-button{width:34px;background:transparent;border:1px solid var(--rule);color:var(--ink)}
+.icon-button:hover{background:#ececea}
+@media(max-width:740px){.dialog-head{padding:10px 14px 10px 20px}}
+/* 减线条：事实栏只留上下两条线和格间竖线，与正文左对齐；「为什么排在这里」只留顶线；顶栏左侧显示公司与城市 */
+.facts{border-width:1px 0}
+.facts div:nth-child(3n+1){padding-left:0}
+.detail-why{border-width:1px 0 0;padding:12px 0 0}
+.dialog-head .eyebrow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:inherit;font-size:12px;font-weight:400;letter-spacing:0;color:var(--muted)}
+@media(max-width:740px){.facts div:nth-child(3n+1){padding-left:14px}.facts div:nth-child(2n+1){padding-left:0}}
