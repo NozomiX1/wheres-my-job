@@ -508,12 +508,7 @@ test('update is the ONLY chain: process.execPath crawl children, then one publis
   const allCalls = [];
   const all = await runUpdate([], { sites: loadSites(), runner: (_command, args) => { allCalls.push(args[1]); return { status: 1 }; }, publisher: () => ({ code: 1, written: false }) });
   assert.equal(all.code, 1);
-  assert.deepEqual(allCalls.sort(), loadSites().filter(s => s.cadence !== 'weekly').map(s => s.key).sort(), 'No second hardcoded site list; weekly sources wait for --full or an explicit key');
-  const fullCalls = [], explicitCalls = [];
-  await runUpdate([], { sites: loadSites(), full: true, runner: (_command, args) => { fullCalls.push(args[1]); return { status: 1 }; }, publisher: () => ({ code: 1, written: false }) });
-  assert.deepEqual(fullCalls.sort(), loadSites().map(s => s.key).sort(), '--full runs every source, weekly ones included');
-  await runUpdate(['guopin_soe'], { sites: loadSites(), runner: (_command, args) => { explicitCalls.push(args[1]); return { status: 1 }; }, publisher: () => ({ code: 1, written: false }) });
-  assert.deepEqual(explicitCalls, ['guopin_soe'], 'an explicit key always runs');
+  assert.deepEqual(allCalls.sort(), loadSites().map(s => s.key).sort(), 'No second hardcoded site list');
   await assert.rejects(runUpdate(['unknown'], { sites: [A], runner: () => assert.fail('must reject first'), publisher: () => assert.fail('must reject first') }), /Unknown/);
   const chain = ['crawl.js', 'publish.js', 'update.js', 'run_daily.ps1'].map(file => fs.readFileSync(path.join(__dirname, '..', 'crawler', file), 'utf8')).join('\n');
   assert.ok(!/require\([^\n]*(?:score|filter|recall)|(?:build_score_html|split_batches|merge_judge|write_cache|aggregate|narrow|recall)\.js/.test(chain));

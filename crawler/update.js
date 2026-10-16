@@ -48,8 +48,7 @@ async function runUpdate(keys = [], { sites = loadSites(), runner = spawnPrefixe
   const say = text => { log(text); file?.line(text); };
   const startedAt = new Date().toISOString();
   say('update start: ' + keys.join(' ') + (keys.length ? '' : '(all)') + (full ? ' --full' : ''));
-  // 没指定来源时：全量（--full）采全部，否则跳过 cadence 为 weekly 的来源（耗时长、变化慢）；明确指定的来源一定会采。
-  const selected = [...new Set(keys.length ? keys.flatMap(key => key.split(',').filter(Boolean)) : sites.filter(site => full || site.cadence !== 'weekly').map(site => site.key))];
+  const selected = [...new Set(keys.length ? keys.flatMap(key => key.split(',').filter(Boolean)) : sites.map(site => site.key))];
   for (const key of selected) if (!sites.some(site => site.key === key)) throw new Error('Unknown source key: ' + key);
   const results = new Map(); // key → { code, refused }，以最后一次尝试为准
   // 同一官网的来源串行、不同官网并行；pass>0 为补采，只跑传入的来源。

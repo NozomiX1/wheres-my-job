@@ -11,8 +11,7 @@ const ADAPTER = 'guopin-portal-v1', PAGE_SIZE = 200, MAX_PAGES = 20, SOE = '11Az
 const HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json', Device: 'h5', Version: '5.2.300' }; // 网页客户端自带的普通应用头
 
 const PROFILES = [{
-  key: 'guopin_soe', company: '国聘（国企）', initial: 'G', aliases: ['国企', '央企', '国聘', '国有企业'], cadence: 'weekly', // weekly：每天的增量不跑（要 1～2 小时），只在每周全量和手动指定时采
- 
+  key: 'guopin_soe', company: '国聘（国企）', initial: 'G', aliases: ['国企', '央企', '国聘', '国有企业'],
   ats: 'custom', adapter: ADAPTER, listJD: true, url: ORIGIN + '/', api: LIST, body: { company_nature: [SOE] },
   batch: '国聘平台上企业性质为“国企”的在招岗位', exclude: '(无)'
 }];

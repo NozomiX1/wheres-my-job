@@ -33,14 +33,6 @@ test('retryable: stale and not refused; fresh or refused sources are skipped', (
   a.deepEqual(retryable(sources, 12, now), ['net', 'new']);
 });
 
-test('weekly sources count as stale only after 8 days, so neither the daily check nor the afternoon retry picks them', () => {
-  const now = Date.parse('2026-01-10T00:00:00Z'), h = n => new Date(now - n * 3600000).toISOString(), weekly = new Set(['w']);
-  const sources = [{ key: 'w', lastSuccess: h(100), message: '' }, { key: 'x', lastSuccess: h(100), message: '' }, { key: 'old', lastSuccess: h(200), message: '' }, { key: 'wold', lastSuccess: h(200), message: '' }];
-  a.deepEqual(stale(sources, 36, now, new Set(['w', 'wold'])), ['x', 'old', 'wold']);
-  a.deepEqual(retryable(sources, 18, now, new Set(['w', 'wold'])), ['x', 'old', 'wold']);
-  a.deepEqual(stale(sources, 36, now), ['w', 'x', 'old', 'wold'], 'without the weekly set every source uses the normal threshold');
-});
-
 test('validate-data refuses a dataset that is too small against the current one', async () => {
   a.equal((await run(process.execPath, [path.join(repo, 'deploy', 'validate-data.js'), fixture, fixture])).code, 0);
   const bad = await run(process.execPath, [path.join(repo, 'deploy', 'validate-data.js'), fixture, fixture, '--min-ratio=1.5']);
