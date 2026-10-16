@@ -52,15 +52,22 @@ function joinText(job, fields) {
   return [...new Set(fields.map(field => text(job[field], field)).filter(value => value.trim()))].join('\n');
 }
 
+// Moka 把区放在 cityName（海淀区），上一级放 provinceName：直辖市写成「北京市」，其他省的区查下表还原成城市；表里没有的区保持原样。
+const DISTRICT_CITY = { '广东>南山区': '深圳市', '浙江>拱墅区': '杭州市', '浙江>上城区': '杭州市', '福建>翔安区': '厦门市', '四川>双流区': '成都市', '内蒙古>察哈尔右翼前旗': '乌兰察布市' };
+function districtCity({ cityName, provinceName }) {
+  if (typeof cityName !== 'string' || typeof provinceName !== 'string' || !/[区县旗]$/.test(cityName)) return null;
+  return /市$/.test(provinceName) ? provinceName : DISTRICT_CITY[provinceName + '>' + cityName] || null;
+}
+
 function cityText(value) {
   if (value == null) return '';
   if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(cityText).filter(Boolean).join('/');
+  if (Array.isArray(value)) return [...new Set(value.map(cityText).filter(Boolean))].join('/');
   if (typeof value === 'object') {
     const fields = ['name', 'cityName', 'city', 'provinceName', 'country']; // Some official overseas locations name only a country.
     for (const field of fields) if (value[field] != null) text(value[field], 'city.' + field);
     const name = first(value, fields);
-    if (name !== null) return name;
+    if (name !== null) return name === value.cityName && districtCity(value) || name;
   }
   throw new Error('Invalid city field');
 }

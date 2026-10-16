@@ -397,6 +397,16 @@ test('country-only official locations retain overseas jobs without inventing a c
   }
 });
 
+test('Moka district locations become their city: municipality via provinceName, other provinces via table', () => {
+  const site = { ...A, site: 'social' }, city = locations => normalizeJobs([{ ...rawJob(), locations }], site)[0].city;
+  assert.equal(city([{ country: '中国', cityName: '海淀区', provinceName: '北京市' }]), '北京市');
+  assert.equal(city([{ cityName: '徐汇区', provinceName: '上海市' }, { cityName: '徐汇区', provinceName: '上海市' }, { cityName: '海淀区', provinceName: '北京市' }]), '上海市/北京市');
+  assert.equal(city([{ cityName: '南山区', provinceName: '广东' }, { cityName: '深圳市', provinceName: '广东' }]), '深圳市');
+  assert.equal(city([{ cityName: '拱墅区', provinceName: '浙江' }]), '杭州市');
+  assert.equal(city([{ cityName: '某某区', provinceName: '某省' }]), '某某区', 'unknown district is kept as published');
+  assert.equal(city([{ cityName: '成都市', provinceName: '四川' }]), '成都市');
+});
+
 test('ATS fields, official URLs and source+official identity do not lose requirements or merge titles', () => {
   assert.notEqual(normalizeJobs([rawJob('same')], A)[0].id, normalizeJobs([rawJob('same')], B)[0].id);
   const generic = { key: 'unknown', company: 'Unknown', ats: 'custom' };
