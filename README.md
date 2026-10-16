@@ -71,7 +71,7 @@ node crawler/update.js stepfun stepfun_social
 | [CONTEXT.md](CONTEXT.md) | 领域用语 |
 | [crawler/README.md](crawler/README.md) | 采集工具操作与适配器契约 |
 
-`index.html` / `assets/` 是原生界面，`assets/rank.js` 是打分排序（浏览器与服务端共用一份），`server/` 是搜索服务，`crawler/` 实现安全采集/发布（`crawler/sites.json` 是唯一来源登记），`deploy/` 是服务器常驻与定时采集配置，`data/` 由采集生成、不入库，`tests/` 提供无依赖离线检查。来源核验与研究记录已清理，需要时查 Git 历史，不替代当前SPEC。
+`index.html` / `assets/` 是原生界面，`assets/rank.js` 是打分排序、`assets/cities.js` 是工作地点归一化（都由浏览器与服务端共用一份），`server/` 是搜索服务，`crawler/` 实现安全采集/发布（`crawler/sites.json` 是唯一来源登记），`deploy/` 是服务器常驻与定时采集配置，`data/` 由采集生成、不入库，`tests/` 提供无依赖离线检查。来源核验与研究记录已清理，需要时查 Git 历史，不替代当前SPEC。
 
 ## 使用许可（禁止商用）
 
