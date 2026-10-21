@@ -14,7 +14,7 @@
   const INTERN_TITLE = /实习|\bintern(?:s|ship)?\b/i;
   const MIXED_TITLE = /全职|FTE|社招|[/／]\s*(?:校招|应届)|(?:校招|应届)\s*[/／]/i; // 「实习/全职」「【校招/实习】」这类同时写了几种，不按标题判
   const GRAD_TOKEN = /(?:20)?\d{2}\s*届/;
-  const EXP_PATTERN = new RegExp('(?<![近前过去最近内约])(' + N + ')\\s*(?:[-–~至到]\\s*(' + N + '))?\\s*年(?:及)?(?:以上|\\+|[^，,。；;\\n\\s]{0,6}?(?:经验|经历))|(?:至少|不少于|不低于)\\s*(' + N + ')\\s*年|(\\d+)\\s*\\+?\\s*years?', 'gi');
+  const EXP_PATTERN = new RegExp('(' + N + ')\\s*(?:[-–~至到]\\s*(' + N + '))?\\s*年(?:及)?(?:以上|\\+|[^，,。；;\\n\\s]{0,6}?(?:经验|经历))|(?:至少|不少于|不低于)\\s*(' + N + ')\\s*年|(\\d+)\\s*\\+?\\s*years?', 'gi');
   const body = job => (job.requirements || '') + '\n' + (job.description || '') + '\n' + (job.duty || '');
 
   // 证据由强到弱：官网明确给的（性质、渠道）→ 标题里的实习/届 → 渠道未知时才看 JD（有「XX届」→ 校招，有年限要求 → 社招）。
@@ -38,6 +38,7 @@
     if (/经验不限|不限经验/.test(text)) return '经验不限';
     const found = [];
     for (const m of text.matchAll(EXP_PATTERN)) {
+      if (m[1] && /[近前过去最近内约]/.test(text[m.index - 1] || '')) continue; // 「近3年」「最近5年」不是经验要求（不用后行断言，老版本 Safari 不支持）
       const lo = m[4] ? Number(m[4]) : num(m[1] ?? m[3]), hi = m[2] ? num(m[2]) : null;
       if (!Number.isFinite(lo) || lo < 0 || lo > 20 || hi != null && (!Number.isFinite(hi) || hi <= lo || hi > 30)) continue;
       if (/优先|加分|更佳|尤佳/.test(text.slice(m.index + m[0].length).split(/[，,。；;\n]/)[0].slice(0, 40))) continue; // 「1年以上…经验优先」是软要求

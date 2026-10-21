@@ -164,7 +164,8 @@ async function fetchAll({ orgId, siteId, site, aesIv, fetchDetails = false, list
     if (strictPortal) for (const field of ['title', 'commitment', 'status']) {
       if (!Object.hasOwn(detail, field) || detail[field] !== job[field]) throw new Error('Moka list/detail identity or factual field conflict: ' + field);
     }
-    if (typeof detail.jobDescription !== 'string') throw new Error('Moka detail needs jobDescription for ' + job.id);
+    // 官网上正文为空的岗位详情里没有 jobDescription：保留为空正文，不让整个来源失败（空正文如实标注）。
+    if (detail.jobDescription != null && typeof detail.jobDescription !== 'string') throw new Error('Moka detail invalid jobDescription for ' + job.id);
     for (const field of ['publishedAt', 'status']) {
       if (detail[field] != null && typeof detail[field] !== 'string') throw new Error('Moka detail invalid ' + field + ' for ' + job.id);
     }
@@ -172,7 +173,9 @@ async function fetchAll({ orgId, siteId, site, aesIv, fetchDetails = false, list
     for (const field of ['orgId', 'title', 'jobDescription', 'publishedAt', 'zhineng', 'commitment', 'locations', 'status']) {
       if (Object.hasOwn(detail, field)) publicDetail[field] = detail[field];
     }
-    jobs.push({ ...job, ...publicDetail, id: job.id, detailVerified: true });
+    if (publicDetail.jobDescription == null) publicDetail.jobDescription = '';
+    const department = Array.isArray(detail.departments) && typeof detail.departments[0]?.name === 'string' ? detail.departments[0].name.trim() : '';
+    jobs.push({ ...job, ...publicDetail, ...(department ? { department } : {}), id: job.id, detailVerified: true }); // department：详情里的部门名（列表里只有部门 ID）
   }
   const finalList = await fetchList();
   const finalIds = listIds(finalList.jobs);

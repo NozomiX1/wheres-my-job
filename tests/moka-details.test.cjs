@@ -160,7 +160,7 @@ for (const [name, fields, error] of [
   ['missing ID', { id: undefined }, /job ID/], ['wrong ID', { id: 'wrong' }, /ID mismatch/],
   ['invalid ID', { id: {} }, /job ID/], ['missing organization', { orgId: undefined }, /orgId mismatch/],
   ['wrong organization', { orgId: 'other' }, /orgId mismatch/], ['invalid organization', { orgId: 1 }, /orgId mismatch/],
-  ['missing JD', { jobDescription: undefined }, /jobDescription/], ['null JD', { jobDescription: null }, /jobDescription/],
+  // 缺少或为 null 的正文是官网上的空正文岗位，保留为空正文（见下面的测试）；类型不对才算异常。
   ['object JD', { jobDescription: { html: '正文' } }, /jobDescription/], ['numeric JD', { jobDescription: 1 }, /jobDescription/],
   ['numeric publishedAt', { publishedAt: 1767225600000 }, /publishedAt/], ['object publishedAt', { publishedAt: {} }, /publishedAt/],
   ['numeric status', { status: 1 }, /status/], ['array status', { status: ['open'] }, /status/]
@@ -291,4 +291,14 @@ test('native per-request timeout also works with an injected fetch and aborts de
   assert.equal(signals.length, 2);
   assert.notEqual(signals[0], signals[1]);
   assert.equal(signals[1].aborted, true);
+});
+
+test('a detail without any jobDescription is an empty-body posting, not a failure; the department name comes from the detail', async () => {
+  const jobs = [job('a'), job('b')];
+  const a = detail('a', { jobDescription: undefined, departments: [{ id: 1, name: '基模算法' }] });
+  const b = detail('b', { departments: [] });
+  const fixture = fetchFixture([list(jobs), ...[a, b].map(data => ({ endpoint: 'job', body: wrapped(data) })), list(jobs)]);
+  const result = await fetchDetails(fixture);
+  assert.equal(result.jobs[0].jobDescription, ''); assert.equal(result.jobs[0].department, '基模算法'); assert.ok(!Object.hasOwn(result.jobs[1], 'department'));
+  fixture.done();
 });

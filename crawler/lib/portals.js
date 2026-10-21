@@ -15,7 +15,7 @@ const entry = (mod, label, timeout, extra = {}) => ({ mod, unverified: label + '
 const custom = (file, label, timeout, extra) => entry(load(file), label, timeout, { script: () => path.join(DIR, file + '.js'), ...extra });
 
 // 脚本名由 site.adapter 推出的一批门户。
-const BY_ADAPTER = ['huawei', 'xiaohongshu', 'baidu', 'alibaba', 'baichuan', 'bilibili', 'ant', 'kuaishou', 'tencent', 'tme', 'jd', 'oppo', 'leihuo', 'netease', 'vivo_social']
+const BY_ADAPTER = ['huawei', 'xiaohongshu', 'baidu', 'alibaba', 'baichuan', 'bilibili', 'ant', 'kuaishou', 'tencent', 'tme', 'jd', 'oppo', 'leihuo', 'netease', 'vivo_social', 'lixiang']
   .map(name => entry(load(name + '_portal'), 'Portal identity/scope', 900000, { rawTitle: () => true, noticeMode: 'exact', noticePass: 2,
     script: site => path.join(DIR, site.adapter.replace('-portal-v1', '_portal.js').replaceAll('-', '_')) }));
 

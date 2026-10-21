@@ -161,7 +161,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
       if (newMokaPortal) {
         moka.validateListJob(job, site.orgId, site.siteId);
         // Only proven native fields may supply public facts; ignore unverified aliases/canonical claims.
-        const fields = ['id', 'orgId', 'title', 'locations', 'zhineng', 'commitment', 'jobDescription', 'publishedAt', 'updatedAt', 'status', 'detailVerified', 'listJDVerified', 'deptId'];
+        const fields = ['id', 'orgId', 'title', 'locations', 'zhineng', 'commitment', 'jobDescription', 'publishedAt', 'updatedAt', 'status', 'detailVerified', 'listJDVerified', 'deptId', 'department'];
         job = Object.fromEntries(fields.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]]));
       }
       const idFields = ['id', 'Id', 'JobAdId', 'jobAdId', 'PostId', 'positionId'];
@@ -211,6 +211,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
         if (['社招', '社会招聘'].includes(value)) channels.push('social');
       }
       if (!channels.length) {
+        if (site.ats === 'feishu' && ['campus', 'social'].includes(site.track)) channels.push(site.track); // 飞书门户本身就是校招或社招入口，岗位没带渠道标记时按入口算
         if (site.ats === 'moka' && site.site === 'social') channels.push('social');
         if (site.ats === 'moka' && site.site === 'campus' && (fullMoka || employment !== 'internship')) channels.push('campus');
       }

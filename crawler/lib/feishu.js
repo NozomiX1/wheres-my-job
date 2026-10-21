@@ -15,7 +15,10 @@ const CLASSIFIED_NOTICE = '字节社招仅覆盖已核验九类及子类（75个
 const SOURCES = {
   bytedance: 'bytedance-v1', bytedance_social: 'bytedance-classified-v1',
   minimax: 'feishu-portal-v1', minimax_social: 'feishu-portal-v1', sensetime: 'feishu-portal-v1', sensetime_social: 'feishu-portal-v1',
-  lilith: 'feishu-portal-v1', lilith_social: 'feishu-portal-v1', papegames: 'feishu-portal-v1', papegames_social: 'feishu-portal-v1'
+  lilith: 'feishu-portal-v1', lilith_social: 'feishu-portal-v1', papegames: 'feishu-portal-v1', papegames_social: 'feishu-portal-v1',
+  nio: 'feishu-portal-v1', nio_social: 'feishu-portal-v1', xpeng: 'feishu-portal-v1', xpeng_social: 'feishu-portal-v1', lixiang_social: 'feishu-portal-v1', kunlun_social: 'feishu-portal-v1',
+  modelbest: 'feishu-portal-v1', modelbest_social: 'feishu-portal-v1', zeroone_social: 'feishu-portal-v1', agibot: 'feishu-portal-v1', agibot_social: 'feishu-portal-v1',
+  xd_social: 'feishu-portal-v1', xd: 'feishu-portal-v1', kuro: 'feishu-portal-v1', kuro_social: 'feishu-portal-v1'
 };
 const requiresVerification = site => Object.hasOwn(SOURCES, site?.key) || site?.ats === 'feishu';
 const verifiedSource = site => Object.hasOwn(SOURCES, site?.key) && SOURCES[site.key] === site.adapter && Number.isSafeInteger(site.portalType);

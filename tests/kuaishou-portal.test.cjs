@@ -163,9 +163,9 @@ test('Kuaishou exactly two deeply frozen current profiles: both campus subprojec
   a.deepEqual(b.PROFILES, ['campus', 'social'].map(track => {
     const origin = 'https://' + (track === 'campus' ? 'campus' : 'zhaopin') + '.kuaishou.cn', root = origin + (track === 'campus' ? '/recruit/campus/e/' : '/recruit/e/');
     return { key: track === 'campus' ? 'kuaishou' : 'kuaishou_social', company: '快手', ats: 'custom', adapter: 'kuaishou-portal-v1', track,
-      batch: track === 'campus' ? '官网校园字典全部项目（2020–2027届/实习生，含往届仍在列项目）' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
+      batch: track === 'campus' ? '官网校园当前项目（2027应届生、2027实习生）；官网默认只展示当前项目，往届项目不收' : '社会招聘默认入口（C001，日常实习另入口未核验）', exclude: '(无)', origin,
       url: root + (track === 'campus' ? '#/campus/jobs' : '#/official/social/'), api: root + 'api/v1/open/positions/simple', listJD: true,
-      body: track === 'campus' ? { recruitSubProjectCodes: ['2020qiuzhao', '2020summerIntern', '2021qiuzhao', '2022campus', '2023campus', '20241687923507', '20251707035672', '20251718874803', '20261707035672', '20261749721165', '20271772783534', '20271779425607'], pageSize: 10, pageNum: 1 } : { pageNum: 1, pageSize: 10, positionNatureCode: 'C001', recruitProject: 'socialr' } };
+      body: track === 'campus' ? { recruitSubProjectCodes: ['20271772783534', '20271779425607'], pageSize: 10, pageNum: 1 } : { pageNum: 1, pageSize: 10, positionNatureCode: 'C001', recruitProject: 'socialr' } };
   }));
   a.ok(Object.isFrozen(b) && Object.isFrozen(b.PROFILES) && Object.isFrozen(campus.body.recruitSubProjectCodes));
   for (const site of b.PROFILES) {
@@ -181,7 +181,7 @@ test('Kuaishou exactly two deeply frozen current profiles: both campus subprojec
   for (const declaration of [{ api: 'POST ' + campus.api }, { url: 'https://CAMPUS.KUAISHOU.CN:443/' }, { origin: 'https://ZHAOPIN.KUAISHOU.CN./' },
     { apiOrigin: '%' }, { api: 'relative' }, { detailApi: null }]) a.equal(b.requiresVerification(declaration), true);
   a.equal(b.requiresVerification({ url: 'https://example.com' }), false); a.equal(b.portalNotice({}), '');
-  a.match(b.portalNotice(campus), /字典全部12个子项目.*快Star.*完整性未验证/); a.match(b.portalNotice(social), /C001\/socialr.*实际已取得范围.*国内分页不证明无城市\/海外.*日常实习.*尚未核验/);
+  a.match(b.portalNotice(campus), /当前项目.*2027应届生.*往届项目不收.*快Star.*完整性未验证/); a.match(b.portalNotice(social), /C001\/socialr.*实际已取得范围.*国内分页不证明无城市\/海外.*日常实习.*尚未核验/);
 });
 test('Kuaishou numeric id-only URLs, raw original TEXT/title/metadata, exact dictionary leaf names and independent dimensions', () => {
   for (const site of b.PROFILES) {
