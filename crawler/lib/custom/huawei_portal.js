@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField } = require('../optional-fields');
 const fs=require('node:fs');
 const {isDeepStrictEqual:equal}=require('node:util');
 const http=require('./huawei_http');
@@ -78,6 +79,8 @@ function validateEvidence(evidence,jobs,site){
 }
 const placeholder=v=>/^请您详见岗位意向中的岗位(?:职责|要求)$/.test((v||'').trim());
 function body(value){return placeholder(value)?'':htmlText(value);}
+// 官网把一个岗位对应的部门用逗号连在一起（校招的岗位意向跨多个部门）：只列前两个，后面写「等」。
+function huaweiDepartments(l){const names=[...new Set(String(l.firstDeptName||l.deptName||'').split(',').map(v=>v.trim()).filter(Boolean))];return names.length>2?names.slice(0,2).join('/')+'等':names.join('/');}
 function normalizeRecord(row,site){
   const p=profile(site);validateJobs([row],p);const l=row.listed,d=row.detail;
   const directions=row.intentions?.length?row.intentions:[];
@@ -92,7 +95,7 @@ function normalizeRecord(row,site){
   // A full source is never inferred from finished requests. Keep unknown metadata/extra sections honest.
   const part=row.split?row.intentions[0]:null; // 拆分后的单个岗位意向：标题带意向名，地点用该意向自己的，ID 加意向号
   return {id:part?l.advertisementId+'-'+part.positionIntentionId:String(l.advertisementId),title:(d?d.jobname:l.jobName)+(part?'（'+part.positionIntention.trim()+'）':''),city:(part&&string(part.jobPlaceName)&&part.jobPlaceName.trim())||(d?d.jobCity:l.workPlace)||'',category:(d?d.categoryName:l.categoryName)||'',
-    channels:[p.track],employment:null,talentPlan:null,date:null,dateKind:null,sourceStatus:null,
+    channels:[p.track],employment:null,talentPlan:null,publishedAt:null,updatedAt:l.lastUpdateDate??null,...departmentField(huaweiDepartments(l)),sourceStatus:null,
     url:http.ORIGIN+'/cn/job-details?advertisementId='+l.advertisementId,duty,requirements,description,
     jdComplete:false};
 }

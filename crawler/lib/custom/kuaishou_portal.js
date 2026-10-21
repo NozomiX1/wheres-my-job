@@ -1,4 +1,5 @@
 'use strict';
+const { optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -217,7 +218,7 @@ function normalizeRecord(job, site) {
   return { id: String(post.id), title: post.name, city, category: dict.category?.name ?? '',
     channels: p.track === 'social' ? ['social'] : internship ? [] : ['campus'], // 校园站的子项目只有「XXXX应届生」和「XXXX实习生」两类（官网字典），不是实习的就是应届生
     employment: internship ? 'internship' : post.positionNatureCode === 'fulltime' && nature === '全职' ? 'full-time' : null,
-    talentPlan: null, publishedAt: post.releaseTime ?? null, updatedAt: post.updateTime ?? null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.releaseTime ?? null, updatedAt: post.updateTime ?? null, ...optionalFields({ batch: p.track === 'campus' && /^20\d{2}/.test(post.recruitSubProjectCode) ? post.recruitSubProjectCode.slice(0, 4) + '届' : undefined }), sourceStatus: null,
     url: baseFor(p) + (p.track === 'campus' ? '#/campus/job-info/' : '#/official/social/job-info/') + post.id,
     duty: post.description ?? '', requirements: post.positionDemand ?? '', description: '', jdComplete: false };
 }

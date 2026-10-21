@@ -1,4 +1,5 @@
 'use strict';
+const { optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -101,7 +102,7 @@ function normalizeRecord(job, site) {
   // getInternalReferralSearchKeyMap maps the actual router aliases _irjid / _irjc.
   const query = new URLSearchParams({ _irjid: post.job_id }); if (post.job_category_id) query.set('_irjc', post.job_category_id);
   return { id: post.job_id, title: post.job_title, category: post.job_category ?? '', city: (post.job_location_list ?? []).map(l => l.city ?? '').join('/'),
-    channels: ['social'], employment: null, talentPlan: null, publishedAt: post.publish_timestamp ?? null, updatedAt: null, sourceStatus: null,
+    channels: ['social'], employment: null, talentPlan: null, publishedAt: post.publish_timestamp ?? null, updatedAt: null, ...optionalFields({ experience: post.yoe_min >= 1 ? post.yoe_min + '年以上' : undefined, education: post.degree_range_code }), sourceStatus: null,
     url: p.origin + '/job-detail?' + query, duty: '', requirements: '', description: htmlText(post.job_desc), jdComplete: false };
 }
 function portalNotice(site) {

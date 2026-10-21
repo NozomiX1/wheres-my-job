@@ -68,7 +68,7 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 
 - `data/catalog.js`（目录：来源、公司、通知、分片清单）＋ `data/parts/<sha256>.js`（完整岗位，按来源／公司分组、每片≤1MiB、内容哈希命名）是唯一公开数据。publisher 读取时从分片还原基线，发布后删除不再被引用的旧分片。
 - 搜索服务（`server/index.js`）读取这些分片到内存，浏览器只取目录和一页结果，不下载分片，也不请求招聘官网。
-- 岗位字段：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,url,duty,requirements,description,jdComplete,sourceStatus`，另有可选的 `employer`（官网给出的业务线，如网易的 productName，显示用）、`publishedAt` / `updatedAt`（官网发布、更新日期，适配器把官网的原始时间原样交出，发布时统一按北京时间换成 `YYYY-MM-DD`）、`firstSeen`（本站首次发现日期，发布时写入）。来源上另有 `history`（近 14 天每次发布的新增/减少条数）。ID 为“来源 key＋官方 ID”，不跨来源合并；正文不截断；只承认官网明确给出的事实，未知保持 null；非法协议链接禁用。下架的来源在 `sites.json` 的 `retired` 里列 key，发布时会把它们的岗位和只属于它们的公司从发布数据里去掉。
+- 岗位字段：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,url,duty,requirements,description,jdComplete,sourceStatus`，另有可选的 `employer`（官网给出的业务线，如网易的 productName，显示用）、`department`（官网列表里的部门名，只显示）、`experience` / `education`（官网结构化的经验、学历要求，发布时统一成「3-5年」「本科及以上」，优先于 JD 提取）、`batch`（招聘批次/项目名，用来认「XX届」）、`publishedAt` / `updatedAt`（官网发布、更新日期，适配器把官网的原始时间原样交出，发布时统一按北京时间换成 `YYYY-MM-DD`）、`firstSeen`（本站首次发现日期，发布时写入）。来源上另有 `history`（近 14 天每次发布的新增/减少条数）。ID 为“来源 key＋官方 ID”，不跨来源合并；正文不截断；只承认官网明确给出的事实，未知保持 null；非法协议链接禁用。下架的来源在 `sites.json` 的 `retired` 里列 key，发布时会把它们的岗位和只属于它们的公司从发布数据里去掉。
 - 来源状态：`ready` 有数据、`failed` 本次失败、`unverified` 尚未接入、`unavailable` 暂无数据。
 - 范围和字段语义只属于登记的入口，不代表公司全球全集。
 

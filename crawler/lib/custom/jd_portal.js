@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -105,7 +106,7 @@ function normalizeRecord(job, site) {
   return { id: String(officialId(post, site)), title: post[p.track === 'campus' ? 'positionName' : 'positionNameOpen'],
     city: p.track === 'campus' ? (post.requirementVoList ?? []).map(q => q.workCity ?? '').join('/') : post.workCity ?? '',
     category: post[p.track === 'campus' ? 'jobCategory' : 'jobType'] ?? '', channels: [p.track], employment: null, talentPlan: null,
-    publishedAt: post.publishTime ?? null, updatedAt: null, sourceStatus: null, url: p.track === 'campus' ? p.origin + '/#/details?id=' + post.publishId : p.url,
+    publishedAt: post.publishTime ?? null, updatedAt: null, ...departmentField(post.positionDeptName), sourceStatus: null, url: p.track === 'campus' ? p.origin + '/#/details?id=' + post.publishId : p.url,
     duty: text(post.workContent), requirements: text(post.qualification), description: '', jdComplete: false };
 }
 function portalNotice(site) {

@@ -35,14 +35,14 @@ test('Leihuo independent profile and two native GETs bind current UI filters and
   a.deepEqual(b.PROFILES[0], site); a.equal(b.verifiedSource(site), true); a.ok(Object.isFrozen(b.PROFILES[0].query.full));
   a.deepEqual(b.requestFor(site, 'full', 1), request('full')); a.deepEqual(b.requestFor(site, 'daily', 2), request('daily', 2));
   a.deepEqual(b.normalizeRecord({ kind: 'full', post: full() }, site), {
-    id: '3738', title: '  原标题 <T> &amp;  ', employer: '网易游戏（雷火）', category: '  游戏策划 <T> &amp;  ', city: '杭州,上海,杭州', channels: ['campus'],
+    id: '3738', title: '  原标题 <T> &amp;  ', employer: '网易游戏（雷火）', department: '雷火事业群', batch: '2027届应届毕业生', category: '  游戏策划 <T> &amp;  ', city: '杭州,上海,杭州', channels: ['campus'],
     employment: 'full-time', talentPlan: null, publishedAt: null, updatedAt: null, sourceStatus: null,
     url: 'https://campus.163.com/app/detail/index?id=3738&projectId=77', duty: '完整 & <List<T>>\n下一段\n末尾', requirements: '独立要求 &lt;T&gt;', description: '', jdComplete: false
   });
   const j = b.normalizeRecord({ kind: 'daily', post: daily() }, site);
   a.equal(j.id, '56088'); a.equal(j.url, 'https://hr.163.com/job-detail.html?id=56088&lang=zh'); a.equal(j.employment, 'internship');
   a.deepEqual(j.channels, ['campus']); a.equal(j.category, '项目管理-项目管理-项目管理'); a.equal(j.title, daily().positionName);
-  a.equal(j.duty, '独立正文 <T>'); a.equal(j.requirements, '独立要求 &lt;T&gt;'); a.equal(Object.keys(j).length, 16);
+  a.equal(j.duty, '独立正文 <T>'); a.equal(j.requirements, '独立要求 &lt;T&gt;'); a.equal(Object.keys(j).length, 17);
   a.deepEqual([j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, null, 1790587344000, null]);
   a.match(b.portalNotice(site), /热招.*非.*全集/); a.match(b.portalNotice(site), /研究.*实习.*待/);
 });
@@ -319,7 +319,7 @@ test('Leihuo shared Position HTML renderer preserves new schema, raw fields, ide
     const post = { ...full('7000', projects[kind]), job_description: html, job_requirement: html, type_name: '实习',
       target: '原官网目标', department_name: ['雷火事业群', '原部门'], extra_native: { retained: ['未经投影的原字段'] } };
     const actual = b.normalizeRecord({ kind, post }, current), reference = b.normalizeRecord({ kind: 'full', post: { ...post, ehr_project_id: '77', job_detail_url: full('7000').job_detail_url } }, site);
-    a.deepEqual(actual, { ...reference, url: post.job_detail_url }); a.equal(Object.keys(actual).length, 16);
+    a.deepEqual(actual, { ...reference, url: post.job_detail_url }); a.equal(Object.keys(actual).length, 18);
     a.equal(actual.duty, '完整 &lt;T&gt; '.repeat(1000).trimEnd() + '\n下一段\n末尾'); a.equal(actual.requirements, actual.duty);
     a.deepEqual([actual.description, actual.jdComplete, actual.talentPlan, actual.publishedAt, actual.updatedAt, actual.sourceStatus], ['', false, null, null, null, null]);
     for (const label of ['正式', null, '研究实习']) a.equal(b.normalizeRecord({ kind, post: { ...post, type_name: label } }, current).employment, null);

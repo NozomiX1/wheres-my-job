@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField, optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -176,7 +177,7 @@ function normalizeRecord(job, site) {
   return { id: String(post.id), title: post.name, employer: typeof post.productName === 'string' ? post.productName.trim() : '', category: post.firstPostTypeName ?? '', // productName：官网列表里岗位所属的业务线（网易游戏（雷火）、网易有道…）
     city: (post.workPlaceNameList ?? []).join('/'),
     channels: ['social'], employment: post.workType === '0' ? 'full-time' : post.workType === '1' ? 'internship' : null,
-    talentPlan: post.geekPassionateTalentFlag === 1 ? true : null, publishedAt: null, updatedAt: post.updateTime ?? null, sourceStatus: null,
+    talentPlan: post.geekPassionateTalentFlag === 1 ? true : null, publishedAt: null, updatedAt: post.updateTime ?? null, ...departmentField(post.firstDepName), ...optionalFields({ experience: post.reqWorkYearsName, education: post.reqEducationName }), sourceStatus: null,
     url: p.origin + '/job-detail.html?id=' + post.id, duty: htmlText(post.description), requirements: htmlText(post.requirement), description: '', jdComplete: false };
 }
 function portalNotice(site) {

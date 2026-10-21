@@ -1,4 +1,5 @@
 'use strict';
+const { optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -97,7 +98,7 @@ function normalizeRecord(job, site) {
   const p = profile(site); record(job);
   return { id: String(job.positionId), title: job.positionName, city: typeof job.workplace === 'string' ? job.workplace : '',
     category: p.track === 'social' && typeof job.jobType === 'string' ? job.jobType : '', channels: [p.track],
-    employment: null, talentPlan: null, publishedAt: job.publishTime ?? null, updatedAt: null, sourceStatus: typeof job.recruitStatus === 'string' && job.recruitStatus.trim() ? job.recruitStatus : null,
+    employment: null, talentPlan: null, publishedAt: job.publishTime ?? null, updatedAt: null, ...optionalFields({ batch: job.jobProjectName }), sourceStatus: typeof job.recruitStatus === 'string' && job.recruitStatus.trim() ? job.recruitStatus : null,
     url: p.url + '/' + job.positionId, duty: job.duty ?? '', requirements: job.qualification ?? '', description: '', jdComplete: false };
 }
 function portalNotice(site) {

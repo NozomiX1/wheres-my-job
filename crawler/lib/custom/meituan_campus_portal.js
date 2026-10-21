@@ -1,6 +1,7 @@
 'use strict';
 // 美团校园：官网默认校招入口 = 类型1（应届）＋类型2（实习）两个分区，按分区分别分页后合并（同一列表/详情接口见 meituan_portal.js）。
 // 宽松策略同社招：单轮、详情尽力而为、差异只记 issues。
+const { departmentField, optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const social = require('./meituan_portal');
@@ -24,7 +25,7 @@ function normalizeRecord(row, site) {
   const cities = (Array.isArray(row.cityList) ? row.cityList : []).map(v => v?.name).filter(Boolean);
   let description = sections.filter(([k]) => text(row[k]) !== '').map(([k, title]) => title + '\n' + row[k]).join('\n\n');
   if (short && cities.length) description += (description ? '\n\n' : '') + '工作城市\n' + cities.join('、');
-  return { id: row.jobUnionId, title: row.name, city: cities, category: '', description, duty: text(row.jobDuty), requirements: text(row.jobRequirement), date: null, dateKind: null,
+  return { id: row.jobUnionId, title: row.name, city: cities, category: '', description, duty: text(row.jobDuty), requirements: text(row.jobRequirement), publishedAt: row.firstPostTime ?? null, updatedAt: row.refreshTime ?? null, ...departmentField(row.department), ...optionalFields({ batch: row.projectName }),
     employment: row.jobType === '2' ? 'internship' : null, talentPlan: null, channels: row.jobType === '2' ? [] : ['campus'], sourceStatus: row.jobStatus ?? null,
     // 旧快照的行都是详情行；新行只有取到详情才算 JD 完整。
     jdComplete: row.detailFetched !== false && sections.some(([k]) => /[\p{L}\p{N}]/u.test(text(row[k]))),

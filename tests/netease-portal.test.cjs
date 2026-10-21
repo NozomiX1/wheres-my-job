@@ -146,7 +146,7 @@ test('NetEase social fact projection preserves literal body/identity and does no
     const native = { ...post, workType, geekPassionateTalentFlag: flag, productName: '网易互娱', firstDepName: '极客计划部门', parentProduct: 'P8',
       publishedAt: '2026-10-08', updatedAt: '2026-10-08T00:00:00Z', sourceStatus: 'open', channels: ['campus'], employment: 'full-time', talentPlan: false };
     const before = structuredClone(native), out = b.normalizeRecord({ post: native }, site);
-    a.deepEqual(out, { id: '76279', title: post.name, employer: native.productName, category: '市场', city: '杭州//北京/杭州', channels: ['social'], employment, talentPlan,
+    a.deepEqual(out, { id: '76279', title: post.name, employer: native.productName, department: native.firstDepName, category: '市场', city: '杭州//北京/杭州', channels: ['social'], employment, talentPlan,
       publishedAt: null, updatedAt: native.updateTime ?? null, sourceStatus: null, url: 'https://hr.163.com/job-detail.html?id=76279',
       duty: 'List<T> &amp; &lt;T&gt;', requirements: 'List<T> &amp; &lt;T&gt;', description: '', jdComplete: false });
     a.deepEqual(native, before);

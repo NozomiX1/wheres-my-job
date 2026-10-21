@@ -1,4 +1,5 @@
 'use strict';
+const { optionalFields, yearsRange } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -118,7 +119,7 @@ function normalizeRecord(job, site) {
   return { id: String(post.id), title: post.name, city: (post.workLocations ?? []).join('/'),
     category: p.track === 'campus' ? post.categoryName ?? '' : (post.categories ?? []).join('/'),
     channels: internship ? [] : p.track === 'social' ? ['social'] : post.batchTypeDesc === '应届生' ? ['campus'] : [], employment: internship ? 'internship' : null,
-    talentPlan: null, publishedAt: post.publishTime ?? null, updatedAt: null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.publishTime ?? null, updatedAt: null, ...optionalFields({ experience: yearsRange(post.experience), education: post.degree, batch: post.batchName }), sourceStatus: null,
     url: ORIGIN + (p.track === 'campus' ? '/campus-position' : '/off-campus-position') + '?positionId=' + post.id,
     duty: post.description ?? '', requirements: post.requirement ?? '', description: '', jdComplete: false };
 }

@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField } = require('../optional-fields');
 const { paginate } = require('../paginate');
 // 上海AI实验室 www.shlab.org.cn：校园(mode=campus)与社会(mode=social)共用游标分页接口，JD 在列表里。
 // 宽松策略：单轮游标穷尽；岗位只需官网ID和标题；元数据缺失按空处理；坏记录/中途失败只记 issues，不挡整源。
@@ -44,7 +45,7 @@ function normalizeRecord(job, site) {
   return {
     id: job.id, title: job.title, city: (Array.isArray(job.address_list) ? job.address_list : []).map(a => a?.city?.name?.zh_cn).filter(Boolean).join('/'),
     category: job.job_function?.name?.zh_cn ?? '', channels: [p.track],
-    employment: kind === '实习' ? 'internship' : kind === '全职' ? 'full-time' : null, talentPlan: null, date: null, dateKind: null,
+    employment: kind === '实习' ? 'internship' : kind === '全职' ? 'full-time' : null, talentPlan: null, publishedAt: job.create_time ?? null, updatedAt: job.modify_time ?? null, ...departmentField(job.job_department?.name?.zh_cn),
     sourceStatus: job.job_active_status == null ? null : String(job.job_active_status),
     url: ORIGIN + '/joinus/detail/' + job.id + '?mode=' + p.track,
     duty, requirements, description: '', jdComplete: /[\p{L}\p{N}]/u.test(duty + requirements)

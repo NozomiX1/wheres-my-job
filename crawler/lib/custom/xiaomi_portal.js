@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField } = require('../optional-fields');
 const { paginate } = require('../paginate');
 // 小米 HR 门户（hr.xiaomi.com）：校招 type=2、社招 type=1、实习 type=3 共用同一套列表/详情接口。
 // 宽松策略：单轮采集；只保证岗位有官网ID、标题和官网链接；缺详情、total 不符、少数坏记录只记 issues，不挡整源。
@@ -52,7 +53,7 @@ function normalizeRecord(job, site) {
   return {
     id: String(job.id), title: job.title, city: (job.cityZhNames || []).join('/'), category: '', channels: [social ? 'social' : 'campus'],
     employment: site.key === 'xiaomi_intern' && d?.recruit_type?.name === '实习' ? 'internship' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null, url: job.url, duty, requirements, description,
+    talentPlan: null, publishedAt: job.publishTime ?? null, updatedAt: null, ...departmentField(job.levelOneDeptName), sourceStatus: null, url: job.url, duty, requirements, description,
     jdComplete: Boolean(d) && (social || /[\p{L}\p{N}]/u.test(duty + requirements + topicText))
   };
 }

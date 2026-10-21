@@ -14,7 +14,7 @@ test('Huawei exact independent scopes reject identity mutation and cannot infer 
 test('Huawei all intention directions retain HTML text and independent same-text columns',()=>{
   const p=proof(),j=h.normalizeRecord(p.jobs[0],campus);assert.equal(j.duty,'同文 List<T>\n最后职责');assert.equal(j.requirements,'同文 List<T>\n最后要求');
   assert.equal(j.description,'方向一\n岗位职责\n同文 List<T>\n岗位要求\n同文 List<T>\n\n方向二\n岗位职责\n最后职责\n岗位要求\n最后要求');
-  assert.equal(j.id,'36384');assert.equal(j.jdComplete,false);assert.equal(j.date,null);assert.equal(j.employment,null);assert.ok(j.url.endsWith('advertisementId=36384'));
+  assert.equal(j.id,'36384');assert.equal(j.jdComplete,false);assert.equal(j.date,undefined);assert.equal(j.publishedAt,null);assert.equal(j.employment,null);assert.ok(j.url.endsWith('advertisementId=36384'));
   const row={listed:list(),detail:null,intentions:null},missing=h.normalizeRecord(row,campus);assert.equal(missing.duty,'');assert.equal(missing.requirements,'');assert.equal(missing.description,'');
 });
 test('Huawei empty detail or intention body cannot erase acquired list JD',()=>{

@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField, optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -63,7 +64,7 @@ function normalizeRecord(job, site) {
   // full/research/intern use the observed shared Position innerHTML; daily has its own observed innerHTML renderer.
   return { id: String(project ? post.ehr_job_id : post.id), title: project ? post.job_name : post.positionName, employer: '网易游戏（雷火）', category: (project ? post.category_name : post.postTypeNames) ?? '',
     city: (project ? post.work_place_name : post.workCityName) ?? '', channels: ['campus'], employment: label === '全职' ? 'full-time' : label === '实习' ? 'internship' : null,
-    talentPlan: null, publishedAt: null, updatedAt: post.updateTime ?? null, sourceStatus: null,
+    talentPlan: null, publishedAt: null, updatedAt: post.updateTime ?? null, ...departmentField(project ? post.department_name : post.firstDepartmentName), ...optionalFields({ experience: post.reqWorkYearsName, education: post.reqEducationName, batch: project ? post.job_target : undefined }), sourceStatus: null,
     url: project ? post.job_detail_url : 'https://hr.163.com/job-detail.html?id=' + post.id + '&lang=zh',
     duty: htmlText(project ? post.job_description : post.description), requirements: htmlText(project ? post.job_requirement : post.requirement), description: '', jdComplete: false };
 }

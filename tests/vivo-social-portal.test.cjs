@@ -22,7 +22,7 @@ test('vivo social native M identity stays separate from display code; HTML singl
   a.equal(r.complete, false); a.equal(r.total, 1); a.deepEqual(r.jobs, [{ post: row() }]);
   a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
   a.deepEqual(b.normalizeRecord(r.jobs[0], site), { id: 'M2027632186654519297', title: 'AI产品规划专家', category: '产品运营类', city: '深圳',
-    channels: ['social'], employment: null, talentPlan: null, publishedAt: 1791431067964, updatedAt: null, sourceStatus: null,
+    channels: ['social'], employment: null, talentPlan: null, publishedAt: 1791431067964, updatedAt: null, experience: '5年以上', sourceStatus: null,
     url: 'https://hr.vivo.com/job-detail?_irjid=M2027632186654519297&_irjc=M1718986621235408897',
     duty: '', requirements: '', description: '岗位职责：\n负责vivo手机AI中长期产品战略\n任职要求：\n学历与专业：本科及以上', jdComplete: false });
 });

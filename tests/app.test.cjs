@@ -124,6 +124,7 @@ assert.ok(p.detailHTML('unit-unknown').includes('正文完整性尚未核验'));
 const dept={...base,id:'netease_social:1',sourceKey:'netease_social',company:'网易',employer:'网易游戏（雷火）',title:'岗位'};p.state.active={words:[],lowered:[]};
 assert.ok(p.rowHTML(p.score(dept,{words:[]})).includes('<span>网易游戏（雷火）</span>'));assert.ok(p.applyHTML(dept).includes('前往官网'));assert.equal(p.detailKicker(dept),'网易游戏（雷火） · 北京');
 const facted=p.rowHTML({...p.score({...dept,facts:['27届','本科及以上']},{words:[]}),job:{...dept,facts:['27届','本科及以上']}});assert.ok(facted.includes('<div class="job-meta job-facts"><span>27届</span><span>·</span><span>本科及以上</span></div>'));assert.ok(!p.rowHTML(p.score(dept,{words:[]})).includes('job-facts'),'no facts, no line');
+const withDept=p.rowHTML({...p.score(dept,{words:[]}),job:{...dept,department:'IEG',facts:['27届']}});assert.ok(withDept.includes('<div class="job-meta job-facts"><span>IEG</span><span>·</span><span>27届</span></div>'),'the department leads the facts line');assert.ok(p.rowHTML({...p.score(dept,{words:[]}),job:{...dept,department:'IEG'}}).includes('<span>IEG</span>'),'a department alone is enough for the line');
 const prefs={version:1,keywords:[' 财务 ','财务'],downrank:['销售'],selected:['字节跳动'],recruitment:'social'},restored=load(prefs);restored.restorePreferences();assert.deepEqual([...restored.state.keywords],['财务']);assert.equal(restored.state.recruitment,'social');assert.equal(restored.state.active,null);assert.equal(restored.state.searched,false);
 const invalid=load({...prefs,recruitment:'bad'});invalid.restorePreferences();assert.ok(invalid.message());
 const cityPrefs=load({...prefs,cities:['北京','上海'],unknown:false});cityPrefs.restorePreferences();assert.deepEqual([...cityPrefs.state.cities],['北京','上海']);assert.equal(cityPrefs.state.unknown,false);assert.equal(cityPrefs.state.active,null);assert.equal(cityPrefs.writes(),0);
@@ -163,11 +164,11 @@ const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),css=fs.readFileS
 console.log('PASS: native UI scoring, full examples, preference/query boundary, per-word counts (not multipliers), display-only official categories/status, placeholder honesty, factual types/dates/links, published-data invariants and no prototype/old algorithm dependencies.');
 {
  const w=load(undefined,[]),today='2026-10-21',h=(date,added,removed,extra={})=>({date,added,removed,...extra});
- assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-14',9,9),h('2026-10-15',3,1),h('2026-10-21',2,0)]}],today),'近 7 天 +5 −1','the window is the last 7 days, today included');
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-14',9,9),h('2026-10-15',3,1),h('2026-10-21',2,0)]}],today),'近7天 +5 −1','the window is the last 7 days, today included');
  assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',3,1,{unsure:true})]}],today),'','an uncertain day hides the number');
  assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',0,0)]}],today),'');
  assert.equal(w.weekChange('甲',[{key:'a',company:'甲'}],today),'');
  assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',1,0)]},{key:'b',company:'乙',history:[h('2026-10-20',1,0)]}],today),'','a source that belongs to another unit is never attributed');
- assert.equal(w.weekChange('网易',[{key:'n1',company:'网易',history:[h('2026-10-20',2,1)]},{key:'n2',company:'网易互娱',history:[h('2026-10-20',1,1)]}],today),'近 7 天 +3 −2','merged units add up their sources');
+ assert.equal(w.weekChange('网易',[{key:'n1',company:'网易',history:[h('2026-10-20',2,1)]},{key:'n2',company:'网易互娱',history:[h('2026-10-20',1,1)]}],today),'近7天 +3 −2','merged units add up their sources');
  w.state.active={words:[],lowered:[]};const seen=w.rowHTML({...w.score({...base,firstSeen:'2026-10-18'},{words:[]}),job:{...base,firstSeen:'2026-10-18'}});assert.ok(seen.includes('<span>本站 10-18 发现</span>'));
 }

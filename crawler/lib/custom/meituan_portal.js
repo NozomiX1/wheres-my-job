@@ -2,6 +2,7 @@
 // 美团 zhaopin.meituan.com：社招(jobType 3)与校园(jobType 1+2，见 meituan_campus_portal.js)共用列表＋详情接口（POST）。
 // 宽松策略：单轮分页；岗位只需 jobUnionId 和标题；详情尽力获取（拒绝即停详情）；
 // total 不符、坏记录、中途失败只记 issues，不挡整源。
+const { departmentField } = require('../optional-fields');
 const fs = require('node:fs');
 const { paginate: loop } = require('../paginate');
 const { randomUUID } = require('node:crypto');
@@ -49,7 +50,7 @@ function normalizeRecord(job, site, { detailIds = new Set() } = {}) {
     id: job.jobUnionId, title: job.name, city: (Array.isArray(job.cityList) ? job.cityList : []).map(v => v?.name).filter(Boolean), category: '',
     description: SECTIONS.filter(([k]) => text(job[k]) !== '').map(([k, title]) => title + '\n' + job[k]).join('\n\n'),
     duty: text(job.jobDuty), requirements: text(job.jobRequirement),
-    date: null, dateKind: null, employment: null, talentPlan: null, channels: ['social'], sourceStatus: job.jobStatus ?? null,
+    publishedAt: job.firstPostTime ?? null, updatedAt: job.refreshTime ?? null, ...departmentField(job.department), employment: null, talentPlan: null, channels: ['social'], sourceStatus: job.jobStatus ?? null,
     // 只有取到详情且没有未映射的 otherInfo 内容，才说 JD 完整。
     jdComplete: (detailIds.has(job.jobUnionId) || job.detailFetched === true) && [null, undefined, '', '暂无'].includes(job.otherInfo) && SECTIONS.some(([k]) => /[\p{L}\p{N}]/u.test(text(job[k]))),
     url: ORIGIN + '/web/position/detail?jobUnionId=' + encodeURIComponent(job.jobUnionId) + '&jobShareType=1'

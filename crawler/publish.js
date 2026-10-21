@@ -9,9 +9,10 @@ const { normalizeJD } = require('./lib/jd-text');
 const moka = require('./lib/moka');
 const portals = require('./lib/portals');
 const { cityKeys } = require('../assets/cities');
+const { structuredExperience, structuredDegree } = require('../assets/facts');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'catalog.js');
-const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'publishedAt', 'updatedAt', 'firstSeen', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus', 'employer']; // category、sourceStatus、employer、publishedAt、updatedAt、firstSeen 是可选字段（旧数据没有，不给保留的岗位补键）
+const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'publishedAt', 'updatedAt', 'firstSeen', 'department', 'experience', 'education', 'batch', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus', 'employer']; // category、sourceStatus、employer、publishedAt、updatedAt、firstSeen 是可选字段（旧数据没有，不给保留的岗位补键）
 
 function loadSites() {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 'utf8')).sites;
@@ -160,7 +161,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
       if (newMokaPortal) {
         moka.validateListJob(job, site.orgId, site.siteId);
         // Only proven native fields may supply public facts; ignore unverified aliases/canonical claims.
-        const fields = ['id', 'orgId', 'title', 'locations', 'zhineng', 'commitment', 'jobDescription', 'publishedAt', 'status', 'detailVerified', 'listJDVerified', 'deptId'];
+        const fields = ['id', 'orgId', 'title', 'locations', 'zhineng', 'commitment', 'jobDescription', 'publishedAt', 'updatedAt', 'status', 'detailVerified', 'listJDVerified', 'deptId'];
         job = Object.fromEntries(fields.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]]));
       }
       const idFields = ['id', 'Id', 'JobAdId', 'jobAdId', 'PostId', 'positionId'];
@@ -183,7 +184,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
       // 日期：适配器直接给 publishedAt / updatedAt（官网时间戳、日期串都行，按北京时间取日期）；老写法 date + dateKind（北森、Moka）也认。写法认不出的日期当作没有，不挡发布。
       const lenient = value => { try { return normalizeDate(value); } catch { return null; } };
       const dateKind = fullMoka ? 'published' : job.dateKind;
-      const publishedAt = (fullMoka ? null : lenient(job.publishedAt)) ?? (dateKind === 'published' ? legacy : null), updatedAt = (fullMoka ? null : lenient(job.updatedAt)) ?? (dateKind === 'updated' ? legacy : null);
+      const publishedAt = (fullMoka ? null : lenient(job.publishedAt)) ?? (dateKind === 'published' ? legacy : null), updatedAt = lenient(job.updatedAt) ?? (dateKind === 'updated' ? legacy : null);
       const commitment = first(job, ['commitment', 'Commitment', 'Kind', 'recruitType', 'recruit_type']);
       if (commitment != null && typeof commitment !== 'string' && !Number.isSafeInteger(commitment) && !(typeof commitment === 'object' && typeof commitment.name === 'string')) throw new Error('Invalid employment field');
       const kind = typeof commitment === 'object' && commitment ? commitment.name : commitment;
@@ -220,6 +221,10 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
         category: [...new Set(categoryFields.flatMap(field => categoryNames(job[field], field)))].join('/'),
         channels: [...new Set(channels)], employment, talentPlan: job.talentPlan ?? null,
         ...(publishedAt ? { publishedAt } : {}), ...(updatedAt ? { updatedAt } : {}),
+        ...(typeof job.department === 'string' && job.department.trim() ? { department: job.department.trim().slice(0, 40) } : {}), // 官网列表里的部门/业务线，只显示
+        // 官网列表自带的经验、学历要求（结构化字段，优先于 JD 提取）和招聘批次/项目名（用来认「XX届」）；认不出的写法当作没有。
+        ...(structuredExperience(job.experience) ? { experience: structuredExperience(job.experience) } : {}), ...(structuredDegree(job.education) ? { education: structuredDegree(job.education) } : {}),
+        ...(typeof job.batch === 'string' && job.batch.trim() ? { batch: job.batch.trim().slice(0, 60) } : {}),
         url: safeUrl(first(job, urlFields)) || buildUrl(site, officialId),
         duty: jd ? jd.duty : newDirectJD ? text(job.duty, 'duty') : joinText(job, dutyFields), requirements: jd ? jd.requirements : newDirectJD ? text(job.requirements, 'requirements') : joinText(job, requireFields), description: jd ? jd.description : newDirectJD ? text(job.description, 'description') : joinText(job, descriptionFields),
         jdComplete: jd ? jd.hasContent : job.jdComplete === true, sourceStatus,
@@ -285,11 +290,12 @@ function readPublished(file) {
       if (typeof job.date === 'string' && job.dateKind === 'published') job.publishedAt = job.date; else if (typeof job.date === 'string' && job.dateKind === 'updated') job.updatedAt = job.date;
       delete job.date; delete job.dateKind;
     }
-    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus', 'employer', 'publishedAt', 'updatedAt', 'firstSeen'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
+    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus', 'employer', 'publishedAt', 'updatedAt', 'firstSeen', 'department', 'experience', 'education', 'batch'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
     // Optional display fields may be absent in old schema-1 data; do not add keys to retained jobs.
     if (Object.hasOwn(job, 'category') && typeof job.category !== 'string') throw new Error('Invalid baseline category');
     if (job.sourceStatus != null && (typeof job.sourceStatus !== 'string' || !job.sourceStatus.trim())) throw new Error('Invalid baseline sourceStatus');
     if (job.employer != null && typeof job.employer !== 'string') throw new Error('Invalid baseline employer');
+    for (const field of ['department', 'experience', 'education', 'batch']) if (job[field] != null && typeof job[field] !== 'string') throw new Error('Invalid baseline ' + field);
     for (const field of ['id', 'sourceKey', 'company', 'title', 'city', 'url', 'duty', 'requirements', 'description']) if (typeof job[field] !== 'string') throw new Error('Invalid baseline job text');
     if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean') throw new Error('Invalid baseline job metadata');
     for (const field of ['publishedAt', 'updatedAt', 'firstSeen']) if (job[field] != null && (typeof job[field] !== 'string' || normalizeDate(job[field]) !== job[field])) throw new Error('Invalid baseline job metadata');

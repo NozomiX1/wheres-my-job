@@ -32,16 +32,43 @@
   }
 
   // ---- 要点 ----
+  // 两条年限之间是「，或」「或者」「…年以上或…年以上」这种写法，说明是二选一。
+  const alternative = between => /[，,、；;]\s*或(?:者|是)?\s*[^，,。；;\n]{0,8}$/.test(between) || /^[^，,。；;\n]{0,2}或(?:者|是)?[^，,。；;\n]{0,10}$/.test(between);
   function experience(text) {
     if (/经验不限|不限经验/.test(text)) return '经验不限';
-    let best = null; // 同一岗位写了几条年限时取下限最高的（各条都要满足）
+    const found = [];
     for (const m of text.matchAll(EXP_PATTERN)) {
       const lo = m[4] ? Number(m[4]) : num(m[1] ?? m[3]), hi = m[2] ? num(m[2]) : null;
       if (!Number.isFinite(lo) || lo < 0 || lo > 20 || hi != null && (!Number.isFinite(hi) || hi <= lo || hi > 30)) continue;
       if (/优先|加分|更佳|尤佳/.test(text.slice(m.index + m[0].length).split(/[，,。；;\n]/)[0].slice(0, 40))) continue; // 「1年以上…经验优先」是软要求
-      if (!best || lo > best.lo) best = { lo, hi };
+      found.push({ lo, hi, start: m.index, end: m.index + m[0].length });
     }
+    // 用「或」连着的几条是二选一，取最低的；不同组各自都要满足，取最高的。
+    const groups = [];
+    found.forEach((f, i) => { if (i && alternative(text.slice(found[i - 1].end, f.start))) groups.at(-1).push(f); else groups.push([f]); });
+    const best = groups.map(g => g.reduce((x, y) => y.lo < x.lo ? y : x)).reduce((x, y) => y && (!x || y.lo > x.lo) ? y : x, null);
     return best ? (best.hi ? best.lo + '-' + best.hi + '年' : best.lo + '年以上') : '';
+  }
+  // 官网列表自带的结构化字段（优先于从 JD 文字里提取）。写法认不出就返回空串。
+  function structuredExperience(value) {
+    const t = String(value ?? '').trim();
+    if (!t) return '';
+    if (/^(?:不限|经验不限)/.test(t)) return '经验不限';
+    let m = t.match(new RegExp('^(' + N + ')\\s*[-~–至到]\\s*(' + N + ')\\s*年'));
+    if (m) { const lo = num(m[1]), hi = num(m[2]); return Number.isFinite(lo) && Number.isFinite(hi) && lo < hi && hi <= 30 ? lo + '-' + hi + '年' : ''; }
+    m = t.match(new RegExp('^(' + N + ')\\s*年?(?:及)?以上'));
+    if (m) { const lo = num(m[1]); return Number.isFinite(lo) && lo >= 1 && lo <= 20 ? lo + '年以上' : ''; }
+    return '';
+  }
+  // 官网的学历字段都是「最低学历」（网易「本科」、vivo BACHELOR_ABOVE、OPPO UNDERGRADUATE-AND-ABOVE 与 JD 里的「本科及以上」一致）。
+  function structuredDegree(value) {
+    const t = String(value ?? '').trim();
+    if (/博士|doctor|phd/i.test(t)) return '博士';
+    if (/硕士|master/i.test(t)) return '硕士及以上';
+    if (/本科|bachelor|undergraduate/i.test(t)) return '本科及以上';
+    if (/大专|专科|college|diploma/i.test(t)) return '大专及以上';
+    if (/^(?:不限|学历不限|unlimited)$/i.test(t)) return '学历不限';
+    return '';
   }
   const LEVEL = { 大专: 1, 专科: 1, 本科: 2, 硕士: 3, 研究生: 3, 博士: 4 };
   function degree(text) {
@@ -57,9 +84,10 @@
     return lowest.name + (lowest.up ? '及以上' : '');
   }
   function graduation(job) {
-    const text = (job.title || '') + '\n' + body(job), years = new Set();
+    const text = (job.title || '') + '\n' + (job.batch || '') + '\n' + body(job), years = new Set();
     for (const m of text.matchAll(/(?:20)?(\d{2})\s*[-~—至到、/]\s*(?:20)?(\d{2})\s*届/g)) for (let y = Number(m[1]); y <= Number(m[2]) && y - m[1] < 6; y++) years.add(y);
     for (const m of text.matchAll(/(?:20)?(\d{2})\s*届/g)) years.add(Number(m[1]));
+    for (const m of text.matchAll(/(?:^|[^\d])20(\d{2})\s*年?\s*(?:校园招聘|校招|秋招|春招|应届)/g)) years.add(Number(m[1])); // 「2027 校园招聘」「2027应届生」
     const list = [...years].filter(y => y >= 20 && y <= 40).sort((a, b) => a - b);
     return !list.length || list.length > 4 ? '' : list.length === 1 ? list[0] + '届' : list[0] + '-' + list.at(-1) + '届';
   }
@@ -73,11 +101,11 @@
   function jobFacts(job, kind = recruitKind(job)) {
     const text = body(job), out = [];
     if (kind === 'campus' || kind === 'intern') { const g = graduation(job); if (g) out.push(g); }
-    if (kind === 'social') { const e = experience(job.requirements || text); if (e) out.push(e); }
-    const d = degree(job.requirements || text); if (d) out.push(d);
+    if (kind === 'social') { const e = job.experience || experience(job.requirements || text); if (e) out.push(e); }
+    const d = job.education || degree(job.requirements || text); if (d) out.push(d);
     if (kind === 'intern') { const m = internMonths(text); if (m) out.push(m); }
     return out;
   }
 
-  return { recruitKind, jobFacts };
+  return { recruitKind, jobFacts, structuredExperience, structuredDegree };
 });

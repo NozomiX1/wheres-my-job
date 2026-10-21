@@ -19,7 +19,7 @@ test('TME only exact broad campus/social profiles, native TEXT and partial evide
   a.equal(r.complete, false); a.equal(r.total, 1); a.deepEqual(b.validateEvidence(r.verification, r.jobs, social).jobs, r.jobs);
   const j = b.normalizeRecord(r.jobs[0], social);
   a.equal(j.id, '13128'); a.equal(j.title, post.name); a.equal(j.duty, post.duty); a.equal(j.requirements, ''); a.equal(j.jdComplete, false);
-  a.equal(j.employment, 'full-time'); a.deepEqual([j.date, j.dateKind, j.talentPlan], [null, null, null]);
+  a.equal(j.employment, 'full-time'); a.deepEqual([j.date, j.dateKind, j.talentPlan], [null, null, null]); // 官网的 date 含义无法确认（页面从不显示，且与岗位 ID 的先后对不上），不取
   a.equal(j.url, 'https://join.tencentmusic.com/social/post-details/?id=13128');
   a.match(r.issues.join(';'), /124.*实际唯一岗位 1/);
   for (const site of [campus, social]) {

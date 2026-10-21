@@ -1,4 +1,5 @@
 'use strict';
+const { optionalFields } = require('../optional-fields');
 const { paginate } = require('../paginate');
 // 米哈游 jobs.mihoyo.com：校招(hireType=1)与社招(hireType=0)共用列表+详情接口（POST）。
 // 宽松策略：单轮列表 + 逐岗详情（尽力而为）；岗位只需官网ID和标题；缺详情时只有列表字段；
@@ -48,7 +49,7 @@ function normalizeRecord(job, site) {
     description: SECTIONS.filter(([k]) => text(job[k]) !== '').map(([k, title]) => title + '\n' + job[k]).join('\n\n'),
     duty: text(job.description), requirements: text(job.jobRequire), channels: [p.track],
     employment: job.jobNature === '全职' ? 'full-time' : job.jobNature === '实习' ? 'internship' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: job.status == null ? null : String(job.status),
+    talentPlan: null, publishedAt: null, updatedAt: null, ...optionalFields({ batch: [job.projectName, job.objectName].filter(v => typeof v === 'string').join(' ') }), sourceStatus: job.status == null ? null : String(job.status),
     jdComplete: job.detailReused !== true && SECTIONS.some(([k]) => /[\p{L}\p{N}]/u.test(text(job[k]))), url: p.url + '/' + job.id
   };
 }

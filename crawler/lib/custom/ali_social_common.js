@@ -1,5 +1,6 @@
 // Independently reviewed Chinese social portals; Cloud has a separate available-only contract.
 'use strict';
+const { optionalFields, yearsRange } = require('../optional-fields');
 const { paginate } = require('../paginate');
 const fs = require('node:fs');
 const { isDeepStrictEqual } = require('node:util');
@@ -395,7 +396,7 @@ function normalizeRecord(job, site) {
   const text = value => cloud ? value ?? '' : (typeof value === 'string' ? value : '').replace(/\r\n?/g, '\n').trim();
   // Proven renderer uses browser-local Date getters, not a source-canonical calendar.
   // Keep both native timestamps in evidence; neither supplies a canonical public date.
-  return { id: String(job.id), title: job.name, city: (Array.isArray(job.workLocations) ? job.workLocations : []).join('/'), category: (Array.isArray(job.categories) ? job.categories : []).join('/'), channels: ['social'], employment: null, talentPlan: null, publishedAt: job.publishTime ?? null, updatedAt: job.modifyTime ?? null, sourceStatus: null, url: officialURL(job, p), duty: text(job.description), requirements: text(job.requirement), description: '', jdComplete: !cloud };
+  return { id: String(job.id), title: job.name, city: (Array.isArray(job.workLocations) ? job.workLocations : []).join('/'), category: (Array.isArray(job.categories) ? job.categories : []).join('/'), channels: ['social'], employment: null, talentPlan: null, publishedAt: job.publishTime ?? null, updatedAt: job.modifyTime ?? null, ...optionalFields({ experience: yearsRange(job.experience), education: job.degree }), sourceStatus: null, url: officialURL(job, p), duty: text(job.description), requirements: text(job.requirement), description: '', jdComplete: !cloud };
 }
 async function run(site, options = {}) {
   if (availableSource(site)) return fetchCloudAvailable(site, options);

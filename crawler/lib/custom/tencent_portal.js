@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField, optionalFields } = require('../optional-fields');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
 const { isDeepStrictEqual: equal } = require('node:util');
@@ -245,7 +246,7 @@ function normalizeRecord(row, site) {
   const badges = p.track === 'campus' && string(post.recruitLabelName) ? post.recruitLabelName.split(' ').slice(0, 3) : [];
   return { id: identity(post, p), title: p.track === 'campus' ? post.positionTitle : post.RecruitPostName,
     city: p.track === 'campus' ? (Array.isArray(d?.workCityList) && d.workCityList.every(string) ? d.workCityList.join('/') : post.workCities) : post.LocationName,
-    category: p.track === 'campus' ? text((d ?? (row.supplement?.kind === 'internal' ? extra : null))?.tidName) : post.CategoryName, channels: [p.track], employment: badges.some(label => ['应届实习', '实习生', '日常实习'].includes(label)) ? 'internship' : null, talentPlan: badges.includes('青云计划') ? true : null, publishedAt: null, updatedAt: p.track === 'social' ? post.LastUpdateTime ?? null : null, sourceStatus: null,
+    category: p.track === 'campus' ? text((d ?? (row.supplement?.kind === 'internal' ? extra : null))?.tidName) : post.CategoryName, channels: [p.track], employment: badges.some(label => ['应届实习', '实习生', '日常实习'].includes(label)) ? 'internship' : null, talentPlan: badges.includes('青云计划') ? true : null, publishedAt: null, updatedAt: p.track === 'social' ? post.LastUpdateTime ?? null : null, ...(p.track === 'social' ? { ...departmentField(post.BGName), ...optionalFields({ experience: post.RequireWorkYearsName }) } : {}), sourceStatus: null,
     url: officialUrl(post, p), duty, requirements, description, jdComplete: false };
 }
 function portalNotice(site) { return verifiedSource(site) ? (site.track === 'campus' ? '仅覆盖官网默认五项目校园广列表，包含实习、青云及官网链接的Workday岗位；' : '仅覆盖官网默认area=cn无职业筛选广列表，含官网链接的外部入口；') +

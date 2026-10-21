@@ -1,4 +1,5 @@
 'use strict';
+const { departmentField } = require('../optional-fields');
 const { paginate } = require('../paginate');
 // 携程 careers.ctrip.com：校招 category=2、社招 category=1，同一列表接口（POST，JD 在列表里）。
 // 宽松策略：单轮采集；岗位只需官网ID、fromId、标题；total 不符/坏记录/中途失败只记 issues，不挡整源。
@@ -45,7 +46,7 @@ function normalizeRecord(job, site) {
   const jd = normalizeJD(html), full = htmlText(html);
   // 原生 requirements 是整篇 HTML 职位描述，不是独立「要求」栏；社招及多方向点状标题无法证明分栏边界时用全文回退。
   const unclear = p.track === 'social' || full.split('\n').some(line => /^[.．·•-]\s*(?:职位描述|岗位描述|工作职责|岗位职责|任职资格|任职要求)\s*[:：]?$/.test(line));
-  return { id: job.fromId, title: job.jobTitle, city: job.cityName ?? '', category: '', channels: [p.track], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+  return { id: job.fromId, title: job.jobTitle, city: job.cityName ?? '', category: '', channels: [p.track], employment: null, talentPlan: null, publishedAt: job.publishDate ?? null, updatedAt: null, ...departmentField(job.buName), sourceStatus: null,
     url: ORIGIN + '/#/' + (p.track === 'campus' ? 'campus' : 'experienced') + '/job-detail/' + encodeURIComponent(job.fromId),
     duty: unclear ? '' : jd.duty, requirements: unclear ? '' : jd.requirements, description: full, jdComplete: jd.hasContent };
 }
