@@ -55,7 +55,7 @@ test('Alibaba native id/title/list TEXT and all raw metadata retained, no guesse
     a.equal(j.id, String(native.id)); a.equal(j.title, native.name); a.equal(j.city, native.workLocations.join('/')); a.equal(j.category, native.categories.join('/'));
     a.equal(j.url, site.origin + '/campus/position/' + native.id + '?deptCodes='); a.equal(j.duty, native.description); a.equal(j.requirements, native.requirement);
     a.equal(j.description, ''); a.equal(j.jdComplete, false); a.deepEqual(j.channels, internship ? [] : ['campus']); a.equal(j.employment, internship ? 'internship' : null);
-    a.deepEqual([j.talentPlan, j.date, j.dateKind, j.sourceStatus], [null, null, null, null]); a.equal(Object.hasOwn(j, 'company'), false); a.deepEqual(job.post, native);
+    a.deepEqual([j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, null, 1788437212000, null]); a.equal(Object.hasOwn(j, 'company'), false); a.deepEqual(job.post, native);
     const unknown = b.normalizeRecord({ batchId: job.batchId, post: { ...native, categories: null, workLocations: null, description: null, requirement: '/' } }, site);
     a.deepEqual([unknown.category, unknown.city, unknown.duty, unknown.requirements, unknown.jdComplete], ['', '', '', '/', false]);
     const same = b.normalizeRecord({ batchId: job.batchId, post: { ...native, requirement: native.description } }, site); a.equal(same.duty, same.requirements);

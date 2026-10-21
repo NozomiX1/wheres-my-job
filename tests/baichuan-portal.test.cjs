@@ -43,7 +43,7 @@ test('Baichuan replays the existing normal Chrome first page: ten complete origi
       a.equal(normalized.title, post.title); a.equal(normalized.duty, post.description); a.equal(normalized.requirements, post.requirement);
       a.equal(normalized.description, ''); a.equal(normalized.jdComplete, false); a.match(normalized.id, /^[1-9][0-9]{18}$/);
       a.equal(normalized.url, site.url + '/position/' + post.id + '/detail'); a.ok(dom.links.some(l => l.href === normalized.url));
-      a.deepEqual([normalized.talentPlan, normalized.date, normalized.dateKind, normalized.sourceStatus], [null, null, null, null]);
+      a.deepEqual([normalized.talentPlan, normalized.publishedAt ?? null, normalized.updatedAt ?? null, normalized.sourceStatus], [null, null, null, null]);
     }
     a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
     a.equal(JSON.parse(fs.readFileSync(path.join(captureDir, 'report.json'), 'utf8')).finishedAt, '2026-10-07T16:38:01.858Z');
@@ -74,7 +74,7 @@ test('Baichuan preserves complete TEXT/title/CR/whitespace and exact named facts
   a.equal(normalized.title, native.title); a.equal(normalized.duty, native.description); a.equal(normalized.requirements, native.requirement);
   a.equal(normalized.description, ''); a.equal(normalized.jdComplete, false); a.equal(normalized.city, '北京/上海'); a.equal(normalized.category, '算法');
   a.deepEqual(normalized.channels, ['campus']); a.equal(normalized.employment, 'internship');
-  a.deepEqual([normalized.talentPlan, normalized.date, normalized.dateKind, normalized.sourceStatus], [null, null, null, null]);
+  a.deepEqual([normalized.talentPlan, normalized.publishedAt ?? null, normalized.updatedAt ?? null, normalized.sourceStatus], [null, 1788146288408, null, null]);
   for (const recruit_type of [null, { id: '202', name: '正式' }, { name: '全职', parent: { name: '社会招聘' } }, { name: ' 实习 ', parent: { name: ' 校招 ' } }]) {
     const j = b.normalizeRecord({ post: row(2, { recruit_type }) }, site); a.deepEqual(j.channels, []); a.equal(j.employment, null);
   }

@@ -45,11 +45,11 @@ function normalizeRecord(job, site) {
   if (!verifiedSource(site)) throw new Error('Beisen portal identity/scope/mode has not been verified');
   if (!usable(job)) throw new Error('Beisen: missing official id/title');
   const duty = nativeText(job.Duty), requirements = nativeText(job.Require), categoryId = job.CategoryId;
-  const channels = categoryId === '1' ? ['social'] : ['2', '4', '5', '6'].includes(categoryId) ? ['campus'] : [];
+  const channels = categoryId === '1' ? ['social'] : ['2', '4', '5', '6', '7'].includes(categoryId) ? ['campus'] : [];
   const route = categoryId === '1' ? 'social' : categoryId === '2' ? 'campus' : categoryId === '3' ? 'intern' : categoryId;
   const date = publicationDate(job);
   return { id: job.Id.toLowerCase(), title: job.JobAdName, city: Array.isArray(job.LocNames) ? job.LocNames : [], category: nativeText(site.key === 'vivo' ? job.ClassificationTwo : job.ClassificationOne), channels,
-    employment: job.Kind === '全职' ? 'full-time' : job.Kind === '实习' ? 'internship' : null,
+    employment: categoryId === '3' || job.Kind === '实习' ? 'internship' : job.Kind === '全职' ? 'full-time' : null, // 频道 3 = 官网实习频道（vivo 的实习岗位性质字段写的是全职）
     talentPlan: site.key === 'vivo' ? job.ClassificationOne === '蓝极星计划' ? true : null : ['4', '5', '7'].includes(categoryId) ? true : null,
     date, dateKind: date ? 'published' : null, url: new URL(site.api).origin + '/' + route + '/detail?jobAdId=' + encodeURIComponent(job.Id),
     duty, requirements, description: '', jdComplete: /[\p{L}\p{N}]/u.test(duty + requirements), sourceStatus: job.Status == null ? null : String(job.Status) };

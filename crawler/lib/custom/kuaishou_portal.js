@@ -215,9 +215,9 @@ function normalizeRecord(job, site) {
   // Current social list workLocations is null. Its renderer resolves workLocationsCode against this same public dictionary.
   if (p.track === 'social' && post.workLocations === null) city = dict.workLocations.map(entry => entry.name).join('/');
   return { id: String(post.id), title: post.name, city, category: dict.category?.name ?? '',
-    channels: p.track === 'social' ? ['social'] : !internship && post.recruitSubProjectCode === p.body.recruitSubProjectCodes[0] ? ['campus'] : [],
+    channels: p.track === 'social' ? ['social'] : internship ? [] : ['campus'], // 校园站的子项目只有「XXXX应届生」和「XXXX实习生」两类（官网字典），不是实习的就是应届生
     employment: internship ? 'internship' : post.positionNatureCode === 'fulltime' && nature === '全职' ? 'full-time' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.releaseTime ?? null, updatedAt: post.updateTime ?? null, sourceStatus: null,
     url: baseFor(p) + (p.track === 'campus' ? '#/campus/job-info/' : '#/official/social/job-info/') + post.id,
     duty: post.description ?? '', requirements: post.positionDemand ?? '', description: '', jdComplete: false };
 }

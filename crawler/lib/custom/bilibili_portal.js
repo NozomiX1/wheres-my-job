@@ -124,7 +124,7 @@ function normalizeRecord(job, site) {
   const post = boundRecord(job, site), internship = post.positionTypeName === '实习';
   return { id: String(post.id), title: post.positionName, city: post.workLocation ?? '', category: post.postCodeName ?? '',
     channels: internship ? [] : [site.track], employment: internship ? 'internship' : post.positionTypeName === '全职' ? 'full-time' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.pushTime ?? null, updatedAt: null, sourceStatus: null,
     // Official app router: w(track) declares child path "positions/:id" under /campus and /social.
     url: ORIGIN + '/' + site.track + '/positions/' + post.id, duty: '', requirements: '', description: htmlText(post.positionDescription), jdComplete: false };
 }

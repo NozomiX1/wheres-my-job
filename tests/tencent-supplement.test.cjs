@@ -30,7 +30,7 @@ test('Tencent all five project12 templates retain independent parent/child title
     const r = b.collectSupplemented(base.verification, site, [supplement], [], null, clock), j = b.normalizeRecord(r.jobs[0], site);
     a.equal(j.description, ['岗位描述\n', '岗位要求\n', literal, literal + '\n' + department + '\n\n' + department, '无部门的子标题', literal, literal + '\n' + department, '无子项的父标题'].join('\n\n'));
     a.equal(j.id, id); a.equal(j.title, p.positionTitle); a.equal(j.duty, ''); a.equal(j.requirements, '');
-    a.deepEqual([j.city, j.employment, j.talentPlan, j.date, j.dateKind, j.jdComplete], [p.workCities, null, null, null, null, false]);
+    a.deepEqual([j.city, j.employment, j.talentPlan, j.publishedAt, j.updatedAt, j.jdComplete], [p.workCities, null, null, null, null, false]);
     a.equal(j.description.includes('工作城市'), false); a.equal(j.description.includes('方向\n'), false); a.equal(j.description.includes(group.title), false);
     a.deepEqual(r.verification.base, base.verification); a.equal(r.verification.baseCompletedAt, clock); a.deepEqual(r.verification.supplements, [original]);
     a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs); a.deepEqual(supplement, original);
@@ -70,7 +70,7 @@ test('Tencent offline captured 905 internal campus details retain all 1277 displ
   for (const row of r.jobs) {
     const d = row.detail?.response.data ?? (row.supplement?.kind === 'internal' ? row.supplement.response.data : null);
     const j = b.normalizeRecord(row, site);
-    a.equal(j.id, row.post.postId); a.equal(j.title, row.post.positionTitle); a.deepEqual([j.date, j.dateKind, j.jdComplete], [null, null, false]);
+    a.equal(j.id, row.post.postId); a.equal(j.title, row.post.positionTitle); a.deepEqual([j.publishedAt, j.updatedAt, j.jdComplete], [null, null, false]);
     a.equal(j.employment, ['应届实习', '实习生 青云计划', '日常实习'].includes(row.post.recruitLabelName) ? 'internship' : null);
     a.equal(j.talentPlan, ['应届毕业生 青云计划', '实习生 青云计划'].includes(row.post.recruitLabelName) ? true : null);
     if (!d) continue;
@@ -138,7 +138,7 @@ test('Tencent resumed phase enriches only the exact original gap and leaves deni
   const f = resumedFixture(), r = b.collectResumed(f.prior.verification, site, { priorCompletedAt, supplements: [f.supplement] });
   const before = b.normalizeRecord(f.prior.jobs[3], site), after = b.normalizeRecord(r.jobs[3], site);
   a.equal(after.description, '全部外部正文 & <T>'); a.deepEqual({ ...after, description: '' }, before);
-  a.deepEqual([after.jdComplete, after.sourceStatus, after.date, after.dateKind, after.employment, after.talentPlan], [false, null, null, null, null, null]);
+  a.deepEqual([after.jdComplete, after.sourceStatus, after.publishedAt, after.updatedAt, after.employment, after.talentPlan], [false, null, null, after.updatedAt, null, null]);
   for (const i of [0, 1, 2, 4]) a.deepEqual(r.jobs[i], f.prior.jobs[i]);
   for (const i of [2, 4]) a.equal(b.normalizeRecord(r.jobs[i], site).description, '');
   a.match(r.issues.join(';'), /详情仍未取得 2 岗/);

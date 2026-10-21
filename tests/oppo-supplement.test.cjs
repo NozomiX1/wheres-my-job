@@ -41,7 +41,7 @@ test('OPPO v3 independently binds OFFEN native pages and JOB-TYPE while preservi
   a.equal(d.url, 'https://career.oppo.com/official/oppo/recruitment/post/1989260677351657473?recruitType=OFFEN-RECRUITMENT');
   a.equal(s.url, 'https://career.oppo.com/official/oppo/recruitment/post/2072618621932081153?recruitType=SOCIAL-RECRUITMENT');
   a.equal(d.duty, row('daily').jobDuty); a.equal(d.requirements, row('daily').workRequire); a.equal(d.description, '岗位职责\n  List<T> &amp; <b>TEXT</b>\r\n  空白  \n\n任职要求\n  要求\n');
-  a.deepEqual([d.date, d.dateKind, d.talentPlan, d.sourceStatus, d.jdComplete], [null, null, null, null, false]);
+  a.deepEqual([d.publishedAt ?? null, d.updatedAt ?? null, d.talentPlan, d.sourceStatus, d.jdComplete], [null, null, null, null, false]);
   a.equal(b.normalizeRecord(b.collectAvailable([page('social')], social).jobs[0], social).category, '');
   a.throws(() => b.validateEvidence(r.verification, r.jobs, social)); a.throws(() => b.validateEvidence(base(), b.collectAvailable([page('social')], social).jobs, extended));
   a.match(b.portalNotice(extended), /日常实习/); a.doesNotMatch(b.portalNotice(extended), /日常实习另入口未核验/);
@@ -124,7 +124,7 @@ test('OPPO complete offline seeds re-run atomically without requests or refreshi
   a.equal(r.verification.baseCompletedAt, baseCompletedAt); a.equal(r.verification.dailyCompletedAt, dailyCompletedAt); a.equal(r.verification.jobTypeResponses[0].completedAt, dictCompletedAt);
   a.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), r); a.deepEqual(fs.readdirSync(dir), ['candidate.json']);
   const jobs = require('../crawler/publish').normalizeJobs(r.jobs, extended, { available: true });
-  a.equal(jobs.length, 2); a.deepEqual(Object.keys(jobs[1]).sort(), ['category','channels','city','company','date','dateKind','description','duty','employment','id','jdComplete','requirements','sourceKey','sourceStatus','talentPlan','title','url']);
+  a.equal(jobs.length, 2); a.deepEqual(Object.keys(jobs[1]).sort(), ['category','channels','city','company','description','duty','employment','id','jdComplete','requirements','sourceKey','sourceStatus','talentPlan','title','url']);
   a.equal(jobs[1].sourceKey, 'oppo_social'); a.equal(jobs[1].company, 'OPPO'); a.equal(jobs[1].id, 'oppo_social:1989260677351657473'); a.deepEqual(jobs[1].channels, []); a.equal(jobs[1].employment, 'internship');
 });
 const proofBase = '/path/to/wheres-my-job-work/third-batch-20261008T071347946Z';

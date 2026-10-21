@@ -118,7 +118,7 @@ function normalizeRecord(job, site) {
   return { id: String(post.id), title: post.name, city: (post.workLocations ?? []).join('/'),
     category: p.track === 'campus' ? post.categoryName ?? '' : (post.categories ?? []).join('/'),
     channels: internship ? [] : p.track === 'social' ? ['social'] : post.batchTypeDesc === '应届生' ? ['campus'] : [], employment: internship ? 'internship' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.publishTime ?? null, updatedAt: null, sourceStatus: null,
     url: ORIGIN + (p.track === 'campus' ? '/campus-position' : '/off-campus-position') + '?positionId=' + post.id,
     duty: post.description ?? '', requirements: post.requirement ?? '', description: '', jdComplete: false };
 }

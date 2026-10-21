@@ -141,7 +141,7 @@ test('Cloud projection preserves literal independent TEXT, native fields and unk
   const out = ali.normalizeRecord(raw, site);
   a.equal(out.title, raw.name); a.equal(out.duty, raw.description); a.equal(out.requirements, raw.requirement);
   a.equal(out.category, '技术类//算法'); a.equal(out.city, '福州/深圳/广州'); a.equal(out.description, ''); a.equal(out.jdComplete, false);
-  a.deepEqual(out.channels, ['social']); for (const field of ['employment', 'talentPlan', 'date', 'dateKind', 'sourceStatus']) a.equal(out[field], null);
+  a.deepEqual(out.channels, ['social']); for (const field of ['employment', 'talentPlan', 'sourceStatus']) a.equal(out[field], null); a.equal(out.date, undefined);
   a.equal(out.url, p.origin + raw.positionUrl); a.equal(Object.hasOwn(out, 'isLingYang'), false); a.equal(Object.hasOwn(out, 'tags'), false);
   for (const body of ['', null, '>>>', '同文', '  ']) {
     const j = { ...raw, description: body, requirement: body, categories: null, workLocations: null };
@@ -299,7 +299,7 @@ test('Explicit supplementation is base-first/new-only: overlapping text/tracking
   a.match(r.issues.join(';'), /过滤列表重复官方id 1.*基础唯一岗位 3；过滤唯一岗位 2；基础重叠 1；补充后唯一岗位 4/);
   a.deepEqual(r.verification.base.pages[0].response.content.datas, native);
   const out = ali.normalizeRecord(r.jobs[0], site); a.equal(out.duty, native[0].description); a.equal(out.requirements, native[0].requirement); a.equal(out.title, native[0].name); a.equal(out.url, p.origin + native[0].positionUrl); a.equal(out.jdComplete, false);
-  a.equal(out.category, native[0].categories?.join('/') ?? ''); a.equal(out.employment, null); a.equal(out.talentPlan, null); a.equal(out.date, null); a.equal(Object.hasOwn(out, 'isLingYang'), false);
+  a.equal(out.category, native[0].categories?.join('/') ?? ''); a.equal(out.employment, null); a.equal(out.talentPlan, null); a.equal(out.date, undefined); a.equal(Object.hasOwn(out, 'isLingYang'), false);
   const zeroSlice = supplemented([{ categoryCode: '130', pages: [filteredPage('130', 1, [], 0)] }], {}, base.verification); a.deepEqual(zeroSlice.jobs, native); a.equal(zeroSlice.complete, false);
 });
 

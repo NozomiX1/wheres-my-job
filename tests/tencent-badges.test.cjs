@@ -13,7 +13,7 @@ test('Explicit same-clock publisher reprojection applies verified badges even to
 });
 test('Tencent campus visible exact native badges prove internship/Qingyun independently without body or invented full-time',()=>{
  for(const [label,employment,talentPlan]of [['应届毕业生',null,null],['应届实习','internship',null],['日常实习','internship',null],['应届毕业生 青云计划',null,true],['实习生 青云计划','internship',true],['青云计划',null,true],['实习生','internship',null],['实习生 实习生 青云计划','internship',true],['日常实习 青云计划','internship',true]]){
-  const native=row(label),before=structuredClone(native),j=p.normalizeRecord(native,campus);a.equal(j.employment,employment,label);a.equal(j.talentPlan,talentPlan,label);a.equal(j.title,native.post.positionTitle);a.equal(j.description,'');a.deepEqual(j.channels,['campus']);a.equal(j.jdComplete,false);a.equal(j.date,null);a.deepEqual(native,before);
+  const native=row(label),before=structuredClone(native),j=p.normalizeRecord(native,campus);a.equal(j.employment,employment,label);a.equal(j.talentPlan,talentPlan,label);a.equal(j.title,native.post.positionTitle);a.equal(j.description,'');a.deepEqual(j.channels,['campus']);a.equal(j.jdComplete,false);a.equal(j.date,undefined);a.deepEqual(native,before);
  }
 });
 test('Tencent badges are optional TEXT and only first three native rendered tokens count; unknown/absent and social remain unknown',()=>{

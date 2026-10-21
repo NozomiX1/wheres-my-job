@@ -17,7 +17,7 @@ test('Tencent fixed broad profiles and literal request builders distinguish offi
   a.equal(new URL(b.detailRequestFor(social, sp, stamp).url).searchParams.get('postId'), sp.PostId);
   for (const site of [campus, social]) { const r = b.collectAvailable([page(site)], site); a.equal(r.complete, false); a.equal(r.total, 1);
     const j = b.normalizeRecord(r.jobs[0], site); a.equal(j.id, '1282707398326592512'); a.equal(j.title, site.track === 'campus' ? cp.positionTitle : sp.RecruitPostName);
-    a.deepEqual([j.employment, j.talentPlan, j.date, j.dateKind], [null, null, null, null]); a.equal(j.jdComplete, false);
+    a.deepEqual([j.employment, j.talentPlan, j.publishedAt, j.updatedAt], [null, null, null, site.track === 'social' ? '2026年10月08日' : null]); a.equal(j.jdComplete, false);
     a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
   }
   a.equal(b.normalizeRecord(b.collectAvailable([page(social)], social).jobs[0], social).url, sp.PostURL);

@@ -38,7 +38,7 @@ test('XHS TEXT two slots, equal text and genuine slash remain exact; metadata st
     const native = row(), j = x.normalizeRecord(native, site);
     a.equal(j.id, '1'); a.equal(j.title, native.positionName); a.equal(j.city, native.workplace);
     a.equal(j.duty, native.duty); a.equal(j.requirements, native.qualification); a.equal(j.description, ''); a.equal(j.jdComplete, false);
-    a.deepEqual(j.channels, [site.track]); a.deepEqual([j.employment, j.talentPlan, j.date, j.dateKind], [null, null, null, null]);
+    a.deepEqual(j.channels, [site.track]); a.deepEqual([j.employment, j.talentPlan, j.publishedAt, j.updatedAt], [null, null, '2026-10-01', null]);
     a.equal(j.sourceStatus, 'in_recruitment'); a.equal(x.normalizeRecord({ ...native, recruitStatus: '' }, site).sourceStatus, null); a.equal(j.category, site.track === 'social' ? native.jobType : '');
     a.equal(j.url, site.url + '/1'); a.equal(x.normalizeRecord({ ...native, duty: '/', qualification: '/' }, site).duty, '/');
     const unknown = x.normalizeRecord({ ...native, workplace: null, jobType: { name: 'unproved' }, recruitStatus: null, duty: null }, site);

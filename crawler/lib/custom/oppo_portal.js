@@ -260,7 +260,7 @@ function normalizeRecord(job, site) {
     if (job.detail?.aiCapabilityLevelDesc && job.detail.aiCapabilityLevelDesc !== post.aiCapabilityLevelDesc) add('AI能力要求', job.detail.aiCapabilityLevelDesc);
   }
   return { id: String(officialId(post, site)), title: post[campus ? 'positionName' : 'publishName'], city: post.workCityName ?? '', category: campus ? post.positionTypeName ?? '' : job.jobTypes?.find(d => d.dictValue === post.jobType)?.dictName ?? '',
-    channels: job.scope === 'daily' ? [] : [p.track], employment: job.scope === 'daily' && post.recruitTypeName === '日常实习生招聘' ? 'internship' : null, talentPlan: null, date: null, dateKind: null, sourceStatus: null, url: jobUrl(p, post), duty, requirements, description: sections.join('\n'), jdComplete: false };
+    channels: job.scope === 'daily' ? [] : [p.track], employment: job.scope === 'daily' && post.recruitTypeName === '日常实习生招聘' ? 'internship' : null, talentPlan: null, publishedAt: post.releaseTime ?? null, updatedAt: null, sourceStatus: null, url: jobUrl(p, post), duty, requirements, description: sections.join('\n'), jdComplete: false };
 }
 function portalNotice(site) {
   if (!verifiedSource(site)) return '';

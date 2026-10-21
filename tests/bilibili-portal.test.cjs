@@ -66,7 +66,7 @@ test('Bilibili literal innerHTML becomes full HTML text without guessed splits o
     a.equal(j.url, site.origin + '/' + site.track + '/positions/' + native.id); // Official w(track) child path is plural positions/:id.
     a.deepEqual([j.duty, j.requirements, j.jdComplete], ['', '', false]); a.match(j.description, /^职责 & <List<T>>\n要求：原始全文\n第二行\n完整长文/);
     a.equal((j.description.match(/完整长文/g) || []).length, 400); a.ok(!j.description.includes('<p>')); a.ok(j.title.includes('#012830'));
-    a.deepEqual([j.talentPlan, j.date, j.dateKind, j.sourceStatus], [null, null, null, null]); a.equal(Object.hasOwn(j, 'company'), false);
+    a.deepEqual([j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, '2026-09-30 15:13:40', null, null]); a.equal(Object.hasOwn(j, 'company'), false);
     for (const [name, expected] of [['实习', 'internship'], ['全职', 'full-time'], ['正式', null], ['全职 ', null], ['', null], [null, null]]) {
       const post = { ...native, positionTypeName: name, recruitType: 99, campusProjectId: 999 }, r = b.normalizeRecord({ post }, site);
       a.equal(r.employment, expected); a.deepEqual(r.channels, name === '实习' ? [] : [site.track]);

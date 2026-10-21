@@ -10,6 +10,7 @@ const { readPublished } = require('../crawler/publish');
 const vm = require('node:vm');
 const createRank = require('../assets/rank.js');
 const { cityKeys } = require('../assets/cities.js');
+const { recruitKind, jobFacts } = require('../assets/facts.js');
 const { createIndex } = require('./search');
 const { createAccessLog, visitorOf } = require('./access');
 
@@ -36,6 +37,9 @@ function load(dataFile) {
     Object.defineProperty(job, '__date', { value: rank.reliableDate(job), enumerable: false });
     Object.defineProperty(job, '__unit', { value: rank.unitName(job), enumerable: false });
     Object.defineProperty(job, '__cities', { value: cityKeys(job.city), enumerable: false });
+    const kind = recruitKind(job);
+    Object.defineProperty(job, '__kind', { value: kind, enumerable: false });
+    Object.defineProperty(job, '__facts', { value: jobFacts(job, kind), enumerable: false });
     byId.set(job.id, job);
   }
   const updated = data.sources.map(s => s.lastSuccess).filter(Boolean).sort().at(-1) ?? null; // 各来源最近成功时间里最新的
@@ -62,8 +66,8 @@ function search(state, body) {
   const q = parseQuery(body), { rank } = state, result = state.index.query(q);
   const items = result.rows.map(r => {
     const j = r.job;
-    return { id: j.id, sourceKey: j.sourceKey, company: j.company, employer: j.employer, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan,
-      date: j.date, dateKind: j.dateKind, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, url: j.url, value: r.value, matched: r.matched, downranked: r.downranked,
+    return { id: j.id, sourceKey: j.sourceKey, company: j.company, employer: j.employer, title: j.title, category: j.category, city: j.city, channels: j.channels, employment: j.employment, talentPlan: j.talentPlan, kind: j.__kind, facts: j.__facts,
+      publishedAt: j.publishedAt, updatedAt: j.updatedAt, firstSeen: j.firstSeen, sourceStatus: j.sourceStatus, jdComplete: j.jdComplete, url: j.url, value: r.value, matched: r.matched, downranked: r.downranked,
       matchedText: r.matched.map(w => rank.hitText(j, w)), downrankedText: r.downranked.map(w => rank.hitText(j, w)) };
   });
   return { total: result.total, matched: result.matched, penalized: result.penalized, offset: q.offset, items };
@@ -140,7 +144,7 @@ function createApp({ dataFile = process.env.ANDE_DATA_FILE || path.join(ROOT, 'd
         if (req.method === 'GET' && url.pathname === '/api/health') { const m = process.memoryUsage(); let lastRun = null; try { lastRun = JSON.parse(fs.readFileSync(path.join(ROOT, 'crawler', 'out', 'logs', 'last-run.json'), 'utf8')); } catch {}
           return json(req, res, 200, { jobs: state.jobs.length, sources: state.sources, dataUpdatedAt: state.dataUpdatedAt, lastRun, loadedAt: state.loadedAt, loadMs: state.loadMs, rssMB: Math.round(m.rss / 1048576), heapMB: Math.round(m.heapUsed / 1048576) }); }
         const m = req.method === 'GET' && /^\/api\/job\/(.+)$/.exec(url.pathname);
-        if (m) { const job = state.byId.get(decodeURIComponent(m[1])); if (!job) throw new HttpError(404, '岗位不存在'); return json(req, res, 200, job); }
+        if (m) { const job = state.byId.get(decodeURIComponent(m[1])); if (!job) throw new HttpError(404, '岗位不存在'); return json(req, res, 200, { ...job, kind: job.__kind }); }
         throw new HttpError(404, '未找到');
       }
       if (req.method !== 'GET') throw new HttpError(405, '不支持');

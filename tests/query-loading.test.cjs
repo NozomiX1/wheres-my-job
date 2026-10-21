@@ -8,7 +8,7 @@ function fixture(){
  // 每次 fetch 登记为待决请求，测试里用 reply/fail 决定结果。
  const fetch=(url,options)=>new Promise((resolve,reject)=>requests.push({url,body:options?.body?JSON.parse(options.body):null,reply:(body,status=200)=>resolve({ok:status<400,status,json:async()=>body}),fail:()=>reject(new TypeError('x'))}));
  const ctx=vm.createContext({URL,fetch,ANDE_DATA:data,ANDE_EXAMPLES:{keywords:[],downrank:[]},document:{addEventListener(){},querySelectorAll(){return []},querySelector:element,getElementById:element},window:{scrollTo(){}},localStorage:{getItem(){return null;},setItem(){},removeItem(){}}});
- vm.runInContext(fs.readFileSync(require.resolve('../assets/cities.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(require.resolve('../assets/rank.js'),'utf8'),ctx);vm.runInContext(script+'\nglobalThis.api={directory,directoryList,CATEGORIES,categoryTag,state,search,loadMore,showJob,clearSettings,render,jobCache,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
+ vm.runInContext(fs.readFileSync(require.resolve('../assets/cities.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(require.resolve('../assets/facts.js'),'utf8'),ctx);vm.runInContext(fs.readFileSync(require.resolve('../assets/rank.js'),'utf8'),ctx);vm.runInContext(script+'\nglobalThis.api={directory,directoryList,CATEGORIES,categoryTag,state,search,loadMore,showJob,clearSettings,render,jobCache,get message(){return loadMessage;}};',ctx);ctx.api.render();return {api:ctx.api,data,element,requests};
 }
 const item=(id,extra={})=>({id,sourceKey:'a',company:'甲',title:'岗位'+id,category:'',city:'',channels:['social'],employment:null,talentPlan:null,date:null,dateKind:null,sourceStatus:null,jdComplete:true,value:0,matched:[],downranked:[],matchedText:[],downrankedText:[],...extra});
 const page=(items,total=items.length)=>({total,matched:0,penalized:0,offset:0,items});
@@ -16,9 +16,9 @@ const tick=()=>new Promise(r=>setImmediate(r));
 
 test('Company categories: tabs only when there are two or more; a tab narrows the directory list that select-all acts on; cards of non-default categories carry a tag',()=>{
  const f=fixture();assert.deepEqual([...f.api.CATEGORIES],['互联网','国企']);
- assert.deepEqual(f.api.directoryList().map(c=>c.name),['甲','乙']);
- f.api.directory.category='国企';assert.deepEqual(f.api.directoryList().map(c=>c.name),['乙']);
- f.api.directory.category='互联网';f.api.directory.letter='B';assert.deepEqual(f.api.directoryList().map(c=>c.name),[]);
+ assert.deepEqual(Array.from(f.api.directoryList(),c=>c.name),['甲','乙']);
+ f.api.directory.category='国企';assert.deepEqual(Array.from(f.api.directoryList(),c=>c.name),['乙']);
+ f.api.directory.category='互联网';f.api.directory.letter='B';assert.deepEqual(Array.from(f.api.directoryList(),c=>c.name),[]);
  assert.equal(f.api.categoryTag({company:'乙'}),'<span class="job-track">国企</span>');assert.equal(f.api.categoryTag({company:'甲'}),'');assert.equal(f.api.categoryTag({company:'没登记的'}),'');
 });
 

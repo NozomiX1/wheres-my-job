@@ -61,9 +61,9 @@ function validateJobs(jobs, site) {
 function normalizeRecord(job, site) {
   const post = boundRecord(job, site), project = job.kind !== 'daily', label = project ? post.type_name : post.workTypeName;
   // full/research/intern use the observed shared Position innerHTML; daily has its own observed innerHTML renderer.
-  return { id: String(project ? post.ehr_job_id : post.id), title: project ? post.job_name : post.positionName, category: (project ? post.category_name : post.postTypeNames) ?? '',
+  return { id: String(project ? post.ehr_job_id : post.id), title: project ? post.job_name : post.positionName, employer: '网易游戏（雷火）', category: (project ? post.category_name : post.postTypeNames) ?? '',
     city: (project ? post.work_place_name : post.workCityName) ?? '', channels: ['campus'], employment: label === '全职' ? 'full-time' : label === '实习' ? 'internship' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: null, publishedAt: null, updatedAt: post.updateTime ?? null, sourceStatus: null,
     url: project ? post.job_detail_url : 'https://hr.163.com/job-detail.html?id=' + post.id + '&lang=zh',
     duty: htmlText(project ? post.job_description : post.description), requirements: htmlText(project ? post.job_requirement : post.requirement), description: '', jdComplete: false };
 }

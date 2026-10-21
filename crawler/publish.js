@@ -11,10 +11,14 @@ const portals = require('./lib/portals');
 const { cityKeys } = require('../assets/cities');
 const OUT_DIR = path.join(__dirname, 'out');
 const DATA_FILE = path.join(__dirname, '..', 'data', 'catalog.js');
-const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'date', 'dateKind', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus', 'employer']; // category、sourceStatus、employer 可缺省
+const JOB_FIELDS = ['id', 'sourceKey', 'company', 'title', 'city', 'category', 'channels', 'employment', 'talentPlan', 'publishedAt', 'updatedAt', 'firstSeen', 'url', 'duty', 'requirements', 'description', 'jdComplete', 'sourceStatus', 'employer']; // category、sourceStatus、employer、publishedAt、updatedAt、firstSeen 是可选字段（旧数据没有，不给保留的岗位补键）
 
 function loadSites() {
   return JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 'utf8')).sites;
+}
+// 已下架的来源 key（sites.json 的 retired）：发布时把它们的岗位和只属于它们的公司从发布数据里去掉。
+function loadRetired() {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, 'sites.json'), 'utf8')).retired || [];
 }
 
 function coverageFor(site) {
@@ -86,20 +90,28 @@ function categoryNames(value, field) {
   });
 }
 
+const BEIJING_MS = 8 * 3600e3;
+const beijingDay = ms => new Date(ms + BEIJING_MS).toISOString().slice(0, 10);
 function normalizeDate(value) {
   if (value == null || value === '' || value === '-') return null;
   if (typeof value !== 'string' && typeof value !== 'number') throw new Error('Invalid date field');
   const str = String(value).trim();
-  const match = str.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/);
+  // 带时区的完整时间（Z、+08:00、+00:00）：换算成北京日期。
+  if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(?:Z|[+-]\d{2}:?\d{2})$/i.test(str)) {
+    const ms = Date.parse(str.replace(' ', 'T'));
+    if (Number.isFinite(ms)) return beijingDay(ms);
+  }
+  const match = str.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/) || str.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日/);
   if (match) {
-    const date = new Date(match[1] + 'T00:00:00Z');
-    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== match[1]) throw new Error('Invalid calendar date');
-    return match[1];
+    const day = match[2] ? match[1] + '-' + match[2].padStart(2, '0') + '-' + match[3].padStart(2, '0') : match[1];
+    const date = new Date(day + 'T00:00:00Z');
+    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== day) throw new Error('Invalid calendar date');
+    return day;
   }
   // Official timestamps only; never use the crawl clock as a publication date.
   if (/^\d{10}(?:\d{3})?$/.test(str)) {
-    const date = new Date(Number(str) * (str.length === 10 ? 1000 : 1));
-    if (Number.isFinite(date.getTime())) return date.toISOString().slice(0, 10);
+    const ms = Number(str) * (str.length === 10 ? 1000 : 1);
+    if (Number.isFinite(new Date(ms).getTime())) return beijingDay(ms);
   }
   return null; // Unsupported date text has unknown semantics, not a fabricated date.
 }
@@ -166,8 +178,12 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
       for (const field of cityFields) cityText(job[field]);
       for (const field of dateFields) normalizeDate(job[field]);
       if (fullMoka && job.publishedAt != null && typeof job.publishedAt !== 'string') throw new Error('Invalid publishedAt field');
-      const date = normalizeDate(first(job, dateFields));
-      if (job.dateKind != null && !['published', 'updated', 'platform'].includes(job.dateKind)) throw new Error('Invalid dateKind'); // platform：汇聚平台给的更新时间，只显示、不参与排序
+      const legacy = normalizeDate(first(job, dateFields));
+      if (job.dateKind != null && !['published', 'updated'].includes(job.dateKind)) throw new Error('Invalid dateKind');
+      // 日期：适配器直接给 publishedAt / updatedAt（官网时间戳、日期串都行，按北京时间取日期）；老写法 date + dateKind（北森、Moka）也认。写法认不出的日期当作没有，不挡发布。
+      const lenient = value => { try { return normalizeDate(value); } catch { return null; } };
+      const dateKind = fullMoka ? 'published' : job.dateKind;
+      const publishedAt = (fullMoka ? null : lenient(job.publishedAt)) ?? (dateKind === 'published' ? legacy : null), updatedAt = (fullMoka ? null : lenient(job.updatedAt)) ?? (dateKind === 'updated' ? legacy : null);
       const commitment = first(job, ['commitment', 'Commitment', 'Kind', 'recruitType', 'recruit_type']);
       if (commitment != null && typeof commitment !== 'string' && !Number.isSafeInteger(commitment) && !(typeof commitment === 'object' && typeof commitment.name === 'string')) throw new Error('Invalid employment field');
       const kind = typeof commitment === 'object' && commitment ? commitment.name : commitment;
@@ -203,7 +219,7 @@ function normalizeJobs(rawJobs, site, { detailIds } = {}) {
         id, sourceKey: site.key, company: site.company, title, city: cityText(first(job, cityFields)),
         category: [...new Set(categoryFields.flatMap(field => categoryNames(job[field], field)))].join('/'),
         channels: [...new Set(channels)], employment, talentPlan: job.talentPlan ?? null,
-        date, dateKind: date ? (fullMoka ? 'published' : job.dateKind ?? null) : null,
+        ...(publishedAt ? { publishedAt } : {}), ...(updatedAt ? { updatedAt } : {}),
         url: safeUrl(first(job, urlFields)) || buildUrl(site, officialId),
         duty: jd ? jd.duty : newDirectJD ? text(job.duty, 'duty') : joinText(job, dutyFields), requirements: jd ? jd.requirements : newDirectJD ? text(job.requirements, 'requirements') : joinText(job, requireFields), description: jd ? jd.description : newDirectJD ? text(job.description, 'description') : joinText(job, descriptionFields),
         jdComplete: jd ? jd.hasContent : job.jdComplete === true, sourceStatus,
@@ -260,16 +276,23 @@ function readPublished(file) {
   for (const source of data.sources) {
     if (!source || typeof source.key !== 'string' || !source.key || keys.has(source.key) || typeof source.company !== 'string' || typeof source.status !== 'string' || typeof source.message !== 'string' || (source.coverage != null && typeof source.coverage !== 'string')) throw new Error('Invalid baseline source');
     for (const field of ['lastSuccess', 'lastAttempt']) if (source[field] !== null && !validTimestamp(source[field])) throw new Error('Invalid baseline source timestamp');
+    if (source.history != null && (!Array.isArray(source.history) || source.history.some(e => !e || normalizeDate(e.date) !== e.date || !Number.isSafeInteger(e.added) || !Number.isSafeInteger(e.removed) || e.added < 0 || e.removed < 0))) throw new Error('Invalid baseline source history');
     keys.add(source.key);
   }
   for (const job of data.jobs) {
-    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus', 'employer'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
+    // 旧格式（date + dateKind）迁移成 publishedAt / updatedAt。
+    if (job && Object.hasOwn(job, 'date')) {
+      if (typeof job.date === 'string' && job.dateKind === 'published') job.publishedAt = job.date; else if (typeof job.date === 'string' && job.dateKind === 'updated') job.updatedAt = job.date;
+      delete job.date; delete job.dateKind;
+    }
+    if (!job || JOB_FIELDS.some(field => !['category', 'sourceStatus', 'employer', 'publishedAt', 'updatedAt', 'firstSeen'].includes(field) && !Object.hasOwn(job, field)) || !job.id || ids.has(job.id) || !keys.has(job.sourceKey) || !names.has(job.company)) throw new Error('Invalid baseline job identity');
     // Optional display fields may be absent in old schema-1 data; do not add keys to retained jobs.
     if (Object.hasOwn(job, 'category') && typeof job.category !== 'string') throw new Error('Invalid baseline category');
     if (job.sourceStatus != null && (typeof job.sourceStatus !== 'string' || !job.sourceStatus.trim())) throw new Error('Invalid baseline sourceStatus');
     if (job.employer != null && typeof job.employer !== 'string') throw new Error('Invalid baseline employer');
     for (const field of ['id', 'sourceKey', 'company', 'title', 'city', 'url', 'duty', 'requirements', 'description']) if (typeof job[field] !== 'string') throw new Error('Invalid baseline job text');
-    if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean' || ![null, 'published', 'updated', 'platform'].includes(job.dateKind) || (job.date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(job.date) || normalizeDate(job.date) !== job.date))) throw new Error('Invalid baseline job metadata');
+    if (!job.title.trim() || !Array.isArray(job.channels) || job.channels.some(c => !['campus', 'social'].includes(c)) || ![null, 'internship', 'full-time'].includes(job.employment) || ![null, true, false].includes(job.talentPlan) || typeof job.jdComplete !== 'boolean') throw new Error('Invalid baseline job metadata');
+    for (const field of ['publishedAt', 'updatedAt', 'firstSeen']) if (job[field] != null && (typeof job[field] !== 'string' || normalizeDate(job[field]) !== job[field])) throw new Error('Invalid baseline job metadata');
     if (job.url && !safeUrl(job.url)) throw new Error('Unsafe baseline job URL');
     ids.add(job.id);
   }
@@ -344,16 +367,30 @@ function validateSnapshot(snapshot, status, site) {
   return normalizeJobs(snapshot.jobs, site, { detailIds: validation?.detailIds });
 }
 
+// 每个来源保留最近 14 天的“新增 / 减少”条数（公司卡片上显示近 7 天）。同一天多次采集合并；
+// 一次变化超过旧岗位数的三成（减少）或五成（新增）多半是采集不完整或官网重发了岗位 ID，标成 unsure，页面不显示这段时间的数字。
+function nextHistory(previous, day, old, jobs) {
+  const ids = new Set(jobs.map(job => job.id));
+  const added = jobs.filter(job => !old.has(job.id)).length, removed = [...old.keys()].filter(id => !ids.has(id)).length;
+  const unsure = old.size >= 20 && (removed > old.size * 0.3 || added > old.size * 0.5);
+  const list = (previous || []).map(entry => ({ ...entry })), last = list.at(-1);
+  if (last?.date === day) { last.added += added; last.removed += removed; if (unsure) last.unsure = true; }
+  else list.push({ date: day, added, removed, ...(unsure ? { unsure: true } : {}) });
+  return list.slice(-14);
+}
+
 // 官网拒绝的来源在 message 前加这个标记，下午补采据此跳过（见 check-fresh.js）。
 const REFUSED_MARK = '官网拒绝；';
 
-function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [], refusedKeys = [], acceptShrink = [] } = {}) {
+function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), reproject = false, keys = reproject ? [] : sites.map(s => s.key), failedKeys = [], refusedKeys = [], acceptShrink = [], retiredKeys = loadRetired() } = {}) {
   const baseline = readPublished(dataFile);
   if (typeof reproject !== 'boolean' || reproject && !keys.length) throw new Error('Reprojection requires explicit source keys');
   const selected = new Set(keys);
   const failed = new Set(failedKeys);
   if (keys.some(key => !sites.some(s => s.key === key))) throw new Error('Unknown source key');
   const sources = new Map(baseline.sources.map(source => [source.key, { ...source }]));
+  const retired = [...sources.values()].filter(source => retiredKeys.includes(source.key));
+  for (const source of retired) sources.delete(source.key);
   const replacements = new Map(), unitMemberships = { ...baseline.unitMemberships };
   const errors = [];
   for (const site of sites) {
@@ -384,6 +421,9 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         const kept = jdLost || restored.length ? ['employment', 'talentPlan', 'category'].filter(field => (job[field] == null || job[field] === '') && o[field] != null && o[field] !== '') : [];
         return restored.length || kept.length || jdLost ? { ...job, ...Object.fromEntries([...restored, ...kept].map(field => [field, o[field]])), jdComplete: job.jdComplete || o.jdComplete } : job;
       });
+      // 本站首次发现：旧数据里没有这个岗位 ID 就记下这次采集的北京日期（来源第一次采集时没有“新增”可言，不记）；已有的沿用旧值。
+      const seenDay = beijingDay(Date.parse(snapshot.completedAt)), tracked = old.size > 0;
+      jobs = jobs.map(job => { const o = old.get(job.id); return !o ? (tracked ? { ...job, firstSeen: seenDay } : job) : o.firstSeen ? { ...job, firstSeen: o.firstSeen } : job; });
       // 门户把一个官网岗位展开成多条（如华为岗位意向）时：这次没取到详情的岗位，保留它旧的展开记录，
       // 不让一条没有正文的岗位级记录顶替它们（旧展开记录的 ID 是 `岗位ID-N`）。
       if (portals.qualified(site)?.mod.expand) jobs = jobs.flatMap(job => {
@@ -394,11 +434,12 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
       // 防护：新结果少于旧数据一半，多半是被截断，拒绝替换（确属下架需显式 acceptShrink）。
       if (old.size && jobs.length < old.size / 2 && !acceptShrink.includes(site.key)) throw new Error('New result has ' + jobs.length + ' jobs, fewer than half of the ' + old.size + ' published; keeping published data');
       if (previous?.company && previous.company !== site.company) throw new Error('Source company changed; explicit migration required');
+      const history = tracked ? nextHistory(previous?.history, seenDay, old, jobs) : previous?.history;
       if (previous?.lastSuccess && (Date.parse(previous.lastSuccess) > Date.parse(snapshot.completedAt) || Date.parse(previous.lastSuccess) === Date.parse(snapshot.completedAt) && !reproject)) continue;
       const memberships = portals.qualified(site)?.mod.unitMemberships;
       if (memberships) Object.assign(unitMemberships, memberships(snapshot.jobs, site));
       replacements.set(site.key, jobs);
-      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已更新（仅此来源范围）') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + portals.notices(site).filter(n => !status.message.includes(n)).map(n => '；' + n).join(''), coverage: snapshot.coverage });
+      sources.set(site.key, { key: site.key, company: site.company, status: 'ready', lastSuccess: snapshot.completedAt, lastAttempt: status.lastAttempt, message: (status.message || '已更新（仅此来源范围）') + (moka.portalNotice(site) ? '；' + moka.portalNotice(site) : '') + portals.notices(site).filter(n => !status.message.includes(n)).map(n => '；' + n).join(''), coverage: snapshot.coverage, ...(history ? { history } : {}) });
     } catch (error) {
       errors.push(site.key + ': ' + error.message);
       const validStatus = status && status.key === site.key && ['failed', 'unverified'].includes(status.status);
@@ -408,14 +449,15 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
         lastSuccess: previous?.lastSuccess ?? null,
         lastAttempt: status?.key === site.key && validTimestamp(status.lastAttempt) ? status.lastAttempt : previous?.lastAttempt ?? null,
         message: (refusedKeys.includes(site.key) ? REFUSED_MARK : '') + (validStatus && typeof status.message === 'string' ? status.message : error.message),
-        coverage: previous?.coverage ?? null
+        coverage: previous?.coverage ?? null, ...(previous?.history ? { history: previous.history } : {})
       });
     }
   }
-  if (!replacements.size) return { code: 1, written: false, updated: [], errors };
-  const jobs = baseline.jobs.filter(job => !replacements.has(job.sourceKey)).map(job => Object.fromEntries(JOB_FIELDS.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]])));
+  if (!replacements.size && !retired.length) return { code: 1, written: false, updated: [], errors };
+  const jobs = baseline.jobs.filter(job => !replacements.has(job.sourceKey) && !retiredKeys.includes(job.sourceKey)).map(job => Object.fromEntries(JOB_FIELDS.filter(field => Object.hasOwn(job, field)).map(field => [field, job[field]])));
   for (const replacement of replacements.values()) jobs.push(...replacement);
-  const companies = baseline.companies.map(company => ({ name: company.name, initial: company.initial, aliases: company.aliases }));
+  const retiredCompanies = new Set(retired.map(source => source.company));
+  const companies = baseline.companies.filter(company => !retiredCompanies.has(company.name) || [...sources.values()].some(source => source.company === company.name)).map(company => ({ name: company.name, initial: company.initial, aliases: company.aliases }));
   for (const source of sources.values()) if (!companies.some(company => company.name === source.company)) {
     const site = sites.find(s => s.key === source.key);
     companies.push({ name: source.company, initial: site?.initial || (/^[a-z]/i.test(source.company) ? source.company[0].toUpperCase() : '#'), aliases: site?.aliases || [] });
@@ -449,7 +491,7 @@ function publish({ outDir = OUT_DIR, dataFile = DATA_FILE, sites = loadSites(), 
   return { code: errors.length ? 1 : 0, written: true, updated: [...replacements.keys()], errors, data };
 }
 
-module.exports = { knownIds, loadSites, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, writeBrowserData, validateSnapshot, publish, REFUSED_MARK };
+module.exports = { knownIds, loadSites, loadRetired, coverageFor, atomicWrite, normalizeJobs, normalizeDate, safeUrl, validTimestamp, readPublished, writeBrowserData, validateSnapshot, publish, REFUSED_MARK };
 if (require.main === module) {
   try {
     const keys = process.argv.slice(2);

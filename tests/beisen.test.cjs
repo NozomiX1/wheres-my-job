@@ -45,15 +45,17 @@ test('failures: first-page refusal throws, a later failure fails the whole run, 
 test('projection: TEXT decode, channel/employment/plan from explicit facts, date only when PostDateInt agrees, tolerant of missing fields', () => {
   const j = normalizeJobs([job(1)], iflytek)[0];
   a.equal(j.id, 'iflytek:' + uuid(1)); a.equal(j.title, '岗位1'); a.equal(j.duty, '职责 <T> &\n末尾'); a.equal(j.requirements, '要求1'); a.equal(j.city, '合肥/北京'); a.equal(j.category, '研发');
-  a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'full-time'); a.equal(j.talentPlan, null); a.equal(j.date, '2026-09-15'); a.equal(j.dateKind, 'published'); a.equal(j.sourceStatus, '1');
+  a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'full-time'); a.equal(j.talentPlan, null); a.equal(j.publishedAt, '2026-09-15'); a.equal(j.updatedAt, undefined); a.equal(j.sourceStatus, '1');
   a.equal(j.url, 'https://iflytek.zhiye.com/campus/detail?jobAdId=' + uuid(1)); a.equal(j.jdComplete, true);
   a.equal(normalizeJobs([job(2, { CategoryId: '4', Category: '飞星计划', Kind: '实习' })], iflytek)[0].talentPlan, true);
   a.deepEqual(normalizeJobs([job(3, { CategoryId: '1', Category: '社会招聘' })], social)[0].channels, ['social']);
+  const intern = normalizeJobs([job(6, { CategoryId: '3', Category: '实习', Kind: '全职' })], vivo)[0]; a.equal(intern.employment, 'internship', 'channel 3 is the official internship channel, whatever the Kind field says'); a.ok(intern.url.includes('/intern/detail'));
+  a.deepEqual(normalizeJobs([job(7, { CategoryId: '7', Category: '星火X' })], iflytek)[0].channels, ['campus']);
   a.equal(normalizeJobs([job(4, { ClassificationOne: '蓝极星计划', ClassificationTwo: '软件' })], vivo)[0].talentPlan, true);
   a.equal(normalizeJobs([job(4, { ClassificationTwo: '软件' })], vivo)[0].category, '软件');
   const bare = normalizeJobs([{ Id: uuid(9), JobAdName: '无元数据' }], iflytek)[0];
-  a.deepEqual([bare.duty, bare.requirements, bare.city, bare.channels, bare.employment, bare.date, bare.jdComplete], ['', '', '', [], null, null, false]);
-  a.equal(normalizeJobs([job(5, { PostDate: '0001-01-01T00:00:00', PostDateInt: 0 })], iflytek)[0].date, null);
+  a.deepEqual([bare.duty, bare.requirements, bare.city, bare.channels, bare.employment, bare.publishedAt ?? null, bare.jdComplete], ['', '', '', [], null, null, false]);
+  a.equal(normalizeJobs([job(5, { PostDate: '0001-01-01T00:00:00', PostDateInt: 0 })], iflytek)[0].publishedAt, undefined);
   a.throws(() => normalizeJobs([], iflytek), /zero cannot clear/);
 });
 

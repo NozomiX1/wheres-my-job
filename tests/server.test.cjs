@@ -23,7 +23,7 @@ test('search returns the same ranking as the shared rank module, and pages are c
 });
 
 test('selected units and recruitment scope filter the result set', async () => {
-  const r = await (await post({ words: [], selected: ['字节跳动'], recruitment: 'campus', limit: 100 })).json();
+  const r = await (await post({ words: [], selected: ['字节跳动'], recruitment: 'internship', limit: 100 })).json();
   a.ok(r.total > 0 && r.items.every(i => i.company === '字节跳动'));
 });
 

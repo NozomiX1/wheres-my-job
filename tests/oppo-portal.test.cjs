@@ -35,7 +35,7 @@ test('OPPO proved idProjPosition vs positionId routes, no jobNo fallback, all TE
   a.equal(j.duty, post.positionDesc); a.equal(j.requirements, post.positionRequire); a.equal(j.category, 'AI/算法类'); a.equal(j.city, '深圳市,东莞市');
   for (const text of [post.positionDesc, post.positionRequire, post.knowledgeSkill, post.aiCapabilityLevelDesc, post.bonusItem, c.jobs[0].culture[1].itemName]) a.ok(j.description.includes(text));
   const headings = ['岗位职责', '任职要求', '知识技能要求', 'AI能力要求', '加分项', '文化匹配性']; a.ok(headings.every((h, i) => !i || j.description.indexOf(h) > j.description.indexOf(headings[i - 1])));
-  a.deepEqual([j.date, j.dateKind, j.employment, j.talentPlan, j.sourceStatus], [null, null, null, null, null]); a.equal(j.jdComplete, false);
+  a.deepEqual([j.publishedAt, j.updatedAt, j.employment, j.talentPlan, j.sourceStatus], ['2026-07-15', null, null, null, null]); a.equal(j.jdComplete, false);
   const s = sample(social), sj = b.normalizeRecord(s.jobs[0], social); a.equal(sj.id, '2072618621932081153'); a.equal(sj.url, 'https://career.oppo.com/official/oppo/recruitment/post/2072618621932081153?recruitType=SOCIAL-RECRUITMENT');
   a.equal(sj.title, s.jobs[0].post.publishName); a.equal(sj.category, ''); a.ok(sj.description.includes(s.jobs[0].post.jobDuty)); a.ok(sj.description.includes('原方向\n深圳市\n岗位职责\n  方向全部 List<T> &amp;\n'));
   a.ok(sj.description.includes('任职要求\n  方向任职全部\n')); a.ok(sj.description.includes('AI能力要求\n  方向AI\n')); a.equal(sj.jdComplete, false);

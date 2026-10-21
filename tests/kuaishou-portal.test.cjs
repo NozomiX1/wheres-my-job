@@ -191,7 +191,7 @@ test('Kuaishou numeric id-only URLs, raw original TEXT/title/metadata, exact dic
     a.equal(j.url, base(site) + (site.track === 'campus' ? '#/campus/job-info/' : '#/official/social/job-info/') + post.id);
     a.equal(new URL(j.url).search, ''); a.ok(!j.url.includes(post.code ?? 'NULL')); a.equal(j.duty, post.description); a.equal(j.requirements, post.positionDemand); a.equal(j.description, '');
     a.deepEqual(j.channels, [site.track]); a.equal(j.employment, site.track === 'campus' ? 'full-time' : null);
-    a.deepEqual([j.talentPlan, j.date, j.dateKind, j.sourceStatus, j.jdComplete], [null, null, null, null, false]); a.equal(Object.hasOwn(j, 'company'), false);
+    a.deepEqual([j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus, j.jdComplete], [null, '2026-09-20 21:38:46', 1790161343000, null, false]); a.equal(Object.hasOwn(j, 'company'), false);
     const same = b.normalizeRecord({ ...r.jobs[0], post: { ...post, positionDemand: post.description } }, site); a.equal(same.duty, same.requirements);
     const blank = normalized({ ...post, description: null, positionDemand: '/', positionCategoryCode: 'unknown' }, site);
     a.deepEqual([blank.duty, blank.requirements, blank.category, blank.jdComplete], ['', '/', '', false]);
@@ -200,7 +200,7 @@ test('Kuaishou numeric id-only URLs, raw original TEXT/title/metadata, exact dic
   const r = sample();
   for (const [nature, expected] of [['intern', 'internship'], ['fulltime', 'full-time'], ['parttime', null], ['C001', null], [null, null]]) {
     const post = { ...r.jobs[0].post, recruitSubProjectCode: campus.body.recruitSubProjectCodes[1], positionNatureCode: nature }, j = normalized(post);
-    a.equal(j.employment, expected); a.deepEqual(j.channels, []); a.equal(j.talentPlan, null);
+    a.equal(j.employment, expected); a.deepEqual(j.channels, expected === 'internship' ? [] : ['campus'], 'in the campus portal anything that is not an internship is a 应届生 posting'); a.equal(j.talentPlan, null);
   }
   const changedName = copy(r.jobs[0]); changedName.dict.nature.name = '正式'; a.equal(b.normalizeRecord(changedName, campus).employment, null);
   const extraFlatten = dictPage(campus); extraFlatten.response.result.positionCategoryFlatten = [node('positionCategory', 'unknown', '不可由flatten猜类别')];
@@ -410,7 +410,7 @@ for (const site of b.PROFILES) {
     for (const job of r.jobs) {
       const j = b.normalizeRecord(job, site), post = job.post;
       a.equal(j.title, post.name); a.equal(j.id, String(post.id)); a.equal(j.duty, post.description ?? ''); a.equal(j.requirements, post.positionDemand ?? '');
-      a.ok(j.city && j.category); a.ok(dom.text.includes(j.category)); a.equal(j.jdComplete, false); a.equal(j.talentPlan, null); a.equal(j.date, null); a.equal(j.sourceStatus, null);
+      a.ok(j.city && j.category); a.ok(dom.text.includes(j.category)); a.equal(j.jdComplete, false); a.equal(j.talentPlan, null); a.equal(j.date, undefined); a.equal(j.sourceStatus, null);
       a.ok(j.url.endsWith('/' + post.id)); a.equal(j.employment, site.track === 'campus' ? 'full-time' : null);
     }
   });

@@ -62,14 +62,13 @@ node crawler/publish.js --accept-shrink=kuaishou   # 确认大幅下架后放行
 
 - **单轮采集**（共用 `lib/paginate.js`：任何一页出错或触顶就整次失败；坏记录、total 不符只记入 `issues`，详情尽力获取，403／412／429 立即停详情只用列表文字）：小米（校招、社招、实习）、携程、米哈游、上海AI实验室、七个阿里社招门户、飞书（字节与各 SaaS 门户，需要 Chrome，`CHROME_PATH` 可指定）、北森（讯飞／vivo 校招）、美团（社招／校园）。
 - **旧门户**（保留原来较严的证据合同，哪个出问题再放宽）：OPPO、腾讯、快手、百川、网易、雷火、百度、蚂蚁、B站、TME、京东、vivo 社招、华为、小红书、阿里巴巴校园；阿里云社招另有独立资格。它们中途失败时仍带 `stopped` 证据返回部分结果，由 `crawl.js` 用 `portals.listStopped` 判断：列表阶段出错或触顶就整次不上架，详情阶段出错只记录。
-- **国聘（`guopin_soe`，央企国企统一招聘平台）**：匿名可用的列表接口（网页自己用的 `POST gp-api.iguopin.com/api/jobs/v1/list`，无需签名，JD 在列表里），只取企业性质为「国企」的岗位。单次查询最多翻到 1000 条，所以按岗位性质→经验→学历→地区（官网地区树：省→市→区）逐级拆分到每份不足上限，岗位 ID 去重（恰好 1000 条也会当作触顶继续拆）；拆到底仍触顶、或收到任何 4xx／业务码异常就整次失败（不重试、不绕过）。请求间隔 2 秒，实测一次约 350 个请求、15 分钟左右。岗位页是国聘的页面，招聘单位登记为一个「国聘（国企）」，岗位里的 `employer` 是实际发布岗位的企业名，页面显示它。
 - Moka 来源（阶跃、Kimi、智谱、DeepSeek、鹰角等）走各自共享协议模块，细节见对应适配器与测试。
 
 ## 发布数据契约
 
 - `data/catalog.js`（目录：来源、公司、通知、分片清单）＋ `data/parts/<sha256>.js`（完整岗位，按来源／公司分组、每片≤1MiB、内容哈希命名）是唯一公开数据。publisher 读取时从分片还原基线，发布后删除不再被引用的旧分片。
 - 搜索服务（`server/index.js`）读取这些分片到内存，浏览器只取目录和一页结果，不下载分片，也不请求招聘官网。
-- 岗位字段：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,date,dateKind,url,duty,requirements,description,jdComplete,sourceStatus`，另有可选的 `employer`（汇聚平台上岗位的实际发布企业，缺省表示与 `company` 相同）。ID 为“来源 key＋官方 ID”，不跨来源合并；正文不截断；只承认官网明确给出的事实，未知保持 null；非法协议链接禁用。
+- 岗位字段：`id,sourceKey,company,title,category,city,channels,employment,talentPlan,url,duty,requirements,description,jdComplete,sourceStatus`，另有可选的 `employer`（官网给出的业务线，如网易的 productName，显示用）、`publishedAt` / `updatedAt`（官网发布、更新日期，适配器把官网的原始时间原样交出，发布时统一按北京时间换成 `YYYY-MM-DD`）、`firstSeen`（本站首次发现日期，发布时写入）。来源上另有 `history`（近 14 天每次发布的新增/减少条数）。ID 为“来源 key＋官方 ID”，不跨来源合并；正文不截断；只承认官网明确给出的事实，未知保持 null；非法协议链接禁用。下架的来源在 `sites.json` 的 `retired` 里列 key，发布时会把它们的岗位和只属于它们的公司从发布数据里去掉。
 - 来源状态：`ready` 有数据、`failed` 本次失败、`unverified` 尚未接入、`unavailable` 暂无数据。
 - 范围和字段语义只属于登记的入口，不代表公司全球全集。
 

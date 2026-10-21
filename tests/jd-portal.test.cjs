@@ -39,7 +39,7 @@ test('JD current publishId/requirementId, external titles, HTML renderer, honest
     a.equal(j.duty, p.track === 'campus' ? 'List<T> & 完整\n第二行\n全部' : '第一行\n第二行');
     a.equal(j.requirements, p.track === 'campus' ? '任职要求 <literal>' : '实体 & 要求'); a.equal(j.description, '');
     a.equal(j.city, p.track === 'campus' ? '北京市-北京市/上海市-上海市' : '北京市'); a.equal(j.category, p.track === 'campus' ? '物流防损类' : '运营类');
-    a.deepEqual([j.date, j.dateKind, j.employment, j.talentPlan, j.sourceStatus], [null, null, null, null, null]); a.equal(Object.hasOwn(j, 'company'), false);
+    a.deepEqual([j.publishedAt, j.updatedAt, j.employment, j.talentPlan, j.sourceStatus], [p.track === 'campus' ? 1786938172000 : null, null, null, null, null]); a.equal(Object.hasOwn(j, 'company'), false);
     a.deepEqual(b.validateEvidence(r.verification, r.jobs, p).jobs, r.jobs);
     const empty = { ...post, workContent: null, qualification: '/' };
     a.equal(b.normalizeRecord({ post: empty }, p).duty, ''); a.equal(b.normalizeRecord({ post: empty }, p).requirements, '/');

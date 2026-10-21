@@ -114,7 +114,7 @@ test('Projection only uses native fields, independent TEXT JD and honest unknown
     const out = ali.normalizeRecord(job, site);
     a.equal(out.id, String(job.id)); a.equal(out.title, job.name); a.equal(out.city, '杭州/东京'); a.equal(out.category, '技术类//算法');
     a.deepEqual(out.channels, ['social']); a.equal(out.employment, null); a.equal(out.talentPlan, null); a.equal(out.sourceStatus, null);
-    a.equal(out.date, null); a.equal(out.dateKind, null);
+    a.equal(out.date, undefined); a.equal(out.dateKind, undefined);
     a.equal(out.duty, '<tag>&amp; >>>正文<<<\n  内部   空白\n尾'); a.equal(out.requirements, '独立要求\n  两栏不同');
     a.equal(out.description, ''); a.equal(out.jdComplete, true); a.equal(out.url, new URL(job.positionUrl, site.apiOrigin).href);
     const honest = ali.normalizeRecord({ ...job, description: null, requirement: '>>>', categories: null, workLocations: null }, site);

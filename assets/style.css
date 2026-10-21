@@ -110,3 +110,4 @@ dialog{width:min(780px,calc(100vw - 32px));border:1px solid var(--rule);box-shad
 .facts dt{font-size:11px;color:var(--muted)}.facts dd{margin:2px 0 0;font-size:13px;color:var(--ink);overflow-wrap:anywhere}
 @media(max-width:740px){.facts{grid-template-columns:1fr}.facts div{border-right:0;border-bottom:1px solid #e6e8e6}.facts div:last-child{border-bottom:0}}
 #companyCategories{margin-top:12px}
+.job-facts{color:var(--ink)}

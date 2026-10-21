@@ -22,7 +22,7 @@ test('vivo social native M identity stays separate from display code; HTML singl
   a.equal(r.complete, false); a.equal(r.total, 1); a.deepEqual(r.jobs, [{ post: row() }]);
   a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
   a.deepEqual(b.normalizeRecord(r.jobs[0], site), { id: 'M2027632186654519297', title: 'AI产品规划专家', category: '产品运营类', city: '深圳',
-    channels: ['social'], employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    channels: ['social'], employment: null, talentPlan: null, publishedAt: 1791431067964, updatedAt: null, sourceStatus: null,
     url: 'https://hr.vivo.com/job-detail?_irjid=M2027632186654519297&_irjc=M1718986621235408897',
     duty: '', requirements: '', description: '岗位职责：\n负责vivo手机AI中长期产品战略\n任职要求：\n学历与专业：本科及以上', jdComplete: false });
 });
@@ -73,7 +73,7 @@ test('vivo entire HTML single body converts once without guessed section splitti
   for (const value of ['', null, '/']) {
     const result = b.collectAvailable([page(1, [{ ...post, job_desc: value, job_location_list: null, job_category: null }], 1, 1)], site);
     const out = b.normalizeRecord(result.jobs[0], site); a.equal(out.description, value ?? ''); a.equal(out.city, ''); a.equal(out.category, ''); a.equal(out.jdComplete, false);
-    a.deepEqual([out.employment, out.talentPlan, out.date, out.dateKind, out.sourceStatus], [null, null, null, null, null]);
+    a.deepEqual([out.employment, out.talentPlan, out.publishedAt, out.updatedAt, out.sourceStatus], [null, null, out.publishedAt, null, null]);
   }
   const noDisplayCode = { ...post }; delete noDisplayCode.job_code;
   a.equal(b.normalizeRecord({ post: noDisplayCode }, site).id, post.job_id);

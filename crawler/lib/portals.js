@@ -28,7 +28,6 @@ const OTHERS = [
   custom('meituan_portal', 'Meituan portal identity/scope/mode', 2400000, { passOptions: true, noticePass: 1, rank: 2, adapter: 'meituan-portal-v1' }),
   custom('ctrip_portal', 'Ctrip portal identity/scope/mode', 900000, { noticePass: 2, adapter: 'ctrip-portal-v1' }),
   custom('mihoyo_portal', 'Mihoyo portal identity/scope/mode', 2400000, { noticePass: 2, adapter: 'mihoyo-portal-v1' }),
-  custom('guopin_portal', 'Guopin portal identity/scope/mode', 9000000, { noticePass: 2, adapter: 'guopin-portal-v1' }),
   custom('shlab_portal', 'SHLAB portal identity/scope/mode', 900000, { noticePass: 2, adapter: 'shlab-portal-v1' }),
   custom('xiaomi_portal', 'Xiaomi portal identity/scope/mode', 2400000, { rawTitle: () => true, noticePass: 2, adapter: 'xiaomi-hr-v1' }),
   // 飞书与北森的模块在 lib/ 下，不在 custom/。

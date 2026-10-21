@@ -58,7 +58,7 @@ function normalizePost(post, site) {
   const kind = named(post.recruit_type), parent = named(post.recruit_type?.parent);
   return { id, title: text(post.title).trim(), city: [...new Set(cities.map(named).filter(Boolean))].join('/'), category: named(post.job_category) || named(post.job_function), duty, requirements, description: '',
     channels: ['校招', '校园招聘'].includes(parent) ? ['campus'] : ['社招', '社会招聘'].includes(parent) ? ['social'] : [],
-    employment: ['实习', '实习生'].includes(kind) ? 'internship' : ['全职', 'full-time'].includes(kind) ? 'full-time' : null, talentPlan: null, date: null, dateKind: null,
+    employment: ['实习', '实习生'].includes(kind) ? 'internship' : ['全职', 'full-time'].includes(kind) ? 'full-time' : null, talentPlan: null, publishedAt: post.publish_time ?? null, updatedAt: null,
     url: site.linkTemplate.replace('{id}', encodeURIComponent(id)), jdComplete: /[\p{L}\p{N}]/u.test(duty + requirements) };
 }
 

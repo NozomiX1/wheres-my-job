@@ -124,7 +124,7 @@ function validateEvidence(evidence, jobs, site) {
 function normalizeRecord(job, site) {
   const post = boundRecord(job, site), internship = job.batchId !== PROFILES[0].body.batchIds[0];
   return { id: String(post.id), title: post.name, city: (post.workLocations ?? []).join('/'), category: (post.categories ?? []).join('/'),
-    channels: internship ? [] : ['campus'], employment: internship ? 'internship' : null, talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    channels: internship ? [] : ['campus'], employment: internship ? 'internship' : null, talentPlan: null, publishedAt: post.publishTime ?? null, updatedAt: post.modifyTime ?? null, sourceStatus: null,
     url: ORIGIN + '/campus/position/' + post.id + '?deptCodes=', duty: post.description ?? '', requirements: post.requirement ?? '', description: '', jdComplete: false };
 }
 function unitMemberships(jobs, site) {

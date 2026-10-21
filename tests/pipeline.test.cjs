@@ -31,7 +31,7 @@ function fixture(t, baseline = true) {
     fs.mkdirSync(path.dirname(dataFile), { recursive: true });
     const sources = [A, B].map(site => ({ key: site.key, company: site.company, status: 'legacy', lastSuccess: null, lastAttempt: null, message: '旧页面迁移；不保证来源完整', coverage: null }));
     const companies = [{ name: A.company, initial: 'A', aliases: ['阿尔法'] }, { name: B.company, initial: 'Y', aliases: ['乙'] }];
-    const jobs = [A, B].flatMap(site => normalizeJobs([rawJob('old')], site)).map(({ category, ...job }) => ({ ...job, duty: '', description: '', requirements: '', channels: [], date: null, dateKind: null, jdComplete: false })); // Older schema-1 data has no category.
+    const jobs = [A, B].flatMap(site => normalizeJobs([rawJob('old')], site)).map(({ category, ...job }) => ({ ...job, duty: '', description: '', requirements: '', channels: [], jdComplete: false })); // Older schema-1 data has no category.
     fs.writeFileSync(dataFile, 'globalThis.ANDE_DATA = ' + JSON.stringify({ version: 1, legacy: true, notices: ['旧筛选基线，不是全量 JD 快照'], companies, sources, jobs }) + ';\n');
   }
   return { dir, outDir, dataFile, index, sites: [A, B] };
@@ -273,8 +273,8 @@ test('normalization retains every occupation, internship, plan and experience; f
   assert.equal(jobs[3].title, raw[3].title, 'Frontend, not crawler, escapes HTML');
   assert.equal(jobs[4].requirements, '完整要求\n十年以上工作经验\n补充要求');
   assert.equal(jobs[4].duty, '独立职责');
-  assert.equal(jobs[5].date, null);
-  assert.equal(jobs[5].dateKind, null);
+  assert.equal(jobs[5].publishedAt, undefined);
+  assert.equal(jobs[5].updatedAt, undefined);
   assert.equal(jobs[5].employment, null);
   assert.equal(jobs[5].talentPlan, null);
   assert.equal(jobs[5].jdComplete, false);
@@ -285,11 +285,10 @@ test('normalization retains every occupation, internship, plan and experience; f
   }
   const known = normalizeJobs([{ id: 'known', title: '完整岗位', date: '2026-01-01', dateKind: 'updated', duty: '正文', jdComplete: true, talentPlan: false, employment: 'full-time', channels: ['campus', 'social'] }], A)[0];
   assert.equal(known.jdComplete, true);
-  assert.equal(known.dateKind, 'updated');
+  assert.equal(known.updatedAt, '2026-01-01'); assert.equal(known.publishedAt, undefined);
   assert.deepEqual(known.channels, ['campus', 'social']);
   const dated = normalizeJobs([{ id: 'date', name: '岗位', createdAt: 1767225600000 }], A)[0];
-  assert.equal(dated.date, '2026-01-01');
-  assert.equal(dated.dateKind, null);
+  assert.equal(dated.publishedAt, undefined); assert.equal(dated.updatedAt, undefined); // 不知道语义的时间不当作官网日期
 });
 
 test('official category names are merged in source-field order; codes, departments, channels and batches are not functions', () => {
@@ -318,9 +317,9 @@ test('verified Moka details give one nonduplicated JD, publishedAt only, factual
   const job = normalizeJobs([raw], detailed)[0];
   assert.ok(job.duty.includes('Agent & C++'));assert.ok(job.requirements.includes('熟悉 Agent'));assert.equal(job.description, '');
   assert.equal((job.duty + job.requirements).match(/Agent/g).length, 3);assert.ok(!job.duty.includes('职责全文'));assert.ok(!job.requirements.includes('十年以上工作经验'));
-  assert.equal(job.date, '2026-09-10');assert.equal(job.dateKind, 'published');assert.equal(job.sourceStatus, 'pause');assert.equal(job.jdComplete, true);
+  assert.equal(job.publishedAt, '2026-09-10');assert.equal(job.updatedAt, undefined);assert.equal(job.sourceStatus, 'pause');assert.equal(job.jdComplete, true);
   assert.equal(job.category, '工程研发');assert.equal(job.employment, 'internship');assert.deepEqual(job.channels, ['campus']);assert.ok(job.url.includes('/official/94905#/job/detail'));
-  const missingDate = normalizeJobs([{ ...raw, publishedAt: null }], detailed)[0];assert.equal(missingDate.date, null);assert.equal(missingDate.dateKind, null);
+  const missingDate = normalizeJobs([{ ...raw, publishedAt: null }], detailed)[0];assert.equal(missingDate.publishedAt, undefined);assert.equal(missingDate.updatedAt, undefined);
   const placeholder = normalizeJobs([{ ...raw, jobDescription: '<p>。</p>' }], detailed)[0];assert.equal(placeholder.jdComplete, false);assert.equal(placeholder.description, '。');
   const retained = readPublished(f.dataFile).jobs.find(j => j.sourceKey === 'b');
   assert.equal(crawl(detailed, f, [raw]).code, 0);assert.equal(publish({ ...f, sites: [detailed, B], keys: ['a'] }).written, true);
@@ -355,7 +354,7 @@ test('reviewed ByteDance campus runs/publishes; raw JD facts and old broad socia
   assert.equal(publish({ ...f, sites: [...f.sites, site], keys: [site.key] }).written, true);
   const data = readPublished(f.dataFile), fresh = data.jobs.find(j => j.sourceKey === site.key);
   assert.deepEqual(data.jobs.filter(j => j.sourceKey !== site.key), old.jobs);assert.deepEqual(data.sources.filter(s => s.key !== site.key), old.sources);
-  assert.equal(fresh.requirements, '完整要求 C++');assert.equal(fresh.duty, '完整职责 Agent');assert.equal(fresh.description, '');assert.deepEqual(fresh.channels, ['campus']);assert.equal(fresh.employment, 'internship');assert.equal(fresh.date, null);assert.equal(fresh.talentPlan, null);
+  assert.equal(fresh.requirements, '完整要求 C++');assert.equal(fresh.duty, '完整职责 Agent');assert.equal(fresh.description, '');assert.deepEqual(fresh.channels, ['campus']);assert.equal(fresh.employment, 'internship');assert.equal(fresh.publishedAt, undefined);assert.equal(fresh.talentPlan, null);
   assert.equal(runCrawl(social, { outDir: f.outDir, runner: () => assert.fail('Capped source cannot run'), now: () => T3 }).status, 'unverified');
   for (const change of [{ adapter: undefined }, { key: 'alias' }]) assert.equal(feishu.verifiedSource({ ...site, ...change }), false);
   assert.notEqual(coverageFor(site), coverageFor({ ...site, portalType: 6 }));assert.notEqual(coverageFor(site), coverageFor({ ...site, adapter: 'future-version' }));

@@ -49,7 +49,7 @@ test('Baidu full native envelopes bind both campus types and social; postId, ful
       a.equal(j.url, 'https://talent.baidu.com/jobs/detail/' + job.recruitType + '/' + native.postId); a.ok(!j.url.includes(native.jobId));
       a.equal(j.duty, native.workContent); a.equal(j.requirements, native.serviceCondition); a.equal(j.description, ''); a.equal(j.jdComplete, false);
       a.deepEqual(j.channels, job.recruitType === 'INTERN' ? [] : [site.track]); a.equal(j.employment, job.recruitType === 'INTERN' ? 'internship' : null);
-      a.deepEqual([j.talentPlan, j.date, j.dateKind, j.sourceStatus], [null, null, null, null]); a.deepEqual(job.post, native);
+      a.deepEqual([j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, '2026-07-08', '2026-08-05', null]); a.deepEqual(job.post, native);
       const unknown = b.normalizeRecord({ ...job, post: { ...native, workPlace: null, postType: null, workContent: null, serviceCondition: '/' } }, site);
       a.deepEqual([unknown.city, unknown.category, unknown.duty, unknown.requirements, unknown.jdComplete], ['', '', '', '/', false]);
     }

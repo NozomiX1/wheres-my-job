@@ -3,7 +3,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..'),script=fs.readFileSync(path.join(root,'assets/app.js'),'utf8');
-const rankScript=fs.readFileSync(path.join(root,'assets/cities.js'),'utf8')+fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
+const rankScript=fs.readFileSync(path.join(root,'assets/cities.js'),'utf8')+fs.readFileSync(path.join(root,'assets/facts.js'),'utf8')+fs.readFileSync(path.join(root,'assets/rank.js'),'utf8');
 const examplesScript=fs.readFileSync(path.join(root,'assets/example-words.js'),'utf8');
 const dataset=require('../crawler/publish').readPublished(path.join(root,'tests/fixtures/data/catalog.js'));
 const base={id:'unit-base',sourceKey:'unit',company:'字节跳动',city:'北京',title:'',duty:'',requirements:'',description:'',channels:['campus'],employment:'full-time',talentPlan:false,date:'2026-09-10',dateKind:'published',url:'https://example.test/job',jdComplete:true,category:''};
@@ -14,7 +14,7 @@ function load(saved,inputJobs=jobs,inputParts){
  const element=key=>{if(!elements.has(key))elements.set(key,{value:'',innerHTML:'',textContent:'',hidden:false,setAttribute(){},focus(){},select(){}});return elements.get(key);};
  const ctx=vm.createContext({URL,ANDE_DATA:{...dataset,jobs:inputJobs,...(inputParts?{parts:inputParts}:{})},document:{addEventListener(){},querySelectorAll(){return []},getElementById:element,querySelector:element},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{writes++;storage.set(k,v);}}});
  vm.runInContext(examplesScript,ctx);vm.runInContext(rankScript,ctx);
- vm.runInContext(script.replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'')+'\nglobalThis.api={detailKicker,score,scoreText,collect,fillExample,restorePreferences,persistPreferences,matchesRecruitment,recruitmentLabels,wordEditor,reliableDate,dateHTML,applyHTML,detailHTML,rowHTML,hitText,jdNotice,unitName,COMPANIES,renderDirectory,renderSelection,companyEditor,footer,state,JOBS,EXAMPLE_KEYWORDS,EXAMPLE_DOWNRANK,RECRUITMENT_TYPES,message:()=>preferencesMessage};',ctx);
+ vm.runInContext(script.replace(/\nrestorePreferences\(\);\nrender\(\);\s*$/,'')+'\nglobalThis.api={weekChange,latestDateHTML,dateParts,unitOfCompany,detailKicker,score,scoreText,collect,fillExample,restorePreferences,persistPreferences,matchesRecruitment,recruitmentLabels,wordEditor,reliableDate,dateHTML,applyHTML,detailHTML,rowHTML,hitText,jdNotice,unitName,COMPANIES,renderDirectory,renderSelection,companyEditor,footer,state,JOBS,EXAMPLE_KEYWORDS,EXAMPLE_DOWNRANK,RECRUITMENT_TYPES,message:()=>preferencesMessage};',ctx);
  return {...ctx.api,storage,element,writes:()=>writes};
 }
 const p=load(),close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`),query={words:['财务'],lowered:[],recruitment:'all'};
@@ -78,22 +78,26 @@ example.fillExample();assert.equal(example.writes(),1);const once=JSON.stringify
 assert.equal(example.state.keywords.length,21);assert.equal(example.state.downrank.length,27);assert.deepEqual([...example.state.keywords].slice(0,2),['财务','agent']);assert.equal(example.state.drafts.keywords,'未添加');assert.equal(example.state.drafts.downrank,'保留草稿');assert.equal(example.state.editing.keywords,0);assert.equal(example.state.editing.downrank,1);assert.equal(example.state.recruitment,'campus');assert.strictEqual(example.state.active,active);assert.strictEqual(example.state.results,results);assert.ok(example.state.feedback.keywords.includes('相抵'));
 const saved=JSON.parse(example.storage.get('ande.preferences.v1'));assert.deepEqual(saved.downrank,[...example.state.downrank]);assert.ok(!('drafts'in saved));
 const types=Array.from(p.RECRUITMENT_TYPES,([type])=>type),scopes=j=>types.filter(t=>p.matchesRecruitment(j,t));
-assert.deepEqual(scopes({channels:[],employment:null,talentPlan:null}),types);
+// 校招、社招、实习各自独立，只有证据明确才进入；无法判断的只在「全部」；人才计划是另一个维度（未知保守纳入）。
+assert.deepEqual(scopes({channels:[],employment:null,talentPlan:null}),['all','talent']);
 assert.deepEqual(scopes({channels:['campus'],employment:'full-time',talentPlan:true}),['all','campus','talent']);
-assert.deepEqual(scopes({channels:['social'],employment:'internship',talentPlan:false}),['all','social','internship']);
-// Unknown hints describe only the missing channel/nature, not an unknown talent flag.
+assert.deepEqual(scopes({channels:['social'],employment:'internship',talentPlan:false}),['all','internship']);
+assert.deepEqual(scopes({channels:['social'],employment:'full-time',title:'算法实习生'}),['all','internship','talent'],'a title that says 实习 beats the official 全职 and the channel');
+assert.deepEqual(scopes({channels:['social'],title:'27届校招算法工程师'}),['all','campus','talent']);
+assert.deepEqual(scopes({channels:[],title:'算法工程师',requirements:'2027届毕业生'}),['all','campus','talent'],'JD evidence only when the channel is unknown');
+assert.deepEqual(scopes({channels:['social'],title:'算法工程师',requirements:'优秀应届生亦可'}),['all','social','talent'],'JD never overrides a known channel');
 const labelCases=[
- [{channels:['campus'],employment:'internship',talentPlan:null},['校招','实习'],['all','campus','internship','talent']],
- [{channels:['social'],employment:'full-time',talentPlan:null},['社招','全职'],['all','social','talent']],
- [{channels:[],employment:'full-time',talentPlan:null},['全职'],['all','social','campus','talent']],
- [{channels:['campus'],employment:null,talentPlan:null},['校招'],['all','campus','internship','talent']],
- [{channels:[],employment:null,talentPlan:null},[],types],
- [{channels:['campus'],employment:'full-time',talentPlan:true},['校招','全职','人才计划'],['all','campus','talent']],
- [{channels:[],employment:null,talentPlan:true},['人才计划'],types],
- [{channels:['campus'],employment:'full-time',talentPlan:undefined},['校招','全职'],['all','campus','talent']],
- [{channels:['social'],employment:'internship',talentPlan:false},['社招','实习'],['all','social','internship']],
- [{channels:['campus','social'],employment:'full-time',talentPlan:false},['校招','社招','全职'],['all','social','campus']],
- [{channels:undefined,employment:undefined,talentPlan:undefined},[],types]
+ [{channels:['campus'],employment:'internship',talentPlan:null},['实习'],['all','internship','talent']],
+ [{channels:['social'],employment:'full-time',talentPlan:null},['社招'],['all','social','talent']],
+ [{channels:[],employment:'full-time',talentPlan:null},[],['all','talent']],
+ [{channels:['campus'],employment:null,talentPlan:null},['校招'],['all','campus','talent']],
+ [{channels:[],employment:null,talentPlan:null},[],['all','talent']],
+ [{channels:['campus'],employment:'full-time',talentPlan:true},['校招','人才计划'],['all','campus','talent']],
+ [{channels:[],employment:null,talentPlan:true},['人才计划'],['all','talent']],
+ [{channels:['campus'],employment:'full-time',talentPlan:undefined},['校招'],['all','campus','talent']],
+ [{channels:['social'],employment:'internship',talentPlan:false},['实习'],['all','internship']],
+ [{channels:['campus','social'],employment:'full-time',talentPlan:false},[],['all']],
+ [{channels:undefined,employment:undefined,talentPlan:undefined},[],['all','talent']]
 ];
 for(const [attributes,labels,expectedScopes]of labelCases){
  const job={...base,...attributes,title:'财务',duty:'财务',requirements:'财务'},before=JSON.stringify(job),ui=load(undefined,[job]);ui.state.active={words:['财务'],lowered:[]};
@@ -107,15 +111,19 @@ for(const recruitment of types){const before=p.collect({...query,recruitment},ne
 assert.equal(p.collect(query,new Set(['字节跳动'])).length,3);
 assert.equal(p.collect(query,new Set(['未知公司'])).length,0);
 const lowerOnly=p.collect({words:[],lowered:['销售']},new Set());assert.equal(lowerOnly.length,3);assert.equal(lowerOnly.at(-1).value,-4.35);
-const dated=load(undefined,[{...base,id:'date-old',date:'2026-01-01'},{...base,id:'unknown',date:'2099-01-01',dateKind:null},{...base,id:'date-new',date:'2026-09-10',dateKind:'updated'},{...base,id:'invalid',date:'2026-02-30'}]);
-assert.deepEqual([...dated.collect({words:[]},new Set()).map(r=>r.job.id)],['date-new','date-old','invalid','unknown']);assert.equal(dated.reliableDate({...base,date:'2026-02-30'}),'');assert.equal(dated.dateHTML({...base,dateKind:null}),'');
+const dated=load(undefined,[{...base,id:'date-old',publishedAt:'2026-01-01'},{...base,id:'unknown'},{...base,id:'date-new',updatedAt:'2026-09-10'},{...base,id:'invalid',publishedAt:'2026-02-30'},{...base,id:'both',publishedAt:'2026-02-01',updatedAt:'2026-09-20'}]);
+assert.deepEqual([...dated.collect({words:[]},new Set()).map(r=>r.job.id)],['both','date-new','date-old','invalid','unknown'],'ranking by the newer of the two days; missing or invalid after');assert.equal(dated.reliableDate({...base,publishedAt:'2026-02-30'}),'');assert.equal(dated.dateHTML(base),'');
+const day=d=>`<time datetime="${d}">${d}</time>`;
+assert.equal(dated.dateHTML({...base,publishedAt:'2026-02-01',updatedAt:'2026-09-20'}),`发布 ${day('2026-02-01')} · 更新 ${day('2026-09-20')}`);
+assert.equal(dated.dateHTML({...base,publishedAt:'2026-02-01'}),`发布 ${day('2026-02-01')}`);assert.equal(dated.dateHTML({...base,updatedAt:'2026-09-20'}),`更新 ${day('2026-09-20')}`);
+assert.equal(dated.dateHTML({...base,publishedAt:'2026-02-01',updatedAt:'2026-02-01'}),`发布 ${day('2026-02-01')}`,'the same day twice is written once');
+assert.equal(dated.latestDateHTML({...base,publishedAt:'2026-02-01',updatedAt:'2026-09-20'}),`更新 ${day('2026-09-20')}`,'JD: only the newest');assert.equal(dated.latestDateHTML({...base,publishedAt:'2026-02-01'}),`发布 ${day('2026-02-01')}`);assert.equal(dated.latestDateHTML(base),'');
 assert.ok(p.applyHTML({...base,url:'javascript:alert(1)'}).includes('disabled'));assert.ok(p.applyHTML({...base,url:'https://user:pass@example.test/'}).includes('disabled'));assert.ok(p.applyHTML(base).includes('rel="noopener noreferrer"'));
 p.state.active={words:[],lowered:[]};const hostile=p.rowHTML({job:{...base,id:'\" onclick=\"alert(1)'},value:0,matched:[],downranked:[]});assert.ok(hostile.includes('data-job-row="&quot; onclick=&quot;alert(1)"'));assert.ok(!hostile.includes('" onclick="'));
 assert.ok(p.detailHTML('unit-unknown').includes('正文完整性尚未核验'));assert.ok(!p.detailHTML('unit-unknown').includes('虚构'));assert.ok(p.detailHTML('unit-unknown').includes('前往官网'));
-const soe={...base,id:'guopin_soe:1',sourceKey:'guopin_soe',company:'国聘（国企）',employer:'某某国企',title:'岗位',url:'https://www.iguopin.com/job/detail?id=1'};p.state.active={words:[],lowered:[]};
-assert.ok(p.rowHTML(p.score(soe,{words:[]})).includes('<span>某某国企</span>'));assert.ok(!p.rowHTML(p.score(soe,{words:[]})).includes('国聘（国企）'));assert.ok(p.applyHTML(soe).includes('前往国聘'));assert.ok(p.applyHTML(base).includes('前往官网'));assert.equal(p.detailKicker(soe),'某某国企 · 北京');
-const platformJob={...soe,date:'2026-10-14',dateKind:'platform'};
-assert.ok(p.dateHTML(platformJob).includes('国聘更新')&&p.dateHTML(platformJob).includes('2026-10-14'));assert.equal(p.reliableDate(platformJob),'','a platform date never takes part in ordering');assert.equal(p.dateHTML({...soe,date:null,dateKind:'platform'}),'');assert.equal(p.dateHTML({...soe,date:'2026-02-30',dateKind:'platform'}),'');
+const dept={...base,id:'netease_social:1',sourceKey:'netease_social',company:'网易',employer:'网易游戏（雷火）',title:'岗位'};p.state.active={words:[],lowered:[]};
+assert.ok(p.rowHTML(p.score(dept,{words:[]})).includes('<span>网易游戏（雷火）</span>'));assert.ok(p.applyHTML(dept).includes('前往官网'));assert.equal(p.detailKicker(dept),'网易游戏（雷火） · 北京');
+const facted=p.rowHTML({...p.score({...dept,facts:['27届','本科及以上']},{words:[]}),job:{...dept,facts:['27届','本科及以上']}});assert.ok(facted.includes('<div class="job-meta job-facts"><span>27届</span><span>·</span><span>本科及以上</span></div>'));assert.ok(!p.rowHTML(p.score(dept,{words:[]})).includes('job-facts'),'no facts, no line');
 const prefs={version:1,keywords:[' 财务 ','财务'],downrank:['销售'],selected:['字节跳动'],recruitment:'social'},restored=load(prefs);restored.restorePreferences();assert.deepEqual([...restored.state.keywords],['财务']);assert.equal(restored.state.recruitment,'social');assert.equal(restored.state.active,null);assert.equal(restored.state.searched,false);
 const invalid=load({...prefs,recruitment:'bad'});invalid.restorePreferences();assert.ok(invalid.message());
 const cityPrefs=load({...prefs,cities:['北京','上海'],unknown:false});cityPrefs.restorePreferences();assert.deepEqual([...cityPrefs.state.cities],['北京','上海']);assert.equal(cityPrefs.state.unknown,false);assert.equal(cityPrefs.state.active,null);assert.equal(cityPrefs.writes(),0);
@@ -129,7 +137,7 @@ const live=load(undefined,dataset.jobs);assert.equal(live.collect({words:['财�
 // Flat units keep source identity; initial HTML data and its pending directory bucket are gone.
 const datasetBefore=JSON.stringify(dataset),holding='阿里巴巴控股',pending='阿里招聘（部门待核）',retired='旧阿里招聘范围（已退出）',allQuery={words:[],lowered:[],recruitment:'all'};
 assert.equal(dataset.legacy,undefined);assert.ok(dataset.jobs.every(j=>!j.id.startsWith('legacy-')));
-const expectedUnits=new Set(dataset.companies.map(c=>c.name==='阿里巴巴'?holding:c.name));for(const j of dataset.jobs)if(j.sourceKey==='alibaba')for(const name of dataset.unitMemberships?.[j.id]||['阿里校园招聘入口'])expectedUnits.add(({'阿里巴巴控股集团':holding,'阿里国际数字商业集团':'阿里国际'})[name]||name);assert.equal(live.COMPANIES.length,expectedUnits.size);assert.ok(!live.COMPANIES.some(c=>c.name==='阿里巴巴'||c.name===pending||c.name===retired));
+const expectedUnits=new Set(dataset.companies.map(c=>c.name==='阿里巴巴'?holding:live.unitOfCompany(c.name)));for(const j of dataset.jobs)if(j.sourceKey==='alibaba')for(const name of dataset.unitMemberships?.[j.id]||['阿里校园招聘入口'])expectedUnits.add(({'阿里巴巴控股集团':holding,'阿里国际数字商业集团':'阿里国际'})[name]||name);assert.equal(live.COMPANIES.length,expectedUnits.size);assert.ok(!live.COMPANIES.some(c=>c.name==='阿里巴巴'||c.name===pending||c.name===retired));
 assert.ok(live.COMPANIES.some(c=>c.name===holding&&c.initial==='A'));assert.ok(live.COMPANIES.some(c=>c.name==='淘天集团'));
 assert.equal(live.unitName({company:'阿里巴巴',sourceKey:'alibaba_social'}),holding);assert.equal(live.unitName({company:'阿里巴巴',key:'alibaba_social'}),holding);assert.equal(live.unitName({company:'阿里巴巴',sourceKey:'alibaba'}),'阿里校园招聘入口');
 assert.equal(live.unitName({company:'阿里巴巴',sourceKey:'future_unknown'}),'阿里巴巴');assert.equal(live.unitName({company:'其它公司',sourceKey:'alibaba_social'}),'其它公司');
@@ -153,3 +161,13 @@ const campusUI=load({...oldUnitPrefs,selected:['阿里巴巴']},[campusJob,holdi
 const campusCatalog=load(undefined,[],[{sourceKey:'alibaba',company:'阿里巴巴',count:1},{sourceKey:'alibaba_social',company:'阿里巴巴',count:1}]);assert.ok(campusCatalog.COMPANIES.some(c=>c.name===campusName));campusCatalog.renderDirectory();assert.ok(campusCatalog.element('companyOptions').innerHTML.includes('data-company="'+campusName+'"'));assert.equal(campusCatalog.JOBS.length,0);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),css=fs.readFileSync(path.join(root,'assets/style.css'),'utf8');assert.ok(!html.includes('prototype')&&!script.includes('虚构')&&!script.includes('updateDebug'));assert.ok(!css.includes('claude')&&!css.includes('workspace')&&!css.includes('height:82px'));assert.ok(css.includes('.word-list:empty{display:none}'));
 console.log('PASS: native UI scoring, full examples, preference/query boundary, per-word counts (not multipliers), display-only official categories/status, placeholder honesty, factual types/dates/links, published-data invariants and no prototype/old algorithm dependencies.');
+{
+ const w=load(undefined,[]),today='2026-10-21',h=(date,added,removed,extra={})=>({date,added,removed,...extra});
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-14',9,9),h('2026-10-15',3,1),h('2026-10-21',2,0)]}],today),'近 7 天 +5 −1','the window is the last 7 days, today included');
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',3,1,{unsure:true})]}],today),'','an uncertain day hides the number');
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',0,0)]}],today),'');
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲'}],today),'');
+ assert.equal(w.weekChange('甲',[{key:'a',company:'甲',history:[h('2026-10-20',1,0)]},{key:'b',company:'乙',history:[h('2026-10-20',1,0)]}],today),'','a source that belongs to another unit is never attributed');
+ assert.equal(w.weekChange('网易',[{key:'n1',company:'网易',history:[h('2026-10-20',2,1)]},{key:'n2',company:'网易互娱',history:[h('2026-10-20',1,1)]}],today),'近 7 天 +3 −2','merged units add up their sources');
+ w.state.active={words:[],lowered:[]};const seen=w.rowHTML({...w.score({...base,firstSeen:'2026-10-18'},{words:[]}),job:{...base,firstSeen:'2026-10-18'}});assert.ok(seen.includes('<span>本站 10-18 发现</span>'));
+}

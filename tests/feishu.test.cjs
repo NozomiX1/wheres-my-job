@@ -53,7 +53,7 @@ test('failures: first-page refusal throws, a later page failure fails the whole 
 test('projection keeps literal JD text and takes channel/employment/category only from explicit facts', () => {
   const j = feishu.normalizePost(post('9', { job_category: null, job_function: { name: ' 美术 ' } }), sensetime);
   a.equal(j.duty, '职责9 List<T> &amp;'); a.equal(j.requirements, '要求9'); a.equal(j.category, '美术'); a.equal(j.city, '深圳/北京');
-  a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'internship'); a.equal(j.date, null); a.equal(j.url, sensetime.linkTemplate.replace('{id}', '9')); a.equal(j.jdComplete, true);
+  a.deepEqual(j.channels, ['campus']); a.equal(j.employment, 'internship'); a.equal(j.date, undefined); a.equal(j.url, sensetime.linkTemplate.replace('{id}', '9')); a.equal(j.jdComplete, true);
   const bare = feishu.normalizePost({ id: 7, title: '无元数据' }, sensetime);
   a.deepEqual([bare.duty, bare.requirements, bare.city, bare.channels, bare.employment, bare.jdComplete], ['', '', '', [], null, false]);
   a.throws(() => feishu.normalizeRecord({ rawPost: { id: 'x' } }, sensetime), /id\/title/);

@@ -54,7 +54,7 @@ test('Ant numeric native id and original TEXT/title/all raw metadata survive; on
     a.equal(j.url, site.origin + (site.track === 'campus' ? '/campus-position' : '/off-campus-position') + '?positionId=' + native.id);
     a.deepEqual([...new URL(j.url).searchParams], [['positionId', String(native.id)]]); a.ok(!j.url.includes('tid='));
     a.equal(j.duty, native.description); a.equal(j.requirements, native.requirement); a.equal(j.description, ''); a.equal(j.jdComplete, false);
-    a.deepEqual(j.channels, [site.track]); a.deepEqual([j.employment, j.talentPlan, j.date, j.dateKind, j.sourceStatus], [null, null, null, null, null]);
+    a.deepEqual(j.channels, [site.track]); a.deepEqual([j.employment, j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, null, '2026-08-13T07:50:34.000+00:00', null, null]);
     a.equal(Object.hasOwn(j, 'company'), false); a.deepEqual(r.jobs[0].post, native); a.ok(r.issues.includes('已收录列表JD，详情正文完整性待核验'));
     const intern = b.normalizeRecord({ post: { ...native, batchType: 'trainee', batchTypeDesc: '实习生' } }, site);
     a.deepEqual(intern.channels, []); a.equal(intern.employment, 'internship'); a.equal(intern.talentPlan, null);
@@ -217,7 +217,7 @@ for (const [site, kind, total] of [[campus, 'unfiltered', 403], [social, 'social
       const j = b.normalizeRecord(job, site), native = job.post;
       a.equal(j.title, native.name); a.equal(j.id, String(native.id)); a.equal(j.duty, native.description ?? ''); a.equal(j.requirements, native.requirement ?? '');
       a.equal(j.city, native.workLocations.join('/')); a.equal(j.category, site.track === 'campus' ? native.categoryName : native.categories.join('/'));
-      a.equal(j.jdComplete, false); a.equal(j.talentPlan, null); a.equal(j.date, null); a.equal(j.sourceStatus, null); a.equal(new URL(j.url).searchParams.get('positionId'), String(native.id));
+      a.equal(j.jdComplete, false); a.equal(j.talentPlan, null); a.equal(j.updatedAt, null); a.equal(j.sourceStatus, null); a.equal(new URL(j.url).searchParams.get('positionId'), String(native.id));
       a.equal(native.teamDescription, null); a.equal(native.showTeamDescription, null);
     }
     if (site.track === 'campus') {

@@ -113,8 +113,8 @@ test('NetEase current native social fixture binds all raw fields and maps HTML t
   a.deepEqual(b.PROFILES, [site, campus]); const r = sample();
   a.equal(r.complete, false); a.equal(r.total, 1); a.deepEqual(r.jobs, [{ post: row() }]);
   a.deepEqual(b.validateEvidence(r.verification, r.jobs, site).jobs, r.jobs);
-  a.deepEqual(b.normalizeRecord(r.jobs[0], site), { id: '76279', title: '高级/资深音乐内容拓展（杭州/北京/广州/成都）', category: '市场', city: '杭州市',
-    channels: ['social'], employment: 'full-time', talentPlan: true, date: null, dateKind: null, sourceStatus: null,
+  a.deepEqual(b.normalizeRecord(r.jobs[0], site), { id: '76279', title: '高级/资深音乐内容拓展（杭州/北京/广州/成都）', employer: '网易云音乐', category: '市场', city: '杭州市',
+    channels: ['social'], employment: 'full-time', talentPlan: true, publishedAt: null, updatedAt: 1791444037000, sourceStatus: null,
     url: 'https://hr.163.com/job-detail.html?id=76279', duty: '负责音乐人版权合作、自制歌曲打造', requirements: '深度热爱音乐', description: '', jdComplete: false });
 });
 
@@ -146,8 +146,8 @@ test('NetEase social fact projection preserves literal body/identity and does no
     const native = { ...post, workType, geekPassionateTalentFlag: flag, productName: '网易互娱', firstDepName: '极客计划部门', parentProduct: 'P8',
       publishedAt: '2026-10-08', updatedAt: '2026-10-08T00:00:00Z', sourceStatus: 'open', channels: ['campus'], employment: 'full-time', talentPlan: false };
     const before = structuredClone(native), out = b.normalizeRecord({ post: native }, site);
-    a.deepEqual(out, { id: '76279', title: post.name, category: '市场', city: '杭州//北京/杭州', channels: ['social'], employment, talentPlan,
-      date: null, dateKind: null, sourceStatus: null, url: 'https://hr.163.com/job-detail.html?id=76279',
+    a.deepEqual(out, { id: '76279', title: post.name, employer: native.productName, category: '市场', city: '杭州//北京/杭州', channels: ['social'], employment, talentPlan,
+      publishedAt: null, updatedAt: native.updateTime ?? null, sourceStatus: null, url: 'https://hr.163.com/job-detail.html?id=76279',
       duty: 'List<T> &amp; &lt;T&gt;', requirements: 'List<T> &amp; &lt;T&gt;', description: '', jdComplete: false });
     a.deepEqual(native, before);
   }
@@ -163,7 +163,7 @@ test('Huyu cannot inherit social workType/geek badge facts, and still preserves 
       const out = b.normalizeRecord({ post }, campus);
       a.deepEqual(out.channels, channels); a.equal(out.employment, employment); a.equal(out.talentPlan, null);
       a.equal(out.duty, post.positionDescription); a.equal(out.requirements, post.positionRequirement);
-      a.deepEqual([out.date, out.dateKind, out.sourceStatus], [null, null, null]);
+      a.deepEqual([out.publishedAt ?? null, out.sourceStatus], [null, null]);
     }
   }
 });
@@ -205,7 +205,7 @@ test('NetEase HTML conversion is whole, single-decode, independent even when ide
   const post = { ...row(), name: '  实习/资深/人才计划原标题  ', description: html, requirement: html, workPlaceNameList: ['杭州', '北京', '杭州'], workType: null, geekPassionateTalentFlag: 0 };
   const j = b.normalizeRecord({ post }, site);
   a.equal(j.title, post.name); a.equal(j.duty, '完整 & <List<T>>\n段落\n结尾'); a.equal(j.requirements, j.duty); a.equal(j.description, '');
-  a.equal(j.city, '杭州/北京/杭州'); a.equal(j.jdComplete, false); a.deepEqual([j.employment, j.talentPlan, j.date, j.dateKind, j.sourceStatus], [null, null, null, null, null]);
+  a.equal(j.city, '杭州/北京/杭州'); a.equal(j.jdComplete, false); a.deepEqual([j.employment, j.talentPlan, j.publishedAt, j.updatedAt, j.sourceStatus], [null, null, null, 1791444037000, null]);
   const long = '长正文'.repeat(1000); a.equal(b.normalizeRecord({ post: { ...post, description: long } }, site).duty, long);
   for (const value of ['', null, '/']) {
     const result = b.collectAvailable([page(1, [{ ...post, description: value, requirement: value, workPlaceNameList: null, firstPostTypeName: null }], 1, 1, true)], site);
@@ -344,8 +344,8 @@ test('NetEase offline parent normal Node 100-row capture binds actual plain wire
 test('Huyu independently frozen current navigation scope enumerates 102/75/104, preserves TEXT, comma city and original official identity', () => {
   a.deepEqual(b.PROFILES, [site, campus]); a.equal(b.verifiedSource(campus), true); a.equal(b.verifiedSource({ ...site, key: 'netease_huyu' }), false);
   const result = huyuSample(); a.equal(result.complete, false); a.equal(result.total, 3);
-  a.deepEqual(b.normalizeRecord(result.jobs[0], campus), { id: '4733', title: '  游戏技术美术工程师  ', category: '游戏艺术', city: '杭州,上海,广州', channels: ['campus'],
-    employment: null, talentPlan: null, date: null, dateKind: null, sourceStatus: null, url: 'https://campus.game.163.com/app/detail/index?id=4733&projectId=102',
+  a.deepEqual(b.normalizeRecord(result.jobs[0], campus), { id: '4733', title: '  游戏技术美术工程师  ', employer: '网易游戏（互娱）', category: '游戏艺术', city: '杭州,上海,广州', channels: ['campus'],
+    employment: null, talentPlan: null, publishedAt: null, updatedAt: 1791441683000, sourceStatus: null, url: 'https://campus.game.163.com/app/detail/index?id=4733&projectId=102',
     duty: '  List<T> &amp; <b>字面正文</b>\r\n  内部  空白\n\n', requirements: '  List<T> &amp; <b>字面要求</b>\r\n', description: '', jdComplete: false });
   for (const job of result.jobs.slice(1)) { const j = b.normalizeRecord(job, campus); a.deepEqual(j.channels, []); a.equal(j.employment, 'internship'); a.equal(j.talentPlan, null); }
   a.equal(b.validateEvidence(result.verification, result.jobs, campus).total, 3);

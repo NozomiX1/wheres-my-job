@@ -165,17 +165,18 @@ function normalizeRecord(job, site) {
   if (campus(p)) {
     // Current official MF-25 uses React children for both sections: preserve literal markup/entities/whitespace.
     // Current status=1 nav proves 102 under 应届生; 75/104 under 精英实习生. These are independent dimensions.
-    return { id: String(post.id), title: post.positionName, category: post.positionTypeName ?? '', city: post.workPlaceName ?? '',
-      channels: post.projectId === 102 ? ['campus'] : [], employment: post.projectId === 102 ? null : 'internship', talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    return { id: String(post.id), title: post.positionName, employer: '网易游戏（互娱）', category: post.positionTypeName ?? '', city: post.workPlaceName ?? '',
+      channels: post.projectId === 102 ? ['campus'] : [], employment: post.projectId === 102 ? null : 'internship', talentPlan: null, publishedAt: null, updatedAt: post.updateTime ?? null, sourceStatus: null,
       url: p.origin + '/app/detail/index?id=' + post.id + '&projectId=' + post.projectId, duty: post.positionDescription ?? '', requirements: post.positionRequirement ?? '', description: '', jdComplete: false };
   }
   // Social card passes each independent field to its first-party HTML parser (fhwx), not React TEXT.
   // Current social commons.c65656b8 (25330/1336134), 34.e3c060e4 (59036): strict string workType 0/1/2 = 全职/实习/派遣.
   // Dispatch has no canonical employment value; workType never proves a campus channel or talent plan.
   // 34.e3c060e4 (59420/2506/37810): observed numeric flag 1 -> isGeek -> img alt 极客计划; absent/0 is not no-plan proof.
-  return { id: String(post.id), title: post.name, category: post.firstPostTypeName ?? '', city: (post.workPlaceNameList ?? []).join('/'),
+  return { id: String(post.id), title: post.name, employer: typeof post.productName === 'string' ? post.productName.trim() : '', category: post.firstPostTypeName ?? '', // productName：官网列表里岗位所属的业务线（网易游戏（雷火）、网易有道…）
+    city: (post.workPlaceNameList ?? []).join('/'),
     channels: ['social'], employment: post.workType === '0' ? 'full-time' : post.workType === '1' ? 'internship' : null,
-    talentPlan: post.geekPassionateTalentFlag === 1 ? true : null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: post.geekPassionateTalentFlag === 1 ? true : null, publishedAt: null, updatedAt: post.updateTime ?? null, sourceStatus: null,
     url: p.origin + '/job-detail.html?id=' + post.id, duty: htmlText(post.description), requirements: htmlText(post.requirement), description: '', jdComplete: false };
 }
 function portalNotice(site) {

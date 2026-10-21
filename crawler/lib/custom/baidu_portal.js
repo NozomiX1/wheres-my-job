@@ -118,7 +118,7 @@ function normalizeRecord(job, site) {
   const post = boundRecord(job, site), type = job.recruitType;
   return { id: post.postId, title: post.name, city: post.workPlace ?? '', category: post.postType ?? '',
     channels: type === 'INTERN' ? [] : [type === 'GRADUATE' ? 'campus' : 'social'], employment: type === 'INTERN' ? 'internship' : null,
-    talentPlan: null, date: null, dateKind: null, sourceStatus: null,
+    talentPlan: null, publishedAt: post.publishDate ?? null, updatedAt: post.updateDate ?? null, sourceStatus: null,
     url: ORIGIN + '/jobs/detail/' + type + '/' + post.postId, duty: post.workContent ?? '', requirements: post.serviceCondition ?? '', description: '', jdComplete: false };
 }
 function portalNotice(site) {
