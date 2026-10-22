@@ -9,7 +9,7 @@
 - **查询（D14）**：与他人共用的海外 VPS（洛杉矶），`https://wheresjob.cn` 经机器管理者的 Caddy 回落，服务只监听本机 8000，靠 crontab 保活（崩溃后最多 1 分钟恢复，不用 systemd）。`deploy/pull.sh` 每 10 分钟从 Release 拉新数据、校验后换上并重启。**更新代码**：`ssh vps 'ANDE_RESTART_CMD=$HOME/ande-restart.sh ~/ande/deploy/update.sh'`（`git pull --ff-only`，只在服务端文件变了才重启）。日志 `~/ande-server.log`、`~/ande-pull.log`，没有轮转。国内个人备案不允许招聘信息，故不备案。
 - **本机兜底采集**：Actions 反复失败时用 `sh deploy/crawl-local.sh <来源key>...`（先 `ANDE_DRY_RUN=1` 干跑，`ANDE_YES=1` 免确认上传）。只在国内小来源 `kimi` 上真跑过；没试过需要 Chrome 的来源。
 - **访问统计（D17）**：VPS 的 `~/ande-run.sh` 设了 `ANDE_ACCESS_LOG`；看统计 `ssh vps 'node ~/ande/deploy/access-stats.js'`。线上拿不到访客真实 IP，人数看「独立浏览器」。
-- **阿里云旧机器**：采集和服务已迁出，网站不再使用；最后的数据与日志备份在用户本机 `~/ande-aliyun-backup/`。是否已退款释放待用户确认。
+- **阿里云旧机器**：已退款释放；最后的数据与日志备份在用户本机 `~/ande-aliyun-backup/`。
 - **要记住的坑**：shell 脚本里 `$VAR` 后面紧跟全角字符会被 macOS 的 sh 当成变量名的一部分，要写成 `${VAR}`；飞书系页面首个列表请求在 CSRF 令牌就绪前会得 405，是页面自己的握手，不是拦截，适配器以页面随后的成功重发为准；Chrome 在 root 或 Ubuntu 24.04 普通用户下都要 `--no-sandbox`；Node 22 下入口模块与 `native-ui` 的循环引用要等模块加载完再运行；腾讯 Workday 上已下线的岗位匿名请求返回 `403 S22 permission denied`，是岗位不可见而不是拦截，适配器逐个跳过。
 
 ## 已知缺口
@@ -23,8 +23,7 @@
 
 ## 待办
 
-1. **退款释放阿里云旧机器**（需用户在控制台操作）。
-2. **外部 fork 的批量来源**（暂缓）：北森通用路径恢复（约 1300 个）、Wecruit 适配器（约 170 个）、Moka 详情模式需先放宽发布层的 detailVerified 检查；先试点再分批，放量前先确认服务内存。
-3. 简历/语义匹配只是可能的方向，暂不做（D26）。
+1. **外部 fork 的批量来源**（暂缓）：北森通用路径恢复（约 1300 个）、Wecruit 适配器（约 170 个）、Moka 详情模式需先放宽发布层的 detailVerified 检查；先试点再分批，放量前先确认服务内存。
+2. 简历/语义匹配只是可能的方向，暂不做（D26）。
 
 **观察项**：Actions 的跨境链路偶发不稳（哔哩哔哩校招、小米、饿了么、小红书有超时／DNS 重试，靠补采救回）；旧门户（OPPO、网易等）按需放宽证据合同。
